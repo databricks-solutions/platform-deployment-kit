@@ -2208,20 +2208,19 @@ class App {
                 </div>
               </div>
               
-              <div class="d-flex justify-content-between align-items-start gap-3">
+              <div class="configuration-actions d-flex justify-content-between align-items-start gap-3">
                 <a href="#/select-provider" class="btn btn-outline-secondary btn-lg" data-navigate>
                   <i class="bi bi-arrow-left me-2"></i>
                   Back to Provider Selection
                 </a>
-                <div class="d-flex flex-column align-items-end gap-2">
+                <div class="configuration-review d-flex flex-column align-items-stretch gap-2">
                   <button type="submit" class="btn btn-primary btn-lg px-4" id="submit-btn"
                           aria-describedby="submit-validation-message">
                     Review Configuration
                     <i class="bi bi-arrow-right ms-2"></i>
                   </button>
                   <div class="alert alert-warning py-2 px-3 mb-0 small text-start"
-                       id="submit-validation-message" role="status" aria-live="polite"
-                       hidden style="max-width: 34rem;">
+                       id="submit-validation-message" role="status" aria-live="polite" hidden>
                     <i class="bi bi-exclamation-triangle me-2"></i>
                     <span><strong>Review unavailable:</strong> No NAT gateway requires AWS PrivateLink. Enable PrivateLink or select a NAT gateway topology.</span>
                   </div>

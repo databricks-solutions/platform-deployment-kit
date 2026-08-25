@@ -1210,6 +1210,24 @@ pre code {
   opacity: 0.7;
 }
 
+.configuration-actions {
+  flex-wrap: wrap;
+}
+
+.configuration-review {
+  width: min(100%, 34rem);
+  margin-left: auto;
+}
+
+.configuration-review > .btn,
+.configuration-review > .alert {
+  width: 100%;
+}
+
+.configuration-review > .alert {
+  animation: none;
+}
+
 /* Form Validation States */
 .form-control.is-valid,
 .form-select.is-valid {
@@ -2918,6 +2936,12 @@ footer .deploy-version {
   .btn {
     width: 100%;
     justify-content: center;
+  }
+
+  .configuration-actions > .btn,
+  .configuration-review {
+    width: 100%;
+    margin-left: 0;
   }
 
   .btn + .btn {

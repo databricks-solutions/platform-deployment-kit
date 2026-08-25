@@ -448,6 +448,15 @@ test.describe('AWS Provider Tests', () => {
       await expect(validationMessage).toBeVisible();
       await expect(validationMessage).toContainText('No NAT gateway requires AWS PrivateLink');
 
+      const [buttonBox, messageBox] = await Promise.all([
+        submitButton.boundingBox(),
+        validationMessage.boundingBox()
+      ]);
+      expect(buttonBox).not.toBeNull();
+      expect(messageBox).not.toBeNull();
+      expect(Math.abs(buttonBox.x - messageBox.x)).toBeLessThanOrEqual(1);
+      expect(Math.abs(buttonBox.width - messageBox.width)).toBeLessThanOrEqual(1);
+
       await page.locator('#enable_private_link').click();
       await expect(submitButton).toBeEnabled();
       await expect(validationMessage).toBeHidden();
