@@ -640,6 +640,34 @@ describe('Validators.validateConfiguration', () => {
     expect(result.errors).toEqual({});
   });
 
+  test('AWS no-NAT mode requires back-end PrivateLink', () => {
+    const result = Validators.validateConfiguration({
+      ...validAwsConfig,
+      nat_gateway_mode: 'none',
+      enable_private_link: false,
+    });
+    expect(result.errors.nat_gateway_mode).toMatch(/requires back-end AWS PrivateLink/i);
+  });
+
+  test('AWS no-NAT mode is valid with Enterprise and back-end PrivateLink', () => {
+    const result = Validators.validateConfiguration({
+      ...validAwsConfig,
+      pricing_tier: 'ENTERPRISE',
+      nat_gateway_mode: 'none',
+      enable_private_link: true,
+      privatelink_subnet_mode: 'terraform_managed',
+    });
+    expect(result.errors.nat_gateway_mode).toBeUndefined();
+  });
+
+  test('AWS rejects an unknown NAT gateway mode', () => {
+    const result = Validators.validateConfiguration({
+      ...validAwsConfig,
+      nat_gateway_mode: 'regional',
+    });
+    expect(result.errors.nat_gateway_mode).toMatch(/none, single, or one per availability zone/i);
+  });
+
   test('missing project name returns project_prefix error', () => {
     const config = { ...validAwsConfig, project_prefix: '' };
     const result = Validators.validateConfiguration(config);
@@ -709,7 +737,6 @@ describe('Validators.validateConfiguration', () => {
       ...validAwsConfig,
       create_new_vpc: false,
       existing_vpc_id: 'vpc-12345678',
-      create_new_subnets: false,
       // existing_subnet_ids and existing_security_group_id omitted
     };
     const result = Validators.validateConfiguration(config);
@@ -722,7 +749,6 @@ describe('Validators.validateConfiguration', () => {
     const config = {
       ...validAwsConfig,
       create_new_vpc: false,
-      create_new_subnets: false,
       existing_vpc_id: 'vpc-12345678',
       existing_subnet_ids: ['subnet-12345678', 'subnet-abcdef12'],
       existing_security_group_id: 'sg-12345678',
@@ -736,7 +762,6 @@ describe('Validators.validateConfiguration', () => {
     const config = {
       ...validAwsConfig,
       create_new_vpc: false,
-      create_new_subnets: false,
       existing_vpc_id: 'vpc-12345678',
       existing_subnet_ids: ['subnet-12345678'], // only 1, need at least 2
       existing_security_group_id: 'sg-12345678',

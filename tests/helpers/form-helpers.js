@@ -77,24 +77,41 @@ class FormHelpers {
       await page.waitForTimeout(300);
     }
     
-    // Fill existing VPC ID if not creating new
-    if (config.existing_vpc_id !== undefined && !config.create_new_vpc) {
+    const creatingNewVpc = await createNewVpc.isChecked();
+
+    // Existing VPC mode is fully user-managed: supply the existing network resources.
+    if (config.existing_vpc_id !== undefined && !creatingNewVpc) {
       const existingVpcField = page.locator('#existing_vpc_id');
       if (await existingVpcField.isVisible()) {
         await existingVpcField.fill(config.existing_vpc_id);
       }
     }
+
+    if (config.existing_subnet_ids && !creatingNewVpc) {
+      const subnetFields = page.locator('.existing-subnet-input');
+      for (let index = 0; index < config.existing_subnet_ids.length; index += 1) {
+        await subnetFields.nth(index).fill(config.existing_subnet_ids[index]);
+      }
+    }
+
+    if (config.existing_security_group_id && !creatingNewVpc) {
+      await page.locator('#existing_security_group_id').fill(config.existing_security_group_id);
+    }
     
-    // Fill VPC CIDR
-    if (config.vpc_cidr) {
+    // CIDR and availability zones only apply when the module creates the VPC.
+    if (config.vpc_cidr && creatingNewVpc) {
       await page.fill('input[name="vpc_cidr"]', config.vpc_cidr);
       await page.waitForTimeout(800); // Wait for subnet calculation
     }
     
     // Set availability zones (Choices.js component)
-    if (config.availability_zones && Array.isArray(config.availability_zones)) {
+    if (creatingNewVpc && config.availability_zones && Array.isArray(config.availability_zones)) {
       // Use the helper function which handles Choices.js correctly
       await this.selectAvailabilityZones(page, config.availability_zones);
+    }
+
+    if (creatingNewVpc && config.nat_gateway_mode) {
+      await page.locator('#nat_gateway_mode').selectOption(config.nat_gateway_mode);
     }
     
     // Toggle private link
@@ -409,4 +426,3 @@ class FormHelpers {
 }
 
 module.exports = FormHelpers;
-

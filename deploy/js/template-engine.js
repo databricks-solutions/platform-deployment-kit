@@ -138,10 +138,7 @@ class TemplateEngine {
     // Format boolean values
     vars.create_new_vpc = config.create_new_vpc === true || config.create_new_vpc === 'true';
     vars.enable_private_link = config.enable_private_link === true || config.enable_private_link === 'true';
-    vars.enable_nat_gateway = config.enable_nat_gateway !== false && config.enable_nat_gateway !== 'false';
-    
-    // Format create_new_subnets - defaults to true if not specified
-    vars.create_new_subnets = config.create_new_subnets !== false && config.create_new_subnets !== 'false';
+    vars.nat_gateway_mode = config.nat_gateway_mode || 'per_az';
     
     // Format existing VPC ID
     vars.existing_vpc_id = config.existing_vpc_id || '';

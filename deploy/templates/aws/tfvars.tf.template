@@ -24,8 +24,7 @@ create_new_vpc = {{create_new_vpc}}
 existing_vpc_id = "{{existing_vpc_id}}"
 {{/unless}}
 
-# Subnet Configuration
-create_new_subnets = {{create_new_subnets}}
+# Existing network configuration (only used when create_new_vpc = false)
 {{#if existing_subnet_ids}}
 existing_subnet_ids = {{{existing_subnet_ids}}}
 {{/if}}
@@ -73,7 +72,7 @@ cross_account_role_arn = "{{cross_account_role_arn}}"
 # ADVANCED CONFIGURATION
 # ----------------------------------------------------------------------------
 
-enable_nat_gateway   = {{enable_nat_gateway}}
+nat_gateway_mode     = "{{nat_gateway_mode}}"
 enable_vpc_endpoints = true
 
 # ----------------------------------------------------------------------------

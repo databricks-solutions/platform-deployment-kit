@@ -81,6 +81,66 @@ test.describe('AWS Provider Tests', () => {
       await FormHelpers.submitConfigForm(page);
       await page.waitForTimeout(1000);
       await expect(page).toHaveURL(/.*#\/summary/, { timeout: 10000 });
+
+      const generatedMain = await page.evaluate(async () => {
+        const config = JSON.parse(localStorage.getItem('config'));
+        const zipBlob = await new TerraformGenerator().generateProject(config);
+        const zip = await JSZip.loadAsync(zipBlob);
+        return zip.file('main.tf').async('string');
+      });
+      expect(generatedMain).toContain('service         = "s3"');
+      expect(generatedMain).not.toContain('service             = "sts"');
+      expect(generatedMain).not.toContain('service             = "kinesis-streams"');
+    });
+
+    test('should complete AWS flow without NAT when back-end PrivateLink is enabled', async ({ page }) => {
+      await FormHelpers.selectProvider(page, 'aws');
+      await FormHelpers.fillBasicConfig(page, {
+        project_prefix: 'aws-no-nat',
+        region: 'us-east-1',
+        pricing_tier: 'ENTERPRISE'
+      });
+
+      await FormHelpers.fillNetworkConfig(page, {
+        create_new_vpc: true,
+        vpc_cidr: '10.48.0.0/16',
+        availability_zones: ['us-east-1a', 'us-east-1b'],
+        nat_gateway_mode: 'none',
+        enable_private_link: true
+      });
+
+      await expect(page.locator('#nat-no-gateway-warning')).toBeVisible();
+      await expect(page.locator('#nat-no-gateway-warning')).toContainText('Back-end PrivateLink is required');
+      await expect(page.locator('#nat-no-gateway-warning')).toHaveCSS('color', 'rgb(241, 245, 249)');
+      await expect(page.locator('#nat-no-gateway-warning strong')).toHaveCSS('color', 'rgb(251, 191, 36)');
+      await FormHelpers.submitConfigForm(page);
+      await expect(page).toHaveURL(/.*#\/summary/, { timeout: 10000 });
+      await expect(page.getByText('None', { exact: true })).toBeVisible();
+
+      const generated = await page.evaluate(async () => {
+        const config = JSON.parse(localStorage.getItem('config'));
+        const zipBlob = await new TerraformGenerator().generateProject(config);
+        const zip = await JSZip.loadAsync(zipBlob);
+        return {
+          main: await zip.file('main.tf').async('string'),
+          variables: await zip.file('variables.tf').async('string'),
+          tfvars: await zip.file('terraform.tfvars').async('string')
+        };
+      });
+
+      expect(generated.main).toContain('enable_nat_gateway   = var.nat_gateway_mode != "none"');
+      expect(generated.main).toContain('create_igw           = var.nat_gateway_mode != "none"');
+      expect(generated.main).toContain('public_subnets  = var.nat_gateway_mode == "none" ? [] : local.public_subnet_cidrs');
+      expect(generated.main).toContain('service         = "s3"');
+      expect(generated.main).toContain('service             = "sts"');
+      expect(generated.main).toContain('service             = "kinesis-streams"');
+      expect(generated.main).toContain('subnet_ids          = module.vpc[0].intra_subnets');
+      expect(generated.main).not.toContain('subnet_ids          = module.vpc[0].private_subnets');
+      expect(generated.main).toContain('private_dns_enabled = true');
+      expect(generated.main).toContain('scc_relay      = [6666, 6666]');
+      expect(generated.variables).toContain('default     = "none"');
+      expect(generated.tfvars).toContain('nat_gateway_mode     = "none"');
+      expect(generated.tfvars).not.toContain('enable_nat_gateway');
     });
 
     test('should complete AWS flow using existing VPC', async ({ page }) => {
@@ -100,17 +160,16 @@ test.describe('AWS Provider Tests', () => {
         await page.waitForTimeout(500);
       }
 
-      // Fill existing VPC ID
-      const existingVpcId = page.locator('#existing_vpc_id');
-      await existingVpcId.waitFor({ state: 'visible', timeout: 5000 });
-      await existingVpcId.fill('vpc-0123456789abcdef0');
-
-      // Default subnet mode is "Create New Subnets" in existing VPC
-      // This still requires VPC CIDR and AZs for the new subnets
+      // Existing VPC mode is fully user-managed, including subnets, routing,
+      // egress, and security groups.
       await FormHelpers.fillNetworkConfig(page, {
         create_new_vpc: false,
-        vpc_cidr: '10.32.0.0/16',
-        availability_zones: ['eu-west-1a', 'eu-west-1b'],
+        existing_vpc_id: 'vpc-0123456789abcdef0',
+        existing_subnet_ids: [
+          'subnet-0123456789abcdef0',
+          'subnet-0fedcba9876543210'
+        ],
+        existing_security_group_id: 'sg-0123456789abcdef0',
         enable_private_link: false
       });
 
@@ -520,10 +579,8 @@ test.describe('AWS Provider Tests', () => {
       await createNewVpc.uncheck();
       await page.waitForTimeout(500);
 
-      // Select "Use Existing Subnets" mode (AWS-specific)
-      const subnetModeExisting = page.locator('#subnet_mode_existing');
-      await subnetModeExisting.click();
-      await page.waitForTimeout(500);
+      // Existing AWS VPC mode always requires preconfigured subnets.
+      await expect(page.locator('#existing-subnets-section')).toBeVisible();
 
       // Slider should be hidden when using existing subnets
       const sliderContainer = page.locator('#subnet-size-slider-container');
@@ -926,4 +983,3 @@ test.describe('AWS Provider Tests', () => {
     });
   });
 });
-

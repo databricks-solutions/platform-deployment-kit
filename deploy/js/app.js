@@ -1917,6 +1917,25 @@ class App {
                       'Create a new Virtual Network or use an existing one' : 
                       'Create a new VPC or use an existing one'}</div>
                   </div>
+                  ${this.currentProvider === 'aws' ? `
+                  <div class="mb-3" id="nat-gateway-options">
+                    <label class="form-label fw-semibold" for="nat_gateway_mode">
+                      NAT Gateway Topology
+                      <i class="bi bi-info-circle ms-1 text-muted"
+                         title="No NAT gateway requires back-end PrivateLink for communication with the Databricks control plane."></i>
+                    </label>
+                    <select class="form-select" id="nat_gateway_mode" name="nat_gateway_mode">
+                      <option value="per_az" ${!this.currentConfig.nat_gateway_mode || this.currentConfig.nat_gateway_mode === 'per_az' ? 'selected' : ''}>One NAT gateway per availability zone</option>
+                      <option value="single" ${this.currentConfig.nat_gateway_mode === 'single' ? 'selected' : ''}>Single shared NAT gateway</option>
+                      <option value="none" ${this.currentConfig.nat_gateway_mode === 'none' ? 'selected' : ''}>No NAT gateway</option>
+                    </select>
+                    <div class="form-text">Per-AZ provides production resilience; single reduces cost but creates a shared egress dependency.</div>
+                    <div class="alert alert-warning mt-2 mb-0" id="nat-no-gateway-warning" style="display: none;">
+                      <i class="bi bi-exclamation-triangle me-2"></i>
+                      <strong>No NAT:</strong> Back-end PrivateLink is required to communicate with the Databricks control plane. Clusters will not have NAT-based internet egress.
+                    </div>
+                  </div>
+                  ` : ''}
                   <div class="collapse mb-3" id="existing-vpc-section" style="display: none;">
                     <div class="card border-secondary mb-3">
                       <div class="card-body">
@@ -1937,28 +1956,10 @@ class App {
                         </div>
                         
                         ${this.currentProvider === 'aws' ? `
-                        <div class="mb-3">
-                          <label class="form-label fw-semibold">Subnet Configuration</label>
-                          <div class="form-check">
-                            <input class="form-check-input" type="radio" name="subnet_mode" id="subnet_mode_create" value="create" checked>
-                            <label class="form-check-label" for="subnet_mode_create">
-                              <strong>Create New Subnets</strong>
-                              <span class="text-muted d-block small">Terraform will create new subnets in the existing VPC</span>
-                            </label>
-                          </div>
-                          <div class="form-check mt-2">
-                            <input class="form-check-input" type="radio" name="subnet_mode" id="subnet_mode_existing" value="existing">
-                            <label class="form-check-label" for="subnet_mode_existing">
-                              <strong>Use Existing Subnets</strong>
-                              <span class="text-muted d-block small">Provide IDs of existing subnets (minimum 2, in different AZs)</span>
-                            </label>
-                          </div>
-                        </div>
-                        
-                        <div id="existing-subnets-section" class="mt-3" style="display: none;">
+                        <div id="existing-subnets-section" class="mt-3">
                           <div class="alert alert-info">
                             <i class="bi bi-info-circle me-2"></i>
-                            <strong>Requirements:</strong> At least 2 private subnets in different Availability Zones are required for Databricks.
+                            <strong>Requirements:</strong> Provide at least two private subnets in different Availability Zones. Their route tables, NAT or private egress, and security groups must already satisfy Databricks requirements.
                           </div>
                           <div id="existing-subnets-container">
                             <div class="row mb-2 existing-subnet-row">
@@ -2267,17 +2268,7 @@ class App {
     
     // Function to check if we should show subnet configuration (VPC CIDR, AZs, slider)
     const shouldShowSubnetConfig = () => {
-      const createNewVpc = isCreateNewVpcActive();
-      if (createNewVpc) return true;
-      
-      // For AWS with existing VPC, check subnet mode
-      if (this.currentProvider === 'aws') {
-        const subnetModeCreate = document.getElementById('subnet_mode_create');
-        return subnetModeCreate?.checked === true;
-      }
-      
-      // Azure/GCP with existing VNet use pre-configured subnets — no subnet config needed
-      return false;
+      return isCreateNewVpcActive();
     };
     
     // Function to update slider limits based on current configuration
@@ -3176,37 +3167,32 @@ class App {
     const createNewVpcCheckbox = document.getElementById('create_new_vpc');
     const existingVpcSection = document.getElementById('existing-vpc-section');
     const existingSubnetsSection = document.getElementById('existing-subnets-section');
-    const subnetModeCreate = document.getElementById('subnet_mode_create');
-    const subnetModeExisting = document.getElementById('subnet_mode_existing');
+    const natGatewayOptions = document.getElementById('nat-gateway-options');
+    const natGatewayMode = document.getElementById('nat_gateway_mode');
+    const natNoGatewayWarning = document.getElementById('nat-no-gateway-warning');
     const vpcCidrContainer = document.querySelector('input[name="vpc_cidr"]')?.closest('.mb-3');
     const azContainer = document.querySelector('#availability-zones-select')?.closest('.mb-3');
     
     // Helper function to update UI based on VPC and subnet mode
     const updateNetworkConfigUI = () => {
       const isCreateNewVpc = createNewVpcCheckbox?.checked !== false;
-      const isUseExistingSubnets = subnetModeExisting?.checked === true;
       
       if (isCreateNewVpc) {
         // Creating new VPC - show VPC CIDR, AZs, subnet slider
         if (existingVpcSection) existingVpcSection.style.display = 'none';
+        if (natGatewayOptions) natGatewayOptions.style.display = 'block';
         if (vpcCidrContainer) vpcCidrContainer.style.display = 'block';
         if (azContainer) azContainer.style.display = 'block';
       } else {
         // Using existing VPC
         if (existingVpcSection) existingVpcSection.style.display = 'block';
+        if (natGatewayOptions) natGatewayOptions.style.display = 'none';
         
         if (this.currentProvider === 'aws') {
-          if (isUseExistingSubnets) {
-            // Using existing subnets - hide VPC CIDR, AZs, subnet slider
-            if (vpcCidrContainer) vpcCidrContainer.style.display = 'none';
-            if (azContainer) azContainer.style.display = 'none';
-            if (existingSubnetsSection) existingSubnetsSection.style.display = 'block';
-          } else {
-            // Creating new subnets in existing VPC - show VPC CIDR, AZs
-            if (vpcCidrContainer) vpcCidrContainer.style.display = 'block';
-            if (azContainer) azContainer.style.display = 'block';
-            if (existingSubnetsSection) existingSubnetsSection.style.display = 'none';
-          }
+          // Existing AWS networking is fully user-managed.
+          if (vpcCidrContainer) vpcCidrContainer.style.display = 'none';
+          if (azContainer) azContainer.style.display = 'none';
+          if (existingSubnetsSection) existingSubnetsSection.style.display = 'block';
         } else {
           // Azure/GCP - hide VPC CIDR, AZs, subnet slider (existing VNet uses pre-configured subnets)
           if (vpcCidrContainer) vpcCidrContainer.style.display = 'none';
@@ -3228,12 +3214,7 @@ class App {
         if (existingVpcIdInput) existingVpcIdInput.setAttribute('required', '');
 
         if (this.currentProvider === 'aws') {
-          const isExistingSubnets = subnetModeExisting?.checked === true;
-          if (isExistingSubnets) {
-            if (vpcCidrInput) vpcCidrInput.removeAttribute('required');
-          } else {
-            if (vpcCidrInput) vpcCidrInput.setAttribute('required', '');
-          }
+          if (vpcCidrInput) vpcCidrInput.removeAttribute('required');
         } else {
           // Azure/GCP with existing VNet — no VPC CIDR needed
           if (vpcCidrInput) vpcCidrInput.removeAttribute('required');
@@ -3244,17 +3225,17 @@ class App {
       calculateSubnets();
     };
 
+    const updateNatGatewayGuidance = () => {
+      if (natNoGatewayWarning) {
+        natNoGatewayWarning.style.display = natGatewayMode?.value === 'none' ? 'block' : 'none';
+      }
+    };
+
     if (createNewVpcCheckbox) {
       createNewVpcCheckbox.addEventListener('change', updateNetworkConfigUI);
     }
-    
-    // Setup subnet mode radio buttons (AWS only)
-    if (subnetModeCreate) {
-      subnetModeCreate.addEventListener('change', updateNetworkConfigUI);
-    }
-    if (subnetModeExisting) {
-      subnetModeExisting.addEventListener('change', updateNetworkConfigUI);
-    }
+    natGatewayMode?.addEventListener('change', updateNatGatewayGuidance);
+    updateNatGatewayGuidance();
     
     // Setup add subnet button
     const addSubnetBtn = document.getElementById('add-subnet-btn');
@@ -3371,6 +3352,9 @@ class App {
       config.provider = this.currentProvider;
       config.create_new_vpc = document.getElementById('create_new_vpc')?.checked !== false;
       config.enable_private_link = document.getElementById('enable_private_link')?.checked || false;
+      if (this.currentProvider === 'aws') {
+        config.nat_gateway_mode = document.getElementById('nat_gateway_mode')?.value || 'per_az';
+      }
       
       // AWS-specific: Handle PrivateLink subnet mode
       if (this.currentProvider === 'aws' && config.enable_private_link) {
@@ -3382,19 +3366,13 @@ class App {
         }
       }
       
-      // AWS-specific: Handle subnet mode
+      // AWS-specific: Existing VPC networking is fully user-managed.
       if (this.currentProvider === 'aws' && !config.create_new_vpc) {
-        config.subnet_mode = document.querySelector('input[name="subnet_mode"]:checked')?.value || 'create';
-        config.create_new_subnets = config.subnet_mode === 'create';
-        
-        // If using existing subnets, collect the IDs
-        if (config.subnet_mode === 'existing') {
-          const subnetInputs = document.querySelectorAll('.existing-subnet-input');
-          config.existing_subnet_ids = Array.from(subnetInputs)
-            .map(input => input.value.trim())
-            .filter(val => val !== '');
-          config.existing_security_group_id = document.getElementById('existing_security_group_id')?.value?.trim() || '';
-        }
+        const subnetInputs = document.querySelectorAll('.existing-subnet-input');
+        config.existing_subnet_ids = Array.from(subnetInputs)
+          .map(input => input.value.trim())
+          .filter(val => val !== '');
+        config.existing_security_group_id = document.getElementById('existing_security_group_id')?.value?.trim() || '';
         
         // Get existing VPC ID
         config.existing_vpc_id = document.getElementById('existing_vpc_id')?.value?.trim() || '';
@@ -3420,8 +3398,7 @@ class App {
       
       // Determine if we need subnet configuration (VPC CIDR, AZs, etc.)
       // Azure/GCP with existing VNet use pre-configured subnets — no CIDR/AZ needed
-      const needsSubnetConfig = config.create_new_vpc ||
-        (this.currentProvider === 'aws' && config.create_new_subnets);
+      const needsSubnetConfig = config.create_new_vpc;
       
       // Get availability zones from multiple select
       const zones = this.getSelectedAvailabilityZones();
@@ -3753,16 +3730,6 @@ class App {
                         <td><code class="text-break">${config.existing_vpc_id}</code></td>
                       </tr>
                       ` : ''}
-                      ${config.provider === 'aws' && !config.create_new_vpc ? `
-                      <tr>
-                        <td class="fw-semibold">Subnet Mode:</td>
-                        <td>
-                          <span class="badge bg-${config.create_new_subnets ? 'primary' : 'secondary'}">
-                            ${config.create_new_subnets ? 'Create New Subnets' : 'Use Existing Subnets'}
-                          </span>
-                        </td>
-                      </tr>
-                      ` : ''}
                       ${config.provider === 'azure' && !config.create_new_vpc ? `
                       <tr>
                         <td class="fw-semibold">Public Subnet:</td>
@@ -3787,10 +3754,16 @@ class App {
                         <td><code>${config.existing_service_range_name || 'N/A'}</code></td>
                       </tr>
                       ` : ''}
-                      ${config.vpc_cidr && (config.create_new_vpc || config.create_new_subnets) ? `
+                      ${config.vpc_cidr && config.create_new_vpc ? `
                       <tr>
                         <td class="fw-semibold">${config.provider === 'azure' ? 'VNet CIDR:' : 'VPC CIDR:'}</td>
                         <td><code>${config.vpc_cidr}</code></td>
+                      </tr>
+                      ` : ''}
+                      ${config.provider === 'aws' && config.create_new_vpc ? `
+                      <tr>
+                        <td class="fw-semibold">NAT Gateway:</td>
+                        <td><span class="badge bg-${config.nat_gateway_mode === 'none' ? 'warning' : 'primary'}">${config.nat_gateway_mode === 'none' ? 'None' : config.nat_gateway_mode === 'single' ? 'Single shared' : 'One per AZ'}</span></td>
                       </tr>
                       ` : ''}
                       ${(config.availability_zones && config.availability_zones.length > 0) ? `
@@ -3819,7 +3792,7 @@ class App {
                         <td><code class="text-break">${config.existing_security_group_id}</code></td>
                       </tr>
                       ` : ''}
-                      ${(config.create_new_vpc || config.create_new_subnets) && config.calculated_subnets && config.calculated_subnets.length > 0 ? `
+                      ${config.create_new_vpc && config.calculated_subnets && config.calculated_subnets.length > 0 ? `
                       <tr>
                         <td class="fw-semibold">Subnets:</td>
                         <td>
@@ -4488,4 +4461,3 @@ document.addEventListener('DOMContentLoaded', () => {
   // Make app globally available for modal buttons
   window.app = app;
 });
-

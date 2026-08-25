@@ -12,6 +12,7 @@ This Terraform project deploys a Databricks workspace on Amazon Web Services.
 | **Pricing Tier** | {{pricing_tier}} |
 | **VPC CIDR** | {{vpc_cidr}} |
 | **Private Link** | {{private_link_status}} |
+| **NAT Gateway Mode** | {{nat_gateway_mode}} |
 
 ## Prerequisites
 
@@ -165,6 +166,10 @@ Ensure your AWS credentials have permissions to create:
 - The IAM cross-account role is automatically configured with self-assume capability
 - This is required for Databricks cross-account functionality
 - The S3 bucket is created with encryption enabled (versioning disabled by default)
+- New VPCs use the pinned `terraform-aws-modules/vpc/aws` module to manage subnets, route tables, the Internet Gateway, Elastic IPs, NAT gateways, and regional AWS service endpoints.
+- Managed private subnets use one NAT gateway per availability zone by default. Set `nat_gateway_mode = "single"` to reduce development costs at the expense of cross-AZ traffic and AZ-level egress resilience. Set it to `"none"` only with back-end PrivateLink; Terraform then omits public subnets and the Internet Gateway, clusters have no internet egress, and control-plane/AWS service connectivity uses the configured private endpoints.
+- Managed VPCs always include the free S3 gateway endpoint. The hourly billed STS and Kinesis interface endpoints are created only with back-end PrivateLink and use the dedicated service/intra subnet.
+- Existing VPC mode is fully user-managed: provide at least two private subnets in distinct AZs, Databricks-compatible security groups, and working NAT, firewall, or private-endpoint egress routes.
 - All resources are tagged with the project prefix for easy identification
 
 ## Cleanup

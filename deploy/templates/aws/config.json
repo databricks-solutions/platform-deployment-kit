@@ -2,7 +2,7 @@
   "provider": "aws",
   "variables": {
     "required": ["databricks_account_id"],
-    "optional": ["enable_private_link", "enable_nat_gateway", "cross_account_role_arn"]
+    "optional": ["enable_private_link", "nat_gateway_mode", "cross_account_role_arn"]
   },
   "template_files": [
     "provider.tf.template",
@@ -14,4 +14,3 @@
     "readme.md.template"
   ]
 }
-

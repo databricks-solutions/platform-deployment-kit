@@ -16,12 +16,12 @@ class Validators {
       if (!ip || !prefix) {
         return { valid: false, message: 'Invalid CIDR format (e.g., 10.0.0.0/16)' };
       }
-      
+
       const parts = ip.split('.').map(Number);
       if (parts.length !== 4 || parts.some(p => p < 0 || p > 255)) {
         return { valid: false, message: 'Invalid IP address format' };
       }
-      
+
       const prefixLen = parseInt(prefix, 10);
       if (isNaN(prefixLen) || prefixLen < 0 || prefixLen > 32) {
         return { valid: false, message: 'Prefix length must be between 0 and 32' };
@@ -343,8 +343,7 @@ class Validators {
     }
     
     // Determine if we need subnet configuration (VPC CIDR, AZs, etc.)
-    const needsSubnetConfig = config.create_new_vpc ||
-      (config.provider === 'aws' && config.create_new_subnets !== false);
+    const needsSubnetConfig = config.create_new_vpc;
     
     // Network - only validate VPC CIDR if we need subnet config
     if (needsSubnetConfig) {
@@ -365,6 +364,15 @@ class Validators {
         }
       }
     }
+
+    if (config.provider === 'aws' && config.create_new_vpc) {
+      const natGatewayMode = config.nat_gateway_mode || 'per_az';
+      if (!['none', 'single', 'per_az'].includes(natGatewayMode)) {
+        errors.nat_gateway_mode = 'NAT gateway topology must be none, single, or one per availability zone';
+      } else if (natGatewayMode === 'none' && !config.enable_private_link) {
+        errors.nat_gateway_mode = 'No NAT gateway requires back-end AWS PrivateLink for control-plane connectivity';
+      }
+    }
     
     // AWS-specific: Existing VPC validation
     if (config.provider === 'aws' && !config.create_new_vpc) {
@@ -374,30 +382,25 @@ class Validators {
         errors.existing_vpc_id = vpcIdCheck.message;
       }
       
-      // If using existing subnets, validate subnet IDs and security group
-      if (config.create_new_subnets === false || config.subnet_mode === 'existing') {
-        // Validate at least 2 subnet IDs
-        if (!config.existing_subnet_ids || config.existing_subnet_ids.length < 2) {
-          errors.existing_subnet_ids = 'At least 2 subnet IDs are required for Databricks (in different AZs)';
-        } else {
-          // Validate each subnet ID format
-          for (let i = 0; i < config.existing_subnet_ids.length; i++) {
-            const subnetCheck = this.validateAwsSubnetId(config.existing_subnet_ids[i]);
-            if (!subnetCheck.valid) {
-              errors.existing_subnet_ids = `Invalid format for Subnet ID ${i + 1}: ${subnetCheck.message}`;
-              break;
-            }
+      // Existing AWS networking is fully user-managed.
+      if (!config.existing_subnet_ids || config.existing_subnet_ids.length < 2) {
+        errors.existing_subnet_ids = 'At least 2 subnet IDs are required for Databricks (in different AZs)';
+      } else {
+        for (let i = 0; i < config.existing_subnet_ids.length; i++) {
+          const subnetCheck = this.validateAwsSubnetId(config.existing_subnet_ids[i]);
+          if (!subnetCheck.valid) {
+            errors.existing_subnet_ids = `Invalid format for Subnet ID ${i + 1}: ${subnetCheck.message}`;
+            break;
           }
         }
-        
-        // Validate security group ID
-        if (!config.existing_security_group_id) {
-          errors.existing_security_group_id = 'Security Group ID is required when using existing subnets';
-        } else {
-          const sgCheck = this.validateAwsSecurityGroupId(config.existing_security_group_id);
-          if (!sgCheck.valid) {
-            errors.existing_security_group_id = sgCheck.message;
-          }
+      }
+
+      if (!config.existing_security_group_id) {
+        errors.existing_security_group_id = 'Security Group ID is required when using an existing VPC';
+      } else {
+        const sgCheck = this.validateAwsSecurityGroupId(config.existing_security_group_id);
+        if (!sgCheck.valid) {
+          errors.existing_security_group_id = sgCheck.message;
         }
       }
     }
@@ -454,8 +457,7 @@ class Validators {
     // AWS-specific: PrivateLink subnet validation
     if (config.provider === 'aws' && config.enable_private_link) {
       // When using existing subnets (not creating new ones), user must provide PrivateLink subnet
-      const usingExistingSubnets = !config.create_new_vpc && 
-        (config.create_new_subnets === false || config.subnet_mode === 'existing');
+      const usingExistingSubnets = !config.create_new_vpc;
       
       if (usingExistingSubnets && config.privatelink_subnet_mode === 'terraform_managed') {
         errors.privatelink_subnet_mode = 'When using existing subnets, you must select "Use Existing Subnet" for PrivateLink and provide a subnet ID';
@@ -492,4 +494,3 @@ class Validators {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = Validators;
 }
-

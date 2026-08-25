@@ -14,15 +14,6 @@ data "aws_caller_identity" "current" {}
 # AWS partition (aws, aws-cn, aws-us-gov)
 data "aws_partition" "current" {}
 
-# Available AZs in the region
-data "aws_availability_zones" "available" {
-  state = "available"
-  filter {
-    name   = "opt-in-status"
-    values = ["opt-in-not-required"]
-  }
-}
-
 # ----------------------------------------------------------------------------
 # DATABRICKS IAM POLICIES
 # ----------------------------------------------------------------------------
@@ -40,28 +31,39 @@ data "databricks_aws_crossaccount_policy" "this" {}
 # VPC
 # ----------------------------------------------------------------------------
 
-# Virtual Private Cloud for Databricks resources
-resource "aws_vpc" "this" {
-  count = var.create_new_vpc ? 1 : 0
-  
-  cidr_block           = var.vpc_cidr
-  enable_dns_hostnames = true
-  enable_dns_support   = true
-  
-  tags = merge(var.common_tags, {
-    Name = "${var.project_prefix}-vpc"
-  })
-}
+# The community VPC module owns the VPC, subnets, route tables, Internet
+# Gateway, Elastic IPs, and NAT gateways for new-VPC deployments.
+module "vpc" {
+  count   = var.create_new_vpc ? 1 : 0
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "5.1.1"
 
-# Internet Gateway for public internet access
-resource "aws_internet_gateway" "this" {
-  count = var.create_new_vpc ? 1 : 0
-  
-  vpc_id = aws_vpc.this[0].id
-  
-  tags = merge(var.common_tags, {
-    Name = "${var.project_prefix}-igw"
-  })
+  name = "${var.project_prefix}-classic-compute-plane-vpc"
+  cidr = var.vpc_cidr
+  azs  = var.availability_zones
+
+  private_subnets = local.private_subnet_cidrs
+  public_subnets  = var.nat_gateway_mode == "none" ? [] : local.public_subnet_cidrs
+  intra_subnets   = local.service_subnet_cidrs
+
+  private_subnet_names = [for az in var.availability_zones : format("%s-private-%s", var.project_prefix, az)]
+  public_subnet_names  = var.nat_gateway_mode == "none" ? [] : [for az in var.availability_zones : format("%s-public-%s", var.project_prefix, az)]
+  intra_subnet_names   = [for az in var.availability_zones : format("%s-services-%s", var.project_prefix, az)]
+
+  enable_dns_support   = true
+  enable_dns_hostnames = true
+  create_igw           = var.nat_gateway_mode != "none"
+  enable_nat_gateway   = var.nat_gateway_mode != "none"
+
+  single_nat_gateway     = var.nat_gateway_mode == "single"
+  one_nat_gateway_per_az = var.nat_gateway_mode == "per_az"
+
+  manage_default_security_group  = true
+  default_security_group_name    = "${var.project_prefix}-default-sg"
+  default_security_group_ingress = []
+  default_security_group_egress  = []
+
+  tags = var.common_tags
 }
 
 # ----------------------------------------------------------------------------
@@ -69,64 +71,51 @@ resource "aws_internet_gateway" "this" {
 # ----------------------------------------------------------------------------
 
 locals {
-  # VPC ID (new or existing)
-  vpc_id = var.create_new_vpc ? aws_vpc.this[0].id : var.existing_vpc_id
-  
-  # Whether to create network resources (subnets, security groups)
-  create_network_resources = var.create_new_vpc || var.create_new_subnets
-  
-  # Private subnet IDs for Databricks clusters
-  # Uses created subnets when create_network_resources is true, otherwise uses existing subnet IDs
-  databricks_subnet_ids = local.create_network_resources ? [
+  # CIDR lists consumed by the VPC module. Their order matches availability_zones.
+  private_subnet_cidrs = [
     {{#each calculated_subnets}}
     {{#if is_private}}
-    aws_subnet.{{name_replace}}[0].id{{#unless @last}},{{/unless}}
+    var.{{name_replace}}_subnet_cidr{{#unless @last}},{{/unless}}
     {{/if}}
     {{/each}}
-  ] : var.existing_subnet_ids
-  
-  # All subnet IDs for network configuration
-  all_subnet_ids = local.create_network_resources ? [
+  ]
+
+  public_subnet_cidrs = [
     {{#each calculated_subnets}}
-    aws_subnet.{{name_replace}}[0].id{{#unless @last}},{{/unless}}
+    {{#if is_public}}
+    var.{{name_replace}}_subnet_cidr{{#unless @last}},{{/unless}}
+    {{/if}}
     {{/each}}
-  ] : var.existing_subnet_ids
+  ]
+
+  service_subnet_cidrs = [
+    {{#each calculated_subnets}}
+    {{#if (eq subnet_type "service")}}
+    var.{{name_replace}}_subnet_cidr{{#unless @last}},{{/unless}}
+    {{/if}}
+    {{/each}}
+  ]
+
+  # VPC ID (new or existing)
+  vpc_id = var.create_new_vpc ? module.vpc[0].vpc_id : var.existing_vpc_id
+  
+  # Existing VPC mode is fully user-managed, including subnet routing and NAT.
+  databricks_subnet_ids = var.create_new_vpc ? module.vpc[0].private_subnets : var.existing_subnet_ids
   
   # Security group IDs - created or existing
-  security_group_ids = local.create_network_resources ? [
+  security_group_ids = var.create_new_vpc ? [
     aws_security_group.databricks[0].id
   ] : var.existing_security_group_ids
 }
 
 # ----------------------------------------------------------------------------
-# SUBNETS
-# ----------------------------------------------------------------------------
-# Subnets are created when creating a new VPC OR when creating new subnets in an existing VPC
-
-{{#each calculated_subnets}}
-# {{name}} subnet in {{availability_zone}}
-resource "aws_subnet" "{{name_replace}}" {
-  count = local.create_network_resources ? 1 : 0
-  
-  vpc_id                  = local.vpc_id
-  cidr_block              = var.{{name_replace}}_subnet_cidr
-  availability_zone       = "{{availability_zone}}"
-  map_public_ip_on_launch = {{is_public}}
-  
-  tags = merge(var.common_tags, {
-    Name = "${var.project_prefix}-{{name}}"
-  })
-}
-
-{{/each}}
-# ----------------------------------------------------------------------------
 # SECURITY GROUP
 # ----------------------------------------------------------------------------
-# Security group is created when creating network resources (new VPC or new subnets)
+# Security group is created with a new VPC. Existing VPC mode is user-managed.
 
 # Security group for Databricks cluster nodes
 resource "aws_security_group" "databricks" {
-  count = local.create_network_resources ? 1 : 0
+  count = var.create_new_vpc ? 1 : 0
   
   name        = "${var.project_prefix}-databricks-sg"
   description = "Security group for Databricks workspace"
@@ -157,6 +146,49 @@ resource "aws_security_group" "databricks" {
   lifecycle {
     create_before_destroy = true
   }
+}
+
+# S3 uses a free gateway endpoint for every managed VPC. STS and Kinesis
+# interface endpoints are added only for back-end PrivateLink/no-NAT designs.
+# Existing VPC users remain responsible for their endpoint topology.
+module "vpc_endpoints" {
+  count   = var.create_new_vpc && var.enable_vpc_endpoints ? 1 : 0
+  source  = "terraform-aws-modules/vpc/aws//modules/vpc-endpoints"
+  version = "5.1.1"
+
+  vpc_id             = module.vpc[0].vpc_id
+  security_group_ids = [aws_security_group.databricks[0].id]
+
+  endpoints = {
+    s3 = {
+      service         = "s3"
+      service_type    = "Gateway"
+      route_table_ids = module.vpc[0].private_route_table_ids
+      tags = {
+        Name = "${var.project_prefix}-s3-vpce"
+      }
+    }
+    {{#if enable_private_link}}
+    sts = {
+      service             = "sts"
+      private_dns_enabled = true
+      subnet_ids          = module.vpc[0].intra_subnets
+      tags = {
+        Name = "${var.project_prefix}-sts-vpce"
+      }
+    }
+    kinesis-streams = {
+      service             = "kinesis-streams"
+      private_dns_enabled = true
+      subnet_ids          = module.vpc[0].intra_subnets
+      tags = {
+        Name = "${var.project_prefix}-kinesis-vpce"
+      }
+    }
+    {{/if}}
+  }
+
+  tags = var.common_tags
 }
 
 # ----------------------------------------------------------------------------
@@ -348,7 +380,7 @@ locals {
   
   # PrivateLink subnet ID - terraform managed or user provided
   privatelink_subnet_id = var.privatelink_subnet_mode == "terraform_managed" ? (
-    aws_subnet.service[0].id
+    module.vpc[0].intra_subnets[0]
   ) : var.existing_privatelink_subnet_id
 }
 
@@ -358,13 +390,25 @@ resource "aws_security_group" "privatelink" {
   description = "Security group for Databricks PrivateLink VPC Endpoints"
   vpc_id      = local.vpc_id
   
-  # Allow HTTPS from VPC CIDR
-  ingress {
-    description = "Allow HTTPS from VPC"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = [var.vpc_cidr]
+  # Allow workspace nodes to reach the Databricks REST, SCC, Lakebase,
+  # control-plane API, and future service ports through PrivateLink.
+  dynamic "ingress" {
+    for_each = {
+      rest_api       = [443, 443]
+      scc_relay      = [6666, 6666]
+      fips_scc       = [2443, 2443]
+      lakebase       = [5432, 5432]
+      control_plane  = [8443, 8444]
+      future_services = [8445, 8451]
+    }
+
+    content {
+      description     = "Databricks PrivateLink ${ingress.key}"
+      from_port       = ingress.value[0]
+      to_port         = ingress.value[1]
+      protocol        = "tcp"
+      security_groups = local.security_group_ids
+    }
   }
   
   # Allow all outbound traffic
@@ -388,7 +432,7 @@ resource "aws_vpc_endpoint" "workspace" {
   vpc_endpoint_type   = "Interface"
   subnet_ids          = [local.privatelink_subnet_id]
   security_group_ids  = [aws_security_group.privatelink.id]
-  private_dns_enabled = false
+  private_dns_enabled = true
   
   tags = merge(var.common_tags, {
     Name = "${var.project_prefix}-workspace-vpce"
@@ -402,7 +446,7 @@ resource "aws_vpc_endpoint" "relay" {
   vpc_endpoint_type   = "Interface"
   subnet_ids          = [local.privatelink_subnet_id]
   security_group_ids  = [aws_security_group.privatelink.id]
-  private_dns_enabled = false
+  private_dns_enabled = true
   
   tags = merge(var.common_tags, {
     Name = "${var.project_prefix}-relay-vpce"
@@ -467,14 +511,7 @@ resource "databricks_mws_storage_configurations" "this" {
   depends_on = [aws_s3_bucket_policy.databricks_root]
 }
 
-# Register VPC network with Databricks
-# Network is registered when:
-# - Creating a new VPC
-# - Using an existing VPC with new subnets
-# - Using an existing VPC with existing subnets
 resource "databricks_mws_networks" "this" {
-  count = var.create_new_vpc || var.create_new_subnets || length(var.existing_subnet_ids) > 0 ? 1 : 0
-  
   provider     = databricks.mws
   account_id   = var.databricks_account_id
   network_name = "${var.project_prefix}-network"
@@ -498,7 +535,7 @@ resource "databricks_mws_workspaces" "this" {
   credentials_id           = databricks_mws_credentials.this.credentials_id
   storage_configuration_id = databricks_mws_storage_configurations.this.storage_configuration_id
   # Network ID is set when using custom network configuration
-  network_id               = length(databricks_mws_networks.this) > 0 ? databricks_mws_networks.this[0].network_id : null
+  network_id               = databricks_mws_networks.this.network_id
   
   {{#if enable_private_link}}
   # PrivateLink configuration

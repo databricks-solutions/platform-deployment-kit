@@ -1667,9 +1667,12 @@ pre code {
 .alert-warning {
   border-left-color: var(--warning);
   background: var(--warning-subtle);
+  color: var(--text-primary);
 }
 
+.alert-warning i,
 .alert-warning .alert-icon,
+.alert-warning strong,
 .alert-warning .alert-title {
   color: var(--warning-text);
 }

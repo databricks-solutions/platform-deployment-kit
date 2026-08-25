@@ -115,6 +115,21 @@ describe('TemplateEngine', () => {
         const vars = engine.prepareVariables({ enable_private_link: false });
         expect(vars.enable_private_link).toBe(false);
       });
+
+      it('defaults NAT gateway mode to per-AZ', () => {
+        const vars = engine.prepareVariables({});
+        expect(vars.nat_gateway_mode).toBe('per_az');
+      });
+
+      it('preserves an explicit single NAT gateway mode', () => {
+        const vars = engine.prepareVariables({ nat_gateway_mode: 'single' });
+        expect(vars.nat_gateway_mode).toBe('single');
+      });
+
+      it('preserves an explicit no NAT gateway mode', () => {
+        const vars = engine.prepareVariables({ nat_gateway_mode: 'none' });
+        expect(vars.nat_gateway_mode).toBe('none');
+      });
     });
 
     describe('availability_zones', () => {

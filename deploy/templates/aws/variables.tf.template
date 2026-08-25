@@ -59,19 +59,13 @@ variable "existing_vpc_id" {
   default     = "{{existing_vpc_id}}"
 }
 
-variable "create_new_subnets" {
-  description = "Whether to create new subnets in existing VPC (only applies when create_new_vpc is false)"
-  type        = bool
-  default     = {{create_new_subnets}}
-}
-
 variable "existing_subnet_ids" {
-  description = "List of existing subnet IDs to use (required if create_new_vpc and create_new_subnets are false)"
+  description = "Private subnet IDs in an existing VPC; must be preconfigured in distinct AZs with Databricks-compatible outbound routing"
   type        = list(string)
   default     = {{{existing_subnet_ids}}}
   
   validation {
-    condition     = var.create_new_vpc || var.create_new_subnets || length(var.existing_subnet_ids) >= 2
+    condition     = var.create_new_vpc || length(var.existing_subnet_ids) >= 2
     error_message = "At least 2 existing subnet IDs are required when using existing subnets."
   }
 }
@@ -82,7 +76,7 @@ variable "existing_security_group_ids" {
   default     = {{{existing_security_group_ids}}}
   
   validation {
-    condition     = var.create_new_vpc || var.create_new_subnets || length(var.existing_security_group_ids) >= 1
+    condition     = var.create_new_vpc || length(var.existing_security_group_ids) >= 1
     error_message = "At least 1 existing security group ID is required when using existing subnets."
   }
 }
@@ -182,10 +176,16 @@ variable "cross_account_role_arn" {
 # ADVANCED CONFIGURATION
 # ----------------------------------------------------------------------------
 
-variable "enable_nat_gateway" {
-  description = "Enable NAT Gateway for private subnet internet access"
-  type        = bool
-  default     = {{enable_nat_gateway}}
+variable "nat_gateway_mode" {
+  description = "NAT topology for managed subnets: 'none' creates no NAT gateway and requires back-end PrivateLink; 'single' creates one shared NAT gateway; 'per_az' creates one NAT gateway per AZ"
+  type        = string
+  default     = "{{nat_gateway_mode}}"
+
+  validation {
+    condition     = contains(["none", "single", "per_az"], var.nat_gateway_mode)
+    error_message = "nat_gateway_mode must be 'none', 'single', or 'per_az'."
+  }
+
 }
 
 variable "enable_vpc_endpoints" {

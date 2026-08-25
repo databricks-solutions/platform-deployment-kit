@@ -1,5 +1,5 @@
 // Service Worker for Databricks Deployer PWA
-const CACHE_NAME = 'databricks-deployer-v8';
+const CACHE_NAME = 'databricks-deployer-v9';
 const BASE_PATH = self.location.pathname.replace('/sw.js', '') || './';
 
 // Template files to cache
@@ -265,4 +265,3 @@ self.addEventListener('message', (event) => {
     );
   }
 });
-

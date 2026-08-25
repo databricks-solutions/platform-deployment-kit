@@ -45,6 +45,11 @@ output "security_group_id" {
   value       = var.create_new_vpc ? aws_security_group.databricks[0].id : null
 }
 
+output "nat_gateway_ids" {
+  description = "NAT Gateway IDs created for managed private subnets"
+  value       = var.create_new_vpc ? module.vpc[0].natgw_ids : []
+}
+
 # ----------------------------------------------------------------------------
 # IAM OUTPUTS
 # ----------------------------------------------------------------------------
