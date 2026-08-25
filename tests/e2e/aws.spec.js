@@ -427,6 +427,31 @@ test.describe('AWS Provider Tests', () => {
       const hasError = await ValidationHelpers.hasFieldValidationError(page, 'enable_private_link', 'Enterprise');
       expect(hasError).toBeTruthy();
     });
+
+    test('should disable review and explain no NAT without PrivateLink', async ({ page }) => {
+      await FormHelpers.fillBasicConfig(page, {
+        project_prefix: 'test',
+        region: 'us-east-1',
+        pricing_tier: 'ENTERPRISE'
+      });
+
+      await FormHelpers.fillNetworkConfig(page, {
+        vpc_cidr: '10.0.0.0/20',
+        availability_zones: ['us-east-1a', 'us-east-1b'],
+        nat_gateway_mode: 'none',
+        enable_private_link: false
+      });
+
+      const submitButton = page.locator('#submit-btn');
+      const validationMessage = page.locator('#submit-validation-message');
+      await expect(submitButton).toBeDisabled();
+      await expect(validationMessage).toBeVisible();
+      await expect(validationMessage).toContainText('No NAT gateway requires AWS PrivateLink');
+
+      await page.locator('#enable_private_link').click();
+      await expect(submitButton).toBeEnabled();
+      await expect(validationMessage).toBeHidden();
+    });
   });
 
   test.describe('Dynamic Interactions', () => {

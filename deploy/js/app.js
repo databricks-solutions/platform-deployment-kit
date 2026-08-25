@@ -2208,15 +2208,24 @@ class App {
                 </div>
               </div>
               
-              <div class="d-flex justify-content-between">
+              <div class="d-flex justify-content-between align-items-start gap-3">
                 <a href="#/select-provider" class="btn btn-outline-secondary btn-lg" data-navigate>
                   <i class="bi bi-arrow-left me-2"></i>
                   Back to Provider Selection
                 </a>
-                <button type="submit" class="btn btn-primary btn-lg px-4" id="submit-btn">
-                  Review Configuration
-                  <i class="bi bi-arrow-right ms-2"></i>
-                </button>
+                <div class="d-flex flex-column align-items-end gap-2">
+                  <button type="submit" class="btn btn-primary btn-lg px-4" id="submit-btn"
+                          aria-describedby="submit-validation-message">
+                    Review Configuration
+                    <i class="bi bi-arrow-right ms-2"></i>
+                  </button>
+                  <div class="alert alert-warning py-2 px-3 mb-0 small text-start"
+                       id="submit-validation-message" role="status" aria-live="polite"
+                       hidden style="max-width: 34rem;">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <span><strong>Review unavailable:</strong> No NAT gateway requires AWS PrivateLink. Enable PrivateLink or select a NAT gateway topology.</span>
+                  </div>
+                </div>
               </div>
             </form>
           </div>
@@ -3170,8 +3179,31 @@ class App {
     const natGatewayOptions = document.getElementById('nat-gateway-options');
     const natGatewayMode = document.getElementById('nat_gateway_mode');
     const natNoGatewayWarning = document.getElementById('nat-no-gateway-warning');
+    const submitButton = document.getElementById('submit-btn');
+    const submitValidationMessage = document.getElementById('submit-validation-message');
     const vpcCidrContainer = document.querySelector('input[name="vpc_cidr"]')?.closest('.mb-3');
     const azContainer = document.querySelector('#availability-zones-select')?.closest('.mb-3');
+
+    const updateSubmissionAvailability = () => {
+      const noNatWithoutPrivateLink = this.currentProvider === 'aws' &&
+        createNewVpcCheckbox?.checked !== false &&
+        natGatewayMode?.value === 'none' &&
+        !privateLinkCheckbox?.checked;
+
+      if (submitButton) {
+        submitButton.disabled = noNatWithoutPrivateLink;
+        submitButton.setAttribute('aria-disabled', String(noNatWithoutPrivateLink));
+        if (noNatWithoutPrivateLink) {
+          submitButton.title = 'Enable AWS PrivateLink or select a NAT gateway topology before reviewing.';
+        } else {
+          submitButton.removeAttribute('title');
+        }
+      }
+
+      if (submitValidationMessage) {
+        submitValidationMessage.hidden = !noNatWithoutPrivateLink;
+      }
+    };
     
     // Helper function to update UI based on VPC and subnet mode
     const updateNetworkConfigUI = () => {
@@ -3223,12 +3255,14 @@ class App {
 
       // Update subnet slider and preview visibility
       calculateSubnets();
+      updateSubmissionAvailability();
     };
 
     const updateNatGatewayGuidance = () => {
       if (natNoGatewayWarning) {
         natNoGatewayWarning.style.display = natGatewayMode?.value === 'none' ? 'block' : 'none';
       }
+      updateSubmissionAvailability();
     };
 
     if (createNewVpcCheckbox) {
@@ -3335,6 +3369,7 @@ class App {
     privateLinkCheckbox?.addEventListener('change', () => {
       checkPrivateLinkRequirements();
       updatePrivatelinkSubnetUI();
+      updateSubmissionAvailability();
       calculateSubnets();
     });
     

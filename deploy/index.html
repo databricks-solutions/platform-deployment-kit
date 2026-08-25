@@ -506,7 +506,7 @@
     <script src="./js/template-loader.js?v=1.0.0"></script>
     <script src="./js/template-engine.js?v=2.0.0"></script>
     <script src="./js/terraform-generator.js?v=1.0.0"></script>
-    <script src="./js/app.js?v=2.1.3"></script>
+    <script src="./js/app.js?v=2.1.4"></script>
 
     <!-- Deploy version display (reads version.json generated at deploy time) -->
     <script>
@@ -584,7 +584,7 @@
         // Service Worker Registration
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=2.1.3')
+                navigator.serviceWorker.register('./sw.js?v=2.1.4')
                     .then((registration) => {
                         console.log('SW registered:', registration);
                         
