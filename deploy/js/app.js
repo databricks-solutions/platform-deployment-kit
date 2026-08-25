@@ -222,7 +222,6 @@ class App {
   renderPricingTierOptions(provider, selectedTier) {
     const tiers = provider === 'aws' 
       ? [
-          { value: 'STANDARD', label: 'Standard' },
           { value: 'PREMIUM', label: 'Premium' },
           { value: 'ENTERPRISE', label: 'Enterprise' }
         ]
@@ -233,7 +232,9 @@ class App {
     
     // Default to the last tier if no selectedTier is provided
     const defaultTier = tiers[tiers.length - 1].value;
-    const effectiveSelection = selectedTier || defaultTier;
+    const effectiveSelection = tiers.some(tier => tier.value === selectedTier)
+      ? selectedTier
+      : defaultTier;
     
     return tiers.map(tier => {
       const selected = tier.value === effectiveSelection ? 'selected' : '';
@@ -2149,13 +2150,18 @@ class App {
                   </h5>
                 </div>
                 <div class="card-body">
-                  <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="enable_private_link" name="enable_private_link">
-                    <label class="form-check-label fw-semibold" for="enable_private_link">
-                      ${this.currentProvider === 'azure' ? 'Enable Private Link' : 
-                        this.currentProvider === 'gcp' ? 'Enable Private Service Connect' : 
-                        'Enable AWS PrivateLink'}
-                    </label>
+                  <div class="private-link-toggle-tooltip" id="private-link-toggle-tooltip">
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" id="enable_private_link" name="enable_private_link">
+                      <label class="form-check-label fw-semibold" for="enable_private_link">
+                        ${this.currentProvider === 'azure' ? 'Enable Private Link' :
+                          this.currentProvider === 'gcp' ? 'Enable Private Service Connect' :
+                          'Enable AWS PrivateLink'}
+                      </label>
+                    </div>
+                    <div class="private-link-validation-tooltip" id="private-link-validation-tooltip" role="tooltip">
+                      AWS PrivateLink requires the Enterprise pricing tier. Select Enterprise to enable it.
+                    </div>
                   </div>
                   <div class="form-text">${this.currentProvider === 'aws' ? 
                     'Enable AWS PrivateLink (requires Enterprise tier)' :
@@ -2239,6 +2245,7 @@ class App {
     const vpcCidrInput = document.querySelector('input[name="vpc_cidr"]');
     const pricingTierSelect = document.querySelector('select[name="pricing_tier"]');
     const privateLinkCheckbox = document.getElementById('enable_private_link');
+    const privateLinkTooltipWrapper = document.getElementById('private-link-toggle-tooltip');
     const privateLinkWarning = document.getElementById('private-link-warning');
     
     // Subnet size slider elements
@@ -3345,6 +3352,40 @@ class App {
         existingPrivatelinkSubnetSection.style.display = userManaged ? 'block' : 'none';
       }
     };
+
+    const updatePrivateLinkAvailability = () => {
+      const enterpriseRequired = this.currentProvider === 'aws' &&
+        pricingTierSelect?.value !== 'ENTERPRISE';
+      const wasEnabled = privateLinkCheckbox?.checked || false;
+
+      if (privateLinkCheckbox) {
+        privateLinkCheckbox.disabled = enterpriseRequired;
+        privateLinkCheckbox.setAttribute('aria-disabled', String(enterpriseRequired));
+        if (enterpriseRequired) {
+          privateLinkCheckbox.checked = false;
+          privateLinkCheckbox.setAttribute('aria-describedby', 'private-link-validation-tooltip');
+        } else {
+          privateLinkCheckbox.removeAttribute('aria-describedby');
+        }
+      }
+
+      if (privateLinkTooltipWrapper) {
+        privateLinkTooltipWrapper.classList.toggle('is-blocked', enterpriseRequired);
+        privateLinkTooltipWrapper.setAttribute('aria-disabled', String(enterpriseRequired));
+        if (enterpriseRequired) {
+          privateLinkTooltipWrapper.setAttribute('tabindex', '0');
+        } else {
+          privateLinkTooltipWrapper.removeAttribute('tabindex');
+        }
+      }
+
+      if (wasEnabled && enterpriseRequired) {
+        updatePrivatelinkSubnetUI();
+        updateSubmissionAvailability();
+      }
+
+      checkPrivateLinkRequirements();
+    };
     
     // Add event listeners for PrivateLink subnet mode
     privatelinkSubnetTerraform?.addEventListener('change', () => {
@@ -3356,16 +3397,15 @@ class App {
       calculateSubnets(); // Recalculate subnets when subnet mode changes
     });
     
-    privateLinkCheckbox?.addEventListener('change', checkPrivateLinkRequirements);
-    pricingTierSelect?.addEventListener('change', checkPrivateLinkRequirements);
-    
     // Real-time subnet calculation event listeners
     // Note: calculateSubnets is already defined earlier in the function
     vpcCidrInput?.addEventListener('input', calculateSubnets);
     pricingTierSelect?.addEventListener('change', () => {
-      checkPrivateLinkRequirements();
+      updatePrivateLinkAvailability();
       calculateSubnets();
     });
+
+    updatePrivateLinkAvailability();
     privateLinkCheckbox?.addEventListener('change', () => {
       checkPrivateLinkRequirements();
       updatePrivatelinkSubnetUI();

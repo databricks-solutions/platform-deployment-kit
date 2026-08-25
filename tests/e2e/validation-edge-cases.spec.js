@@ -22,7 +22,7 @@ test.describe('Project Prefix Validation Edge Cases', () => {
     await FormHelpers.fillBasicConfig(page, {
       project_prefix: '123test',
       region: 'us-east-1',
-      pricing_tier: 'STANDARD'
+      pricing_tier: 'PREMIUM'
     });
     
     await FormHelpers.fillNetworkConfig(page, {
@@ -51,7 +51,7 @@ test.describe('Project Prefix Validation Edge Cases', () => {
     await FormHelpers.fillBasicConfig(page, {
       project_prefix: 'TestProject',
       region: 'us-east-1',
-      pricing_tier: 'STANDARD'
+      pricing_tier: 'PREMIUM'
     });
     
     await FormHelpers.fillNetworkConfig(page, {
@@ -78,7 +78,7 @@ test.describe('Project Prefix Validation Edge Cases', () => {
     await FormHelpers.fillBasicConfig(page, {
       project_prefix: 'test@project!',
       region: 'us-east-1',
-      pricing_tier: 'STANDARD'
+      pricing_tier: 'PREMIUM'
     });
     
     await FormHelpers.fillNetworkConfig(page, {
@@ -104,7 +104,7 @@ test.describe('Project Prefix Validation Edge Cases', () => {
     await FormHelpers.fillBasicConfig(page, {
       project_prefix: 'test-project-name',
       region: 'us-east-1',
-      pricing_tier: 'STANDARD'
+      pricing_tier: 'PREMIUM'
     });
     
     await FormHelpers.fillNetworkConfig(page, {
@@ -123,7 +123,7 @@ test.describe('Project Prefix Validation Edge Cases', () => {
     await FormHelpers.fillBasicConfig(page, {
       project_prefix: 'test_project_name',
       region: 'us-east-1',
-      pricing_tier: 'STANDARD'
+      pricing_tier: 'PREMIUM'
     });
     
     await FormHelpers.fillNetworkConfig(page, {
@@ -288,7 +288,7 @@ test.describe('Provider Switch Tests', () => {
     await FormHelpers.fillBasicConfig(page, {
       project_prefix: 'aws-az',
       region: 'us-east-1',
-      pricing_tier: 'STANDARD'
+      pricing_tier: 'PREMIUM'
     });
     
     // Get AWS AZ options
@@ -326,7 +326,7 @@ test.describe('VPC CIDR Validation Edge Cases', () => {
     await FormHelpers.fillBasicConfig(page, {
       project_prefix: 'cidr-test',
       region: 'us-east-1',
-      pricing_tier: 'STANDARD'
+      pricing_tier: 'PREMIUM'
     });
     
     await page.fill('input[name="vpc_cidr"]', '10.0.0.0');
@@ -344,7 +344,7 @@ test.describe('VPC CIDR Validation Edge Cases', () => {
     await FormHelpers.fillBasicConfig(page, {
       project_prefix: 'cidr-invalid-ip',
       region: 'us-east-1',
-      pricing_tier: 'STANDARD'
+      pricing_tier: 'PREMIUM'
     });
     
     await page.fill('input[name="vpc_cidr"]', '999.999.999.999/20');
@@ -362,7 +362,7 @@ test.describe('VPC CIDR Validation Edge Cases', () => {
     await FormHelpers.fillBasicConfig(page, {
       project_prefix: 'cidr-invalid-prefix',
       region: 'us-east-1',
-      pricing_tier: 'STANDARD'
+      pricing_tier: 'PREMIUM'
     });
     
     await page.fill('input[name="vpc_cidr"]', '10.0.0.0/99');
@@ -380,7 +380,7 @@ test.describe('VPC CIDR Validation Edge Cases', () => {
     await FormHelpers.fillBasicConfig(page, {
       project_prefix: 'cidr-valid-ip',
       region: 'us-east-1',
-      pricing_tier: 'STANDARD'
+      pricing_tier: 'PREMIUM'
     });
     
     // Test 10.x.x.x range
@@ -421,7 +421,7 @@ test.describe('Existing VPC/VNet Tests', () => {
     await FormHelpers.fillBasicConfig(page, {
       project_prefix: 'existing-vpc',
       region: 'us-east-1',
-      pricing_tier: 'STANDARD'
+      pricing_tier: 'PREMIUM'
     });
     
     // Toggle to use existing VPC
@@ -447,7 +447,7 @@ test.describe('Existing VPC/VNet Tests', () => {
     await FormHelpers.fillBasicConfig(page, {
       project_prefix: 'hide-cidr',
       region: 'us-east-1',
-      pricing_tier: 'STANDARD'
+      pricing_tier: 'PREMIUM'
     });
     
     // Initially, VPC CIDR should be visible
@@ -509,7 +509,7 @@ test.describe('Form Persistence Tests', () => {
     await FormHelpers.fillBasicConfig(page, {
       project_prefix: 'persist-refresh',
       region: 'us-east-1',
-      pricing_tier: 'STANDARD'
+      pricing_tier: 'PREMIUM'
     });
     await FormHelpers.fillNetworkConfig(page, {
       vpc_cidr: '10.0.0.0/20',
@@ -538,7 +538,7 @@ test.describe('Form Persistence Tests', () => {
     await FormHelpers.fillBasicConfig(page, {
       project_prefix: 'will-be-cleared',
       region: 'us-east-1',
-      pricing_tier: 'STANDARD'
+      pricing_tier: 'PREMIUM'
     });
     
     // Navigate to reset

@@ -55,7 +55,7 @@ test.describe('Summary Page Tests', () => {
       await FormHelpers.fillBasicConfig(page, {
         project_prefix: 'aws-subnets',
         region: 'us-west-2',
-        pricing_tier: 'STANDARD'
+        pricing_tier: 'PREMIUM'
       });
       await FormHelpers.fillNetworkConfig(page, {
         vpc_cidr: '10.0.0.0/20',
@@ -75,7 +75,7 @@ test.describe('Summary Page Tests', () => {
       await FormHelpers.fillBasicConfig(page, {
         project_prefix: 'aws-subnet-count',
         region: 'us-west-2',
-        pricing_tier: 'STANDARD'
+        pricing_tier: 'PREMIUM'
       });
       await FormHelpers.fillNetworkConfig(page, {
         vpc_cidr: '10.0.0.0/20',
@@ -221,7 +221,7 @@ test.describe('Download/Generate Tests', () => {
       await FormHelpers.fillBasicConfig(page, {
         project_prefix: 'aws-confirm',
         region: 'us-east-1',
-        pricing_tier: 'STANDARD'
+        pricing_tier: 'PREMIUM'
       });
       await FormHelpers.fillNetworkConfig(page, {
         vpc_cidr: '10.0.0.0/20',
@@ -247,7 +247,7 @@ test.describe('Download/Generate Tests', () => {
       await FormHelpers.fillBasicConfig(page, {
         project_prefix: 'aws-enable-gen',
         region: 'us-east-1',
-        pricing_tier: 'STANDARD'
+        pricing_tier: 'PREMIUM'
       });
       await FormHelpers.fillNetworkConfig(page, {
         vpc_cidr: '10.0.0.0/20',
@@ -386,7 +386,7 @@ test.describe('Download/Generate Tests', () => {
       await FormHelpers.fillBasicConfig(page, {
         project_prefix: 'aws-instructions',
         region: 'us-east-1',
-        pricing_tier: 'STANDARD'
+        pricing_tier: 'PREMIUM'
       });
       await FormHelpers.fillNetworkConfig(page, {
         vpc_cidr: '10.0.0.0/20',
@@ -413,7 +413,7 @@ test.describe('Download/Generate Tests', () => {
       await FormHelpers.fillBasicConfig(page, {
         project_prefix: 'aws-creds',
         region: 'us-east-1',
-        pricing_tier: 'STANDARD'
+        pricing_tier: 'PREMIUM'
       });
       await FormHelpers.fillNetworkConfig(page, {
         vpc_cidr: '10.0.0.0/20',
@@ -447,7 +447,7 @@ test.describe('Back Navigation from Summary', () => {
     await FormHelpers.fillBasicConfig(page, {
       project_prefix: 'nav-back',
       region: 'us-east-1',
-      pricing_tier: 'STANDARD'
+      pricing_tier: 'PREMIUM'
     });
     await FormHelpers.fillNetworkConfig(page, {
       vpc_cidr: '10.0.0.0/20',

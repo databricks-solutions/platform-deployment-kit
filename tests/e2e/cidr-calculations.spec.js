@@ -21,7 +21,7 @@ test.describe('CIDR Calculations', () => {
       await FormHelpers.fillBasicConfig(page, {
         project_prefix: 'test',
         region: 'us-east-1',
-        pricing_tier: 'STANDARD'
+        pricing_tier: 'PREMIUM'
       });
       
       await FormHelpers.fillNetworkConfig(page, {
@@ -64,7 +64,7 @@ test.describe('CIDR Calculations', () => {
       await FormHelpers.fillBasicConfig(page, {
         project_prefix: 'test',
         region: 'us-east-1',
-        pricing_tier: 'STANDARD'
+        pricing_tier: 'PREMIUM'
       });
       
       await FormHelpers.fillNetworkConfig(page, {
@@ -233,7 +233,7 @@ test.describe('CIDR Calculations', () => {
       await FormHelpers.fillBasicConfig(page, {
         project_prefix: 'test',
         region: 'us-east-1',
-        pricing_tier: 'STANDARD'
+        pricing_tier: 'PREMIUM'
       });
       
       await FormHelpers.fillNetworkConfig(page, {
@@ -288,7 +288,7 @@ test.describe('CIDR Calculations', () => {
       await FormHelpers.fillBasicConfig(page, {
         project_prefix: 'large-cidr',
         region: 'us-east-1',
-        pricing_tier: 'STANDARD'
+        pricing_tier: 'PREMIUM'
       });
       
       await FormHelpers.fillNetworkConfig(page, {
@@ -326,7 +326,7 @@ test.describe('CIDR Calculations', () => {
       await FormHelpers.fillBasicConfig(page, {
         project_prefix: 'min-cidr',
         region: 'us-east-1',
-        pricing_tier: 'STANDARD'
+        pricing_tier: 'PREMIUM'
       });
       
       await FormHelpers.fillNetworkConfig(page, {
@@ -466,7 +466,7 @@ test.describe('CIDR Calculations', () => {
       await FormHelpers.fillBasicConfig(page, {
         project_prefix: 'util-test',
         region: 'us-east-1',
-        pricing_tier: 'STANDARD'
+        pricing_tier: 'PREMIUM'
       });
 
       // Set up with /20 first
@@ -527,7 +527,7 @@ test.describe('CIDR Calculations', () => {
       await FormHelpers.fillBasicConfig(page, {
         project_prefix: 'max-az',
         region: 'us-east-1',
-        pricing_tier: 'STANDARD'
+        pricing_tier: 'PREMIUM'
       });
       
       await FormHelpers.fillNetworkConfig(page, {

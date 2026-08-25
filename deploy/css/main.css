@@ -1218,12 +1218,14 @@ pre code {
   margin-left: auto;
 }
 
-.review-button-tooltip {
+.review-button-tooltip,
+.private-link-toggle-tooltip {
   position: relative;
   display: inline-flex;
 }
 
-.submit-validation-tooltip {
+.submit-validation-tooltip,
+.private-link-validation-tooltip {
   position: absolute;
   right: 0;
   bottom: calc(100% + var(--space-3));
@@ -1245,7 +1247,8 @@ pre code {
   pointer-events: none;
 }
 
-.submit-validation-tooltip::after {
+.submit-validation-tooltip::after,
+.private-link-validation-tooltip::after {
   content: '';
   position: absolute;
   top: 100%;
@@ -1254,9 +1257,22 @@ pre code {
   border-top-color: var(--warning);
 }
 
+.private-link-validation-tooltip {
+  right: auto;
+  left: 0;
+}
+
+.private-link-validation-tooltip::after {
+  right: auto;
+  left: var(--space-8);
+}
+
 .review-button-tooltip.is-blocked:hover .submit-validation-tooltip,
 .review-button-tooltip.is-blocked:focus .submit-validation-tooltip,
-.review-button-tooltip.is-blocked:focus-within .submit-validation-tooltip {
+.review-button-tooltip.is-blocked:focus-within .submit-validation-tooltip,
+.private-link-toggle-tooltip.is-blocked:hover .private-link-validation-tooltip,
+.private-link-toggle-tooltip.is-blocked:focus .private-link-validation-tooltip,
+.private-link-toggle-tooltip.is-blocked:focus-within .private-link-validation-tooltip {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);

@@ -115,7 +115,7 @@ class Validators {
     }
     
     const validTiers = {
-      aws: ['STANDARD', 'PREMIUM', 'ENTERPRISE'],
+      aws: ['PREMIUM', 'ENTERPRISE'],
       azure: ['STANDARD', 'PREMIUM'],
       gcp: ['STANDARD', 'PREMIUM']
     };

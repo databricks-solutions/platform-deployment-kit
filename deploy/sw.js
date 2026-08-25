@@ -1,5 +1,5 @@
 // Service Worker for Databricks Deployer PWA
-const CACHE_NAME = 'databricks-deployer-v12';
+const CACHE_NAME = 'databricks-deployer-v14';
 const BASE_PATH = self.location.pathname.replace('/sw.js', '') || './';
 
 // Template files to cache

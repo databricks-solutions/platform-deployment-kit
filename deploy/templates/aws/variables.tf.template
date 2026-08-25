@@ -114,13 +114,13 @@ variable "databricks_account_id" {
 }
 
 variable "pricing_tier" {
-  description = "Databricks workspace pricing tier: STANDARD, PREMIUM, or ENTERPRISE"
+  description = "Databricks workspace pricing tier: PREMIUM or ENTERPRISE"
   type        = string
   default     = "{{pricing_tier}}"
   
   validation {
-    condition     = contains(["STANDARD", "PREMIUM", "ENTERPRISE"], var.pricing_tier)
-    error_message = "Pricing tier must be one of: STANDARD, PREMIUM, or ENTERPRISE."
+    condition     = contains(["PREMIUM", "ENTERPRISE"], var.pricing_tier)
+    error_message = "Pricing tier must be one of: PREMIUM or ENTERPRISE."
   }
 }
 

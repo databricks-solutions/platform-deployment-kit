@@ -207,7 +207,6 @@ describe('Validators.validatePricingTier', () => {
   });
 
   test('valid AWS tiers', () => {
-    expect(Validators.validatePricingTier('STANDARD', 'aws')).toEqual({ valid: true, message: '' });
     expect(Validators.validatePricingTier('PREMIUM', 'aws')).toEqual({ valid: true, message: '' });
     expect(Validators.validatePricingTier('ENTERPRISE', 'aws')).toEqual({ valid: true, message: '' });
   });
@@ -215,7 +214,7 @@ describe('Validators.validatePricingTier', () => {
   test('invalid AWS tier returns error with valid options', () => {
     const result = Validators.validatePricingTier('BASIC', 'aws');
     expect(result.valid).toBe(false);
-    expect(result.message).toMatch(/STANDARD, PREMIUM, ENTERPRISE/);
+    expect(result.message).toMatch(/PREMIUM, ENTERPRISE/);
   });
 
   test('valid Azure tiers', () => {
@@ -249,12 +248,12 @@ describe('Validators.validatePricingTier', () => {
 // ---------------------------------------------------------------------------
 describe('Validators.validatePricingTierFeatures', () => {
   test('no private link — no errors', () => {
-    expect(Validators.validatePricingTierFeatures({ provider: 'aws', pricing_tier: 'STANDARD', enable_private_link: false })).toEqual({});
-    expect(Validators.validatePricingTierFeatures({ provider: 'aws', pricing_tier: 'STANDARD' })).toEqual({});
+    expect(Validators.validatePricingTierFeatures({ provider: 'aws', pricing_tier: 'PREMIUM', enable_private_link: false })).toEqual({});
+    expect(Validators.validatePricingTierFeatures({ provider: 'aws', pricing_tier: 'PREMIUM' })).toEqual({});
   });
 
   test('AWS PrivateLink without ENTERPRISE returns error', () => {
-    const errors = Validators.validatePricingTierFeatures({ provider: 'aws', pricing_tier: 'STANDARD', enable_private_link: true });
+    const errors = Validators.validatePricingTierFeatures({ provider: 'aws', pricing_tier: 'PREMIUM', enable_private_link: true });
     expect(errors.enable_private_link).toMatch(/enterprise/i);
   });
 
@@ -628,7 +627,7 @@ describe('Validators.validateConfiguration', () => {
     provider: 'aws',
     project_prefix: 'myproject',
     region: 'us-east-1',
-    pricing_tier: 'STANDARD',
+    pricing_tier: 'PREMIUM',
     create_new_vpc: true,
     vpc_cidr: '10.0.0.0/16',
     availability_zones: ['us-east-1a', 'us-east-1b'],
@@ -694,7 +693,7 @@ describe('Validators.validateConfiguration', () => {
       provider: 'azure',
       project_prefix: 'myproject',
       region: 'eastus',
-      pricing_tier: 'STANDARD',
+      pricing_tier: 'PREMIUM',
       create_new_vpc: true,
       vpc_cidr: '10.0.0.0/16',
       availability_zones: ['1', '2'],
@@ -808,7 +807,7 @@ describe('Validators.validateConfiguration', () => {
   test('AWS PrivateLink without ENTERPRISE returns feature error', () => {
     const config = {
       ...validAwsConfig,
-      pricing_tier: 'STANDARD',
+      pricing_tier: 'PREMIUM',
       enable_private_link: true,
     };
     const result = Validators.validateConfiguration(config);
