@@ -442,24 +442,28 @@ test.describe('AWS Provider Tests', () => {
         enable_private_link: false
       });
 
+      const backButton = page.locator('.configuration-actions > a');
       const submitButton = page.locator('#submit-btn');
-      const validationMessage = page.locator('#submit-validation-message');
+      const tooltipWrapper = page.locator('#review-button-tooltip');
+      const validationTooltip = page.locator('#submit-validation-tooltip');
       await expect(submitButton).toBeDisabled();
-      await expect(validationMessage).toBeVisible();
-      await expect(validationMessage).toContainText('No NAT gateway requires AWS PrivateLink');
+      await expect(validationTooltip).toBeHidden();
 
-      const [buttonBox, messageBox] = await Promise.all([
-        submitButton.boundingBox(),
-        validationMessage.boundingBox()
+      const [backButtonBox, submitButtonBox] = await Promise.all([
+        backButton.boundingBox(),
+        submitButton.boundingBox()
       ]);
-      expect(buttonBox).not.toBeNull();
-      expect(messageBox).not.toBeNull();
-      expect(Math.abs(buttonBox.x - messageBox.x)).toBeLessThanOrEqual(1);
-      expect(Math.abs(buttonBox.width - messageBox.width)).toBeLessThanOrEqual(1);
+      expect(backButtonBox).not.toBeNull();
+      expect(submitButtonBox).not.toBeNull();
+      expect(Math.abs(backButtonBox.y - submitButtonBox.y)).toBeLessThanOrEqual(1);
+
+      await tooltipWrapper.hover();
+      await expect(validationTooltip).toBeVisible();
+      await expect(validationTooltip).toContainText('No NAT gateway requires AWS PrivateLink');
 
       await page.locator('#enable_private_link').click();
       await expect(submitButton).toBeEnabled();
-      await expect(validationMessage).toBeHidden();
+      await expect(validationTooltip).toBeHidden();
     });
   });
 

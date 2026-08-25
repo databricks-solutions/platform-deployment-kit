@@ -2213,16 +2213,16 @@ class App {
                   <i class="bi bi-arrow-left me-2"></i>
                   Back to Provider Selection
                 </a>
-                <div class="configuration-review d-flex flex-column align-items-stretch gap-2">
-                  <button type="submit" class="btn btn-primary btn-lg px-4" id="submit-btn"
-                          aria-describedby="submit-validation-message">
-                    Review Configuration
-                    <i class="bi bi-arrow-right ms-2"></i>
-                  </button>
-                  <div class="alert alert-warning py-2 px-3 mb-0 small text-start"
-                       id="submit-validation-message" role="status" aria-live="polite" hidden>
-                    <i class="bi bi-exclamation-triangle me-2"></i>
-                    <span><strong>Review unavailable:</strong> No NAT gateway requires AWS PrivateLink. Enable PrivateLink or select a NAT gateway topology.</span>
+                <div class="configuration-review">
+                  <div class="review-button-tooltip" id="review-button-tooltip">
+                    <button type="submit" class="btn btn-primary btn-lg px-4" id="submit-btn"
+                            aria-describedby="submit-validation-tooltip">
+                      Review Configuration
+                      <i class="bi bi-arrow-right ms-2"></i>
+                    </button>
+                    <div class="submit-validation-tooltip" id="submit-validation-tooltip" role="tooltip">
+                      No NAT gateway requires AWS PrivateLink. Enable PrivateLink or select a NAT gateway topology.
+                    </div>
                   </div>
                 </div>
               </div>
@@ -3179,7 +3179,7 @@ class App {
     const natGatewayMode = document.getElementById('nat_gateway_mode');
     const natNoGatewayWarning = document.getElementById('nat-no-gateway-warning');
     const submitButton = document.getElementById('submit-btn');
-    const submitValidationMessage = document.getElementById('submit-validation-message');
+    const reviewButtonTooltip = document.getElementById('review-button-tooltip');
     const vpcCidrContainer = document.querySelector('input[name="vpc_cidr"]')?.closest('.mb-3');
     const azContainer = document.querySelector('#availability-zones-select')?.closest('.mb-3');
 
@@ -3192,15 +3192,16 @@ class App {
       if (submitButton) {
         submitButton.disabled = noNatWithoutPrivateLink;
         submitButton.setAttribute('aria-disabled', String(noNatWithoutPrivateLink));
-        if (noNatWithoutPrivateLink) {
-          submitButton.title = 'Enable AWS PrivateLink or select a NAT gateway topology before reviewing.';
-        } else {
-          submitButton.removeAttribute('title');
-        }
       }
 
-      if (submitValidationMessage) {
-        submitValidationMessage.hidden = !noNatWithoutPrivateLink;
+      if (reviewButtonTooltip) {
+        reviewButtonTooltip.classList.toggle('is-blocked', noNatWithoutPrivateLink);
+        reviewButtonTooltip.setAttribute('aria-disabled', String(noNatWithoutPrivateLink));
+        if (noNatWithoutPrivateLink) {
+          reviewButtonTooltip.setAttribute('tabindex', '0');
+        } else {
+          reviewButtonTooltip.removeAttribute('tabindex');
+        }
       }
     };
     

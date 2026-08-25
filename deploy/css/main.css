@@ -1215,17 +1215,51 @@ pre code {
 }
 
 .configuration-review {
-  width: min(100%, 34rem);
   margin-left: auto;
 }
 
-.configuration-review > .btn,
-.configuration-review > .alert {
-  width: 100%;
+.review-button-tooltip {
+  position: relative;
+  display: inline-flex;
 }
 
-.configuration-review > .alert {
-  animation: none;
+.submit-validation-tooltip {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + var(--space-3));
+  z-index: var(--z-tooltip);
+  width: max-content;
+  max-width: min(30rem, calc(100vw - 2rem));
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--warning);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(var(--space-1));
+  transition: opacity var(--transition-fast), transform var(--transition-fast), visibility var(--transition-fast);
+  pointer-events: none;
+}
+
+.submit-validation-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  right: var(--space-8);
+  border: 8px solid transparent;
+  border-top-color: var(--warning);
+}
+
+.review-button-tooltip.is-blocked:hover .submit-validation-tooltip,
+.review-button-tooltip.is-blocked:focus .submit-validation-tooltip,
+.review-button-tooltip.is-blocked:focus-within .submit-validation-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
 }
 
 /* Form Validation States */
@@ -2942,6 +2976,11 @@ footer .deploy-version {
   .configuration-review {
     width: 100%;
     margin-left: 0;
+  }
+
+  .review-button-tooltip,
+  .review-button-tooltip > .btn {
+    width: 100%;
   }
 
   .btn + .btn {
