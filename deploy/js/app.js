@@ -1541,7 +1541,6 @@ class App {
                       <select class="form-select" name="pricing_tier" required>
                         ${this.renderPricingTierOptions(this.currentProvider, this.currentConfig.pricing_tier)}
                       </select>
-                      <div class="form-text">Databricks workspace pricing tier (affects available features)</div>
                     </div>
                     ` : ''}
                     ${this.currentProvider === 'azure' ? `
@@ -1584,7 +1583,6 @@ class App {
                                      value="${this.currentConfig.metastore_id || ''}"
                                      placeholder="e.g., 12345678-1234-1234-1234-123456789abc">
                             </div>
-                            <div class="form-text mt-2">This deployment requires a metastore assignment.</div>
                           </div>
                         </div>
                       </div>
@@ -1682,7 +1680,6 @@ class App {
                         <input type="email" class="form-control" name="google_service_account_email"
                                value="${this.currentConfig.google_service_account_email || ''}"
                                placeholder="workspace-creator@my-project.iam.gserviceaccount.com" required>
-                        <div class="form-text">Service account used by the Google and Databricks providers.</div>
                       </div>
                       <div class="col-md-6">
                         <label class="form-label fw-semibold">Databricks Account ID <span class="text-danger">*</span></label>
@@ -1726,7 +1723,6 @@ class App {
                     <input type="text" class="form-control" id="subnet_cidr" name="subnet_cidr"
                            value="${this.currentConfig.subnet_cidr || '10.10.0.0/20'}"
                            placeholder="e.g., 10.10.0.0/20" required>
-                    <div class="form-text">Primary IPv4 CIDR for the subnet created for Databricks compute.</div>
                   </div>
                   ` : `
                   <div class="mb-3">
@@ -1737,9 +1733,6 @@ class App {
                       </label>
                       ${this.renderHelpButton('network-mode', this.currentProvider === 'azure' ? 'new or existing VNet' : 'new or existing VPC')}
                     </div>
-                    <div class="form-text">${this.currentProvider === 'azure' ? 
-                      'The standard deployment can create a VNet or add new Databricks subnets to an existing VNet' :
-                      'Create a new VPC or use an existing one'}</div>
                   </div>
                   ${this.currentProvider === 'azure' ? `
                   <div class="mb-3" id="azure-vnet-resource-group-field">
@@ -1761,7 +1754,6 @@ class App {
                       <option value="3" ${savedAzureNatGatewayZone === '3' ? 'selected' : ''}>Availability Zone 3</option>
                       <option value="" ${savedAzureNatGatewayZone === '' ? 'selected' : ''}>Regional / non-zonal</option>
                     </select>
-                    <div class="form-text">The standard deployment creates one NAT gateway and public IP. Zonal placement keeps them in the selected zone; regional placement is not tied to one zone and supports regions without availability zones.</div>
                   </div>
                   ` : ''}
                   ${this.currentProvider === 'aws' || this.currentProvider === 'azure' ? `
@@ -1779,9 +1771,6 @@ class App {
                       ` : ''}
                       <option value="none" ${savedNatGatewayMode === 'none' ? 'selected' : ''}>No NAT gateway</option>
                     </select>
-                    <div class="form-text">${this.currentProvider === 'azure'
-                      ? 'Single provides general outbound internet through one NAT gateway and public IP. None provides no general internet egress; use service endpoints or route required traffic through a firewall or network virtual appliance (NVA).'
-                      : 'Single costs less but shares one gateway across zones and can add a cross-zone dependency and data charges. Per-zone keeps egress local and improves zone resilience at higher cost. None provides no general internet egress and requires Back-end PrivateLink plus private AWS service endpoints.'}</div>
                     ${this.currentProvider === 'azure' ? `
                     <div class="mt-3" id="azure-private-link-nat-gateway-zone-section"
                          ${savedNatGatewayMode === 'none' ? 'style="display: none;"' : ''}>
@@ -1795,7 +1784,6 @@ class App {
                         <option value="2" ${savedAzurePrivateLinkNatGatewayZone === '2' ? 'selected' : ''}>Availability Zone 2</option>
                         <option value="3" ${savedAzurePrivateLinkNatGatewayZone === '3' ? 'selected' : ''}>Availability Zone 3</option>
                       </select>
-                      <div class="form-text">Regional placement is not tied to one availability zone. Zonal placement pins the NAT gateway and public IP to the selected zone.</div>
                     </div>
                     ` : ''}
                     <div id="nat-gateway-private-link-message" class="alert alert-warning mt-2 mb-0" style="display: none;">
@@ -1964,7 +1952,6 @@ class App {
                     <select id="availability-zones-select" class="form-select" name="availability_zones" multiple required>
                       <option value="" disabled>Select availability zones</option>
                     </select>
-                    <div class="form-text">Select at least two distinct zones in the chosen region. Workspace subnets are distributed across them; when “one NAT gateway per availability zone” is selected, this also determines how many NAT gateways are created.</div>
                   </div>
                   ` : ''}
                   <div id="subnet-size-slider-container" class="mb-4" style="display: none;">
@@ -2006,9 +1993,6 @@ class App {
                         </div>
                       </div>
                     </div>
-                    <div class="form-text mt-2" id="subnet-size-description">
-                      Adjust the subnet size based on your expected cluster size. Larger subnets support more concurrent nodes.
-                    </div>
                   </div>
                   <div id="subnets-preview" class="mt-4" style="display: none;">
                     <h6 class="fw-bold text-primary mb-3">
@@ -2041,11 +2025,6 @@ class App {
                     </label>
                     ${this.renderHelpButton('backend-private-link', this.currentProvider === 'azure' ? 'Back-end Private Link' : 'Back-end PrivateLink')}
                   </div>
-                  <div class="form-text">${this.currentProvider === 'aws' ? 
-                    'Enable Back-end PrivateLink (requires Enterprise tier)' :
-                    this.currentProvider === 'azure' ?
-                    'Use classic Back-end and DBFS Private Link. The workspace UI remains public.' :
-                    'Enable Private Service Connect (requires Premium tier)'}</div>
                   <div id="private-link-warning" class="alert alert-info mt-2" style="display: none;">
                     <i class="bi bi-info-circle me-2"></i>
                     <strong>Note:</strong> Private connectivity requires 
