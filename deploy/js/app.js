@@ -1954,44 +1954,17 @@ class App {
                     </select>
                   </div>
                   ` : ''}
-                  <div id="subnet-size-slider-container" class="mb-4" style="display: none;">
+                  <div id="subnet-size-selector-container" class="mb-4" style="display: none;">
                     <div class="field-label-with-help">
-                      <label class="form-label fw-semibold">
+                      <div class="form-label fw-semibold">
                         <i class="bi bi-sliders me-2"></i>
                         Subnet Size
                         <span class="text-muted small ms-2" id="subnet-size-info"></span>
-                      </label>
+                      </div>
                       ${this.renderHelpButton('subnet-sizing', 'subnet sizing')}
                     </div>
-                    <div class="subnet-slider-wrapper">
-                      <input type="range" class="form-range subnet-size-slider" id="subnet-size-slider" 
-                             min="17" max="28" step="1" value="26" name="custom_subnet_size">
-                      <div class="slider-labels d-flex justify-content-between mt-1">
-                        <span class="small text-muted" id="slider-label-min">Larger subnets</span>
-                        <span class="small text-muted" id="slider-label-max">Smaller subnets</span>
-                      </div>
-                    </div>
-                    <div class="subnet-size-details mt-3">
-                      <div class="row g-2 text-center">
-                        <div class="col-4">
-                          <div class="subnet-metric">
-                            <div class="h5 mb-0 text-primary" id="subnet-size-display">/<span>26</span></div>
-                            <div class="small text-muted">Subnet Prefix</div>
-                          </div>
-                        </div>
-                        <div class="col-4">
-                          <div class="subnet-metric">
-                            <div class="h5 mb-0 text-success" id="subnet-ips-display">64</div>
-                            <div class="small text-muted">IPs per Subnet</div>
-                          </div>
-                        </div>
-                        <div class="col-4">
-                          <div class="subnet-metric">
-                            <div class="h5 mb-0 text-info" id="subnet-nodes-display">~30</div>
-                            <div class="small text-muted">Max Nodes</div>
-                          </div>
-                        </div>
-                      </div>
+                    <div id="subnet-size-options" class="subnet-size-options" role="radiogroup" aria-label="Subnet size">
+                      <div class="subnet-size-empty">Complete the network settings to see available subnet sizes.</div>
                     </div>
                   </div>
                   <div id="subnets-preview" class="mt-4" style="display: none;">
@@ -2066,31 +2039,86 @@ class App {
     const azureNatGatewayZoneSection = document.getElementById('azure-nat-gateway-zone-section');
     const azurePrivateLinkNatGatewayZoneSection = document.getElementById('azure-private-link-nat-gateway-zone-section');
     
-    // Subnet size slider elements
-    const subnetSizeSliderContainer = document.getElementById('subnet-size-slider-container');
-    const subnetSizeSlider = document.getElementById('subnet-size-slider');
-    const subnetSizeDisplay = document.querySelector('#subnet-size-display span');
-    const subnetIpsDisplay = document.getElementById('subnet-ips-display');
-    const subnetNodesDisplay = document.getElementById('subnet-nodes-display');
-    const sliderLabelMin = document.getElementById('slider-label-min');
-    const sliderLabelMax = document.getElementById('slider-label-max');
-    
-    // Store current slider limits
-    let currentSliderLimits = null;
-    let userHasAdjustedSubnetSize = false;
-    
-    // Function to update slider display values
-    const updateSliderDisplay = (prefixSize) => {
-      if (!subnetSizeDisplay || !subnetIpsDisplay || !subnetNodesDisplay) return;
-      
-      const ips = Math.pow(2, 32 - prefixSize);
-      // Each Databricks node requires 2 IPs, minus 5 reserved
-      const usableIPs = Math.max(0, ips - 5);
-      const maxNodes = Math.floor(usableIPs / 2);
-      
-      subnetSizeDisplay.textContent = prefixSize;
-      subnetIpsDisplay.textContent = Utils.formatNumber(ips);
-      subnetNodesDisplay.textContent = `~${Utils.formatNumber(maxNodes)}`;
+    // Subnet size selector elements
+    const subnetSizeSelectorContainer = document.getElementById('subnet-size-selector-container');
+    const subnetSizeOptions = document.getElementById('subnet-size-options');
+
+    // Store the current available range and user choice.
+    let currentSubnetLimits = null;
+    const configuredSubnetSize = parseInt(this.currentConfig.custom_subnet_size, 10);
+    let selectedSubnetSize = Number.isNaN(configuredSubnetSize) ? null : configuredSubnetSize;
+    let userHasAdjustedSubnetSize = selectedSubnetSize !== null;
+
+    const readSelectedSubnetSize = () => {
+      const selectedControl = subnetSizeOptions?.querySelector(
+        'input[name="custom_subnet_size"]:checked, input.subnet-size-range'
+      );
+      if (!selectedControl) return selectedSubnetSize;
+      const value = parseInt(selectedControl.value, 10);
+      return Number.isNaN(value) ? selectedSubnetSize : value;
+    };
+
+    const renderSubnetSizeOptions = (limits, selectedPrefix) => {
+      if (!subnetSizeOptions) return;
+
+      if (!limits?.valid) {
+        subnetSizeOptions.className = 'subnet-size-options';
+        subnetSizeOptions.setAttribute('role', 'radiogroup');
+        subnetSizeOptions.innerHTML = '<div class="subnet-size-empty">No compatible subnet sizes are available for this configuration.</div>';
+        return;
+      }
+
+      const prefixes = [];
+      for (let prefix = limits.min; prefix <= limits.max; prefix += 1) {
+        prefixes.push(prefix);
+      }
+
+      // Cards make a short list easy to scan. A slider keeps larger ranges compact.
+      if (prefixes.length <= 4) {
+        subnetSizeOptions.className = 'subnet-size-options';
+        subnetSizeOptions.setAttribute('role', 'radiogroup');
+        subnetSizeOptions.innerHTML = prefixes.map(prefix => {
+          const ips = limits.getIPsForSize(prefix);
+          const maxNodes = limits.getMaxNodes(prefix);
+          const isRecommended = prefix === limits.default;
+          return `
+            <div class="subnet-size-choice">
+              <input class="subnet-size-radio" type="radio" name="custom_subnet_size"
+                     id="subnet-size-${prefix}" value="${prefix}"
+                     ${prefix === selectedPrefix ? 'checked' : ''}>
+              <label class="subnet-size-option" for="subnet-size-${prefix}">
+                ${isRecommended ? '<span class="subnet-size-recommended">Recommended</span>' : ''}
+                <span class="subnet-size-prefix">/${prefix}</span>
+                <span class="subnet-size-capacity">${Utils.formatNumber(ips)} IPs</span>
+                <span class="subnet-size-nodes">~${Utils.formatNumber(maxNodes)} max nodes</span>
+              </label>
+            </div>
+          `;
+        }).join('');
+        return;
+      }
+
+      const selectedIps = limits.getIPsForSize(selectedPrefix);
+      const selectedMaxNodes = limits.getMaxNodes(selectedPrefix);
+      const minIps = limits.getIPsForSize(limits.min);
+      const maxIps = limits.getIPsForSize(limits.max);
+      subnetSizeOptions.className = 'subnet-size-range-wrapper';
+      subnetSizeOptions.removeAttribute('role');
+      subnetSizeOptions.innerHTML = `
+        <label class="visually-hidden" for="subnet-size-range">Subnet size</label>
+        <input class="subnet-size-range" type="range" id="subnet-size-range"
+               name="custom_subnet_size" min="${limits.min}" max="${limits.max}"
+               step="1" value="${selectedPrefix}">
+        <div class="subnet-size-range-labels" aria-hidden="true">
+          <span>/${limits.min} (${Utils.formatNumber(minIps)} IPs)</span>
+          <span>/${limits.max} (${Utils.formatNumber(maxIps)} IPs)</span>
+        </div>
+        <div class="subnet-size-range-summary" aria-live="polite">
+          <strong data-subnet-prefix>/${selectedPrefix}</strong>
+          <span data-subnet-ips>${Utils.formatNumber(selectedIps)} IPs</span>
+          <span data-subnet-nodes>~${Utils.formatNumber(selectedMaxNodes)} max nodes</span>
+        </div>
+      `;
     };
     
     // Function to check if "Create New VPC" is active
@@ -2099,7 +2127,7 @@ class App {
       return createNewVpcCheckbox?.checked !== false;
     };
     
-    // Function to check if we should show subnet configuration (VPC CIDR, AZs, slider)
+    // Function to check if we should show subnet configuration (VPC CIDR, AZs, selector)
     const shouldShowSubnetConfig = () => {
       const createNewVpc = isCreateNewVpcActive();
       if (createNewVpc) return true;
@@ -2117,8 +2145,8 @@ class App {
       return false;
     };
     
-    // Function to update slider limits based on current configuration
-    const updateSliderLimits = () => {
+    // Function to update available subnet sizes based on current configuration
+    const updateSubnetSizeOptions = () => {
       const vpcCidr = vpcCidrInput?.value;
       const enablePrivateLink = privateLinkCheckbox?.checked || false;
       const natGatewayChoiceApplies = this.currentProvider === 'aws' ||
@@ -2130,37 +2158,27 @@ class App {
       // Azure and GCP retain their existing private-connectivity service subnet.
       const createServiceSubnet = this.currentProvider !== 'aws' && enablePrivateLink;
       
-      // Always show slider container when subnet configuration is needed
       if (!showSubnetConfig) {
-        if (subnetSizeSliderContainer) {
-          subnetSizeSliderContainer.style.display = 'none';
+        if (subnetSizeSelectorContainer) {
+          subnetSizeSelectorContainer.style.display = 'none';
         }
-        currentSliderLimits = null;
+        currentSubnetLimits = null;
+        selectedSubnetSize = null;
         return;
       }
-      
-      // Show slider container when subnet configuration is needed
-      if (subnetSizeSliderContainer) {
-        subnetSizeSliderContainer.style.display = 'block';
+
+      if (subnetSizeSelectorContainer) {
+        subnetSizeSelectorContainer.style.display = 'block';
       }
-      
-      // If missing data, show disabled state
+
       if (!vpcCidr || zones.length === 0) {
-        if (subnetSizeSlider) {
-          subnetSizeSlider.disabled = true;
-          subnetSizeSlider.classList.add('disabled');
+        if (subnetSizeOptions) {
+          subnetSizeOptions.className = 'subnet-size-options';
+          subnetSizeOptions.setAttribute('role', 'radiogroup');
+          subnetSizeOptions.innerHTML = '<div class="subnet-size-empty">Complete the VPC CIDR and Availability Zones to see available sizes.</div>';
         }
-        if (sliderLabelMin) {
-          sliderLabelMin.textContent = 'Larger subnets';
-        }
-        if (sliderLabelMax) {
-          sliderLabelMax.textContent = 'Smaller subnets';
-        }
-        // Show placeholder values
-        if (subnetSizeDisplay) subnetSizeDisplay.textContent = '--';
-        if (subnetIpsDisplay) subnetIpsDisplay.textContent = '--';
-        if (subnetNodesDisplay) subnetNodesDisplay.textContent = '--';
-        currentSliderLimits = null;
+        currentSubnetLimits = null;
+        selectedSubnetSize = null;
         return;
       }
       
@@ -2175,77 +2193,50 @@ class App {
         );
         
         if (limits.error || !limits.valid) {
-          if (subnetSizeSlider) {
-            subnetSizeSlider.disabled = true;
-            subnetSizeSlider.classList.add('disabled');
-          }
-          currentSliderLimits = null;
+          currentSubnetLimits = null;
+          selectedSubnetSize = null;
+          renderSubnetSizeOptions(null, null);
           return;
         }
-        
+
+        const previousValue = readSelectedSubnetSize();
+        const hadCurrentLimits = currentSubnetLimits !== null;
         // Check if limits have changed
-        const limitsChanged = !currentSliderLimits || 
-                              currentSliderLimits.min !== limits.min || 
-                              currentSliderLimits.max !== limits.max;
+        const limitsChanged = !currentSubnetLimits ||
+                              currentSubnetLimits.min !== limits.min ||
+                              currentSubnetLimits.max !== limits.max;
         
         // If limits changed, reset the user adjustment flag
-        if (limitsChanged) {
+        if (limitsChanged && hadCurrentLimits) {
           userHasAdjustedSubnetSize = false;
         }
         
-        currentSliderLimits = limits;
-        
-        // Enable slider
-        if (subnetSizeSlider) {
-          subnetSizeSlider.disabled = false;
-          subnetSizeSlider.classList.remove('disabled');
-          
-          const previousValue = parseInt(subnetSizeSlider.value, 10);
-          subnetSizeSlider.min = limits.min;
-          subnetSizeSlider.max = limits.max;
-          
-          // Determine new value based on user interaction
-          let newValue;
-          if (userHasAdjustedSubnetSize && !limitsChanged) {
-            // Preserve user choice, clamping to new limits if necessary
-            newValue = Math.max(limits.min, Math.min(limits.max, previousValue));
-          } else {
-            // Use default: largest subnet possible (limits.min = smallest prefix = most IPs)
-            newValue = limits.min;
-          }
-          subnetSizeSlider.value = newValue;
-          
-          // Update labels
-          if (sliderLabelMin) {
-            const minIps = Math.pow(2, 32 - limits.min);
-            sliderLabelMin.textContent = `/${limits.min} (${Utils.formatNumber(minIps)} IPs)`;
-          }
-          if (sliderLabelMax) {
-            const maxIps = Math.pow(2, 32 - limits.max);
-            sliderLabelMax.textContent = `/${limits.max} (${Utils.formatNumber(maxIps)} IPs)`;
-          }
-          
-          // Update display
-          updateSliderDisplay(parseInt(subnetSizeSlider.value, 10));
-        }
+        currentSubnetLimits = limits;
+        selectedSubnetSize = userHasAdjustedSubnetSize && (!limitsChanged || !hadCurrentLimits) && previousValue !== null
+          ? Math.max(limits.min, Math.min(limits.max, previousValue))
+          : limits.default;
+        renderSubnetSizeOptions(limits, selectedSubnetSize);
       } catch (err) {
         console.error('Error calculating subnet limits:', err);
-        if (subnetSizeSlider) {
-          subnetSizeSlider.disabled = true;
-          subnetSizeSlider.classList.add('disabled');
-        }
-        currentSliderLimits = null;
+        currentSubnetLimits = null;
+        selectedSubnetSize = null;
+        renderSubnetSizeOptions(null, null);
       }
     };
-    
-    // Add slider event listener
-    if (subnetSizeSlider) {
-      subnetSizeSlider.addEventListener('input', () => {
-        const value = parseInt(subnetSizeSlider.value, 10);
-        updateSliderDisplay(value);
+
+    if (subnetSizeOptions) {
+      subnetSizeOptions.addEventListener('input', (event) => {
+        if (!event.target?.classList.contains('subnet-size-range') || !currentSubnetLimits?.valid) return;
+        const prefix = parseInt(event.target.value, 10);
+        selectedSubnetSize = prefix;
+        subnetSizeOptions.querySelector('[data-subnet-prefix]').textContent = `/${prefix}`;
+        subnetSizeOptions.querySelector('[data-subnet-ips]').textContent = `${Utils.formatNumber(currentSubnetLimits.getIPsForSize(prefix))} IPs`;
+        subnetSizeOptions.querySelector('[data-subnet-nodes]').textContent = `~${Utils.formatNumber(currentSubnetLimits.getMaxNodes(prefix))} max nodes`;
       });
-      
-      subnetSizeSlider.addEventListener('change', () => {
+
+      subnetSizeOptions.addEventListener('change', (event) => {
+        if (event.target?.name !== 'custom_subnet_size') return;
+        selectedSubnetSize = parseInt(event.target.value, 10);
         userHasAdjustedSubnetSize = true;
         if (typeof calculateSubnets === 'function') {
           calculateSubnets();
@@ -2264,8 +2255,8 @@ class App {
       // Azure and GCP retain their existing private-connectivity service subnet.
       const createServiceSubnet = this.currentProvider !== 'aws' && enablePrivateLink;
       
-      // Update slider limits first
-      updateSliderLimits();
+      // Update available subnet sizes first
+      updateSubnetSizeOptions();
       
       const preview = document.getElementById('subnets-preview');
       const container = document.getElementById('subnets-container');
@@ -2304,11 +2295,7 @@ class App {
       try {
         const networkCalc = new NetworkCalculator(this.currentProvider);
         
-        // Get custom subnet size from slider if available
-        let customSubnetSize = null;
-        if (subnetSizeSlider && currentSliderLimits && currentSliderLimits.valid) {
-          customSubnetSize = parseInt(subnetSizeSlider.value, 10);
-        }
+        const customSubnetSize = currentSubnetLimits?.valid ? selectedSubnetSize : null;
         
         const subnets = networkCalc.allocateSubnets(
           vpcCidr,
@@ -3039,7 +3026,7 @@ class App {
       const azurePrivateLink = this.currentProvider === 'azure' && privateLinkCheckbox?.checked === true;
       
       if (isCreateNewVpc) {
-        // Creating new VPC - show VPC CIDR, AZs, subnet slider
+        // Creating new VPC - show VPC CIDR, AZs, and subnet-size options
         if (existingVpcSection) existingVpcSection.style.display = 'none';
         if (vpcCidrContainer) vpcCidrContainer.style.display = 'block';
         if (azContainer) azContainer.style.display = 'block';
@@ -3130,7 +3117,7 @@ class App {
         }
       }
 
-      // Update subnet slider and preview visibility
+      // Update subnet-size options and preview visibility
       calculateSubnets();
     };
 
@@ -3294,7 +3281,7 @@ class App {
     updateAzureResourceGroupUI();
     updateNetworkConfigUI();
 
-    // Trigger initial calculations - always call to show slider/preview when Create New VPC is active
+    // Trigger initial calculations to show the size selector and preview when needed.
     setTimeout(calculateSubnets, 500);
     
     // Setup form submission
@@ -3500,13 +3487,28 @@ class App {
         try {
           if (config.vpc_cidr && zones.length > 0) {
             const createServiceSubnet = this.currentProvider !== 'aws' && config.enable_private_link;
-            
+            const subnetSizeLimits = networkCalc.calculateSubnetSizeLimits(
+              config.vpc_cidr,
+              zones.length,
+              config.enable_private_link,
+              createServiceSubnet,
+              config.enable_nat_gateway
+            );
+            const requestedSubnetSize = parseInt(config.custom_subnet_size, 10);
+            const customSubnetSize = subnetSizeLimits.valid &&
+              !Number.isNaN(requestedSubnetSize) &&
+              requestedSubnetSize >= subnetSizeLimits.min &&
+              requestedSubnetSize <= subnetSizeLimits.max
+              ? requestedSubnetSize
+              : subnetSizeLimits.default;
+            config.custom_subnet_size = customSubnetSize;
+
             const subnets = networkCalc.allocateSubnets(
               config.vpc_cidr,
               zones,
               config.pricing_tier,
               config.enable_private_link,
-              null, // customSubnetSize
+              customSubnetSize,
               createServiceSubnet,
               config.enable_nat_gateway
             );

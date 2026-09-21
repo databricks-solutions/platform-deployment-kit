@@ -28,10 +28,14 @@ test.describe('AWS critical journeys', () => {
     });
     await FormHelpers.fillNetworkConfig(page, {
       create_new_vpc: true,
-      vpc_cidr: '10.16.0.0/20',
+      vpc_cidr: '10.16.0.0/22',
       availability_zones: ['us-west-2a', 'us-west-2b']
     });
     await page.locator('#nat_gateway_mode').selectOption('per_az');
+    await expect(page.locator('.subnet-size-radio')).toHaveCount(2);
+    await expect(page.locator('#subnet-size-25')).toBeChecked();
+    await page.locator('label[for="subnet-size-26"]').click();
+    await expect(page.locator('#subnet-size-26')).toBeChecked();
 
     await FormHelpers.submitConfigForm(page);
     await expect(page).toHaveURL(/.*#\/summary/);
@@ -47,6 +51,7 @@ test.describe('AWS critical journeys', () => {
     expect(tfvars).toContain('region          = "us-west-2"');
     expect(tfvars).toContain('nat_gateway_mode        = "per_az"');
     expect(tfvars).toContain('pricing_tier            = "PREMIUM"');
+    expect(tfvars).toContain('10.16.0.0/26');
   });
 
   test('requires Enterprise PrivateLink when NAT is disabled', async ({ page }) => {
@@ -65,6 +70,8 @@ test.describe('AWS critical journeys', () => {
     });
     await page.locator('#nat_gateway_mode').selectOption('none');
     await expect(page.locator('#nat-gateway-private-link-message')).toBeVisible();
+    await expect(page.locator('#subnet-size-range')).toBeVisible();
+    await expect(page.locator('#subnet-size-select')).toHaveCount(0);
 
     await FormHelpers.submitConfigForm(page);
     const { archive } = await downloadProject(page);
