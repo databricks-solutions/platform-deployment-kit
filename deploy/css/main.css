@@ -1,5 +1,5 @@
 /* =============================================================================
-   One-Click Deployer - Databricks brand-aligned design system
+   Platform Kit - Databricks brand-aligned design system
    ============================================================================= */
 /* =============================================================================
    1. FONTS - Local @font-face declarations
@@ -2205,19 +2205,6 @@ pre code {
 .subnet-size-nodes {
   font-size: var(--text-sm);
   color: var(--text-muted);
-}
-
-.subnet-size-recommended {
-  position: absolute;
-  top: var(--space-2);
-  right: var(--space-2);
-  padding: 2px var(--space-2);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-full);
-  background: var(--bg-elevated);
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
-  font-weight: var(--font-semibold);
 }
 
 .subnet-size-range-wrapper {

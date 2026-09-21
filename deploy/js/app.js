@@ -2080,14 +2080,12 @@ class App {
         subnetSizeOptions.innerHTML = prefixes.map(prefix => {
           const ips = limits.getIPsForSize(prefix);
           const maxNodes = limits.getMaxNodes(prefix);
-          const isRecommended = prefix === limits.default;
           return `
             <div class="subnet-size-choice">
               <input class="subnet-size-radio" type="radio" name="custom_subnet_size"
                      id="subnet-size-${prefix}" value="${prefix}"
                      ${prefix === selectedPrefix ? 'checked' : ''}>
               <label class="subnet-size-option" for="subnet-size-${prefix}">
-                ${isRecommended ? '<span class="subnet-size-recommended">Recommended</span>' : ''}
                 <span class="subnet-size-prefix">/${prefix}</span>
                 <span class="subnet-size-capacity">${Utils.formatNumber(ips)} IPs</span>
                 <span class="subnet-size-nodes">~${Utils.formatNumber(maxNodes)} max nodes</span>

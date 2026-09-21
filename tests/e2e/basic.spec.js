@@ -8,7 +8,7 @@ test.describe('Application smoke tests', () => {
   });
 
   test('loads the application and provider selection', async ({ page }) => {
-    await expect(page).toHaveTitle(/One-Click Deployer/i);
+    await expect(page).toHaveTitle(/Platform Kit/i);
     await page.goto('/#/select-provider');
     await expect(page.locator('.provider-option')).toHaveCount(3);
     await expect(page.locator('#app-content')).toBeVisible();
