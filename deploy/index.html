@@ -256,13 +256,6 @@
         // Initialize theme manager
         ThemeManager.init();
 
-        // Remove encrypted values left in browsers by the retired credentials feature.
-        [
-            'databricks_encrypted_credentials',
-            'databricks_credentials_salt',
-            'databricks_credentials_verify'
-        ].forEach(key => localStorage.removeItem(key));
-
         // Retire registrations and caches created by earlier installable releases.
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', async () => {
