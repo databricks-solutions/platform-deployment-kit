@@ -3731,6 +3731,23 @@ export DATABRICKS_CLIENT_SECRET="&lt;client-secret&gt;"`;
                       </div>
                     </div>
                   </div>
+
+                  <div class="step-item d-flex mb-4">
+                    <div class="step-number bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                      7
+                    </div>
+                    <div class="step-content">
+                      <h6 class="fw-bold mb-2">Extend with AI Platform Kit</h6>
+                      <p class="mb-2">Use AI Platform Kit for agentic development of additional Terraform and infrastructure resources.</p>
+                      <a href="https://github.com/databricks-solutions/ai-platform-kit"
+                         class="btn btn-outline-primary"
+                         target="_blank"
+                         rel="noopener noreferrer">
+                        Explore AI Platform Kit
+                        <i class="bi bi-box-arrow-up-right ms-2" aria-hidden="true"></i>
+                      </a>
+                    </div>
+                  </div>
                 </div>
 
                 <div class="alert alert-info mt-4">
