@@ -1632,83 +1632,73 @@ pre code {
 }
 
 .alert-success {
+  --bs-alert-color: var(--text-primary);
+  --bs-alert-link-color: var(--success-text);
   border-left-color: var(--success);
   background: var(--success-subtle);
+  color: var(--text-primary);
 }
 
 .alert-success .alert-icon,
-.alert-success .alert-title {
+.alert-success .alert-title,
+.alert-success .alert-link,
+.alert-success i,
+.alert-success strong {
   color: var(--success-text);
 }
 
 .alert-danger,
 .alert-error {
+  --bs-alert-color: var(--text-primary);
+  --bs-alert-link-color: var(--error-text);
   border-left-color: var(--error);
   background: var(--error-subtle);
+  color: var(--text-primary);
 }
 
 .alert-danger .alert-icon,
 .alert-danger .alert-title,
+.alert-danger .alert-link,
+.alert-danger i,
+.alert-danger strong,
 .alert-error .alert-icon,
-.alert-error .alert-title {
+.alert-error .alert-title,
+.alert-error .alert-link,
+.alert-error i,
+.alert-error strong {
   color: var(--error-text);
-}
-
-/* Bootstrap defaults to light-theme danger text unless data-bs-theme is set. */
-[data-theme="dark"] .alert-danger,
-[data-theme="dark"] .alert-error {
-  --bs-alert-color: var(--error-text);
-  --bs-alert-link-color: var(--error-text);
-  color: var(--error-text);
-}
-
-[data-theme="dark"] .alert-danger .alert-message,
-[data-theme="dark"] .alert-danger .alert-link,
-[data-theme="dark"] .alert-danger i,
-[data-theme="dark"] .alert-danger strong,
-[data-theme="dark"] .alert-error .alert-message,
-[data-theme="dark"] .alert-error .alert-link,
-[data-theme="dark"] .alert-error i,
-[data-theme="dark"] .alert-error strong {
-  color: inherit;
 }
 
 .alert-warning {
+  --bs-alert-color: var(--text-primary);
+  --bs-alert-link-color: var(--warning-text);
   border-left-color: var(--warning);
   background: var(--warning-subtle);
+  color: var(--text-primary);
 }
 
 .alert-warning .alert-icon,
-.alert-warning .alert-title {
+.alert-warning .alert-title,
+.alert-warning .alert-link,
+.alert-warning i,
+.alert-warning strong {
   color: var(--warning-text);
 }
 
 .alert-info {
+  --bs-alert-color: var(--text-primary);
+  --bs-alert-link-color: var(--info-text);
   border-left-color: var(--info);
   background: var(--info-subtle);
+  color: var(--text-primary);
 }
 
 .alert-info .alert-icon,
-.alert-info .alert-title {
+.alert-info .alert-title,
+.alert-info .alert-link,
+.alert-info i,
+.alert-info strong {
   color: var(--info-text);
-}
-
-/* Tip boxes - Yellow text in dark theme */
-[data-theme="dark"] .alert-info,
-[data-theme="dark"] .alert.alert-info {
-  color: var(--warning-text) !important;
-}
-
-[data-theme="dark"] .alert-info *,
-[data-theme="dark"] .alert.alert-info * {
-  color: var(--warning-text) !important;
-}
-
-[data-theme="dark"] .alert-info .alert-icon,
-[data-theme="dark"] .alert-info strong,
-[data-theme="dark"] .alert.alert-info i,
-[data-theme="dark"] .alert.alert-info strong {
-  color: var(--warning-text) !important;
 }
 
 .alert .btn-close {
