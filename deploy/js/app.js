@@ -1551,42 +1551,6 @@ class App {
                                placeholder="00000000-0000-0000-0000-000000000000" required>
                       </div>
                     ` : ''}
-                    ${this.currentProvider === 'aws' || this.currentProvider === 'azure' ? `
-                      <div class="col-12" id="metastore-configuration" ${this.currentProvider === 'azure' && this.currentConfig.enable_private_link ? 'style="display: none;"' : ''}>
-                        <div class="row g-3 align-items-start">
-                          <div class="col-md-6">
-                            <div class="field-label-with-help">
-                              <label class="form-label fw-semibold">Unity Catalog Metastore <span class="text-danger">*</span></label>
-                              ${this.renderHelpButton('metastore', 'Unity Catalog metastore')}
-                            </div>
-                            <div class="form-check">
-                              <input class="form-check-input" type="radio" name="metastore_mode" id="metastore_mode_create"
-                                     value="create" ${this.currentConfig.metastore_mode !== 'existing' ? 'checked' : ''}>
-                              <label class="form-check-label" for="metastore_mode_create">Create a new metastore</label>
-                            </div>
-                            <div class="form-check mt-2">
-                              <input class="form-check-input" type="radio" name="metastore_mode" id="metastore_mode_existing"
-                                     value="existing" ${this.currentConfig.metastore_mode === 'existing' ? 'checked' : ''}>
-                              <label class="form-check-label" for="metastore_mode_existing">Attach an existing metastore</label>
-                            </div>
-                          </div>
-                          <div class="col-md-6">
-                            <div id="new-metastore-section">
-                              <label class="form-label" for="metastore_name">Metastore Name</label>
-                              <input type="text" class="form-control" id="metastore_name" name="metastore_name"
-                                     value="${this.currentConfig.metastore_name || ''}"
-                                     placeholder="Defaults to &lt;project-prefix&gt;-metastore">
-                            </div>
-                            <div id="existing-metastore-section" style="display: none;">
-                              <label class="form-label" for="metastore_id">Existing Metastore ID <span class="text-danger">*</span></label>
-                              <input type="text" class="form-control" id="metastore_id" name="metastore_id"
-                                     value="${this.currentConfig.metastore_id || ''}"
-                                     placeholder="e.g., 12345678-1234-1234-1234-123456789abc">
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ` : ''}
                     ${this.currentProvider === 'azure' ? `
                       <div id="azure-standard-fields" class="col-12">
                         <div class="row g-3">
@@ -1614,31 +1578,6 @@ class App {
                                    value="${this.currentConfig.azure_root_storage_name || ''}"
                                    placeholder="dbfsuniquename">
                             <div class="form-text">Globally unique, 3-24 lowercase letters and numbers.</div>
-                          </div>
-                          <div class="col-md-6">
-                            <label class="form-label fw-semibold">UC Storage Account <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control azure-standard-required" name="azure_uc_storage_account_name"
-                                   value="${this.currentConfig.azure_uc_storage_account_name || ''}"
-                                   placeholder="ucuniquename">
-                            <div class="form-text">Globally unique, 3-24 lowercase letters and numbers.</div>
-                          </div>
-                          <div class="col-md-6">
-                            <label class="form-label fw-semibold">Catalog Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control azure-standard-required" name="azure_catalog_name"
-                                   value="${this.currentConfig.azure_catalog_name || ''}"
-                                   placeholder="my_catalog">
-                          </div>
-                          <div class="col-md-6">
-                            <label class="form-label fw-semibold">Storage Credential Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control azure-standard-required" name="azure_storage_credential_name"
-                                   value="${this.currentConfig.azure_storage_credential_name || ''}"
-                                   placeholder="my-storage-credential">
-                          </div>
-                          <div class="col-md-6">
-                            <label class="form-label fw-semibold">External Location Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control azure-standard-required" name="azure_external_location_name"
-                                   value="${this.currentConfig.azure_external_location_name || ''}"
-                                   placeholder="my-external-location">
                           </div>
                         </div>
                       </div>
@@ -2005,6 +1944,79 @@ class App {
                     pricing tier.
                   </div>
                   
+                </div>
+              </div>
+              ` : ''}
+
+              ${this.currentProvider === 'aws' || this.currentProvider === 'azure' ? `
+              <div class="card mb-4" id="unity-catalog-configuration"
+                   ${this.currentProvider === 'azure' && this.currentConfig.enable_private_link ? 'style="display: none;"' : ''}>
+                <div class="card-header bg-primary text-white">
+                  <h5 class="card-title mb-0">
+                    <i class="bi bi-database-fill-gear me-2"></i>
+                    Unity Catalog Configuration
+                  </h5>
+                </div>
+                <div class="card-body">
+                  <div class="row g-3 align-items-start">
+                    <div class="col-md-6">
+                      <div class="field-label-with-help">
+                        <label class="form-label fw-semibold">Unity Catalog Metastore <span class="text-danger">*</span></label>
+                        ${this.renderHelpButton('metastore', 'Unity Catalog metastore')}
+                      </div>
+                      <div class="form-check">
+                        <input class="form-check-input" type="radio" name="metastore_mode" id="metastore_mode_create"
+                               value="create" ${this.currentConfig.metastore_mode !== 'existing' ? 'checked' : ''}>
+                        <label class="form-check-label" for="metastore_mode_create">Create a new metastore</label>
+                      </div>
+                      <div class="form-check mt-2">
+                        <input class="form-check-input" type="radio" name="metastore_mode" id="metastore_mode_existing"
+                               value="existing" ${this.currentConfig.metastore_mode === 'existing' ? 'checked' : ''}>
+                        <label class="form-check-label" for="metastore_mode_existing">Attach an existing metastore</label>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div id="new-metastore-section">
+                        <label class="form-label" for="metastore_name">Metastore Name</label>
+                        <input type="text" class="form-control" id="metastore_name" name="metastore_name"
+                               value="${this.currentConfig.metastore_name || ''}"
+                               placeholder="Defaults to &lt;project-prefix&gt;-metastore">
+                      </div>
+                      <div id="existing-metastore-section" style="display: none;">
+                        <label class="form-label" for="metastore_id">Existing Metastore ID <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="metastore_id" name="metastore_id"
+                               value="${this.currentConfig.metastore_id || ''}"
+                               placeholder="e.g., 12345678-1234-1234-1234-123456789abc">
+                      </div>
+                    </div>
+                    ${this.currentProvider === 'azure' ? `
+                    <div class="col-md-6">
+                      <label class="form-label fw-semibold">UC Storage Account <span class="text-danger">*</span></label>
+                      <input type="text" class="form-control azure-standard-required" name="azure_uc_storage_account_name"
+                             value="${this.currentConfig.azure_uc_storage_account_name || ''}"
+                             placeholder="ucuniquename">
+                      <div class="form-text">Globally unique, 3-24 lowercase letters and numbers.</div>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label fw-semibold">Catalog Name <span class="text-danger">*</span></label>
+                      <input type="text" class="form-control azure-standard-required" name="azure_catalog_name"
+                             value="${this.currentConfig.azure_catalog_name || ''}"
+                             placeholder="my_catalog">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label fw-semibold">Storage Credential Name <span class="text-danger">*</span></label>
+                      <input type="text" class="form-control azure-standard-required" name="azure_storage_credential_name"
+                             value="${this.currentConfig.azure_storage_credential_name || ''}"
+                             placeholder="my-storage-credential">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label fw-semibold">External Location Name <span class="text-danger">*</span></label>
+                      <input type="text" class="form-control azure-standard-required" name="azure_external_location_name"
+                             value="${this.currentConfig.azure_external_location_name || ''}"
+                             placeholder="my-external-location">
+                    </div>
+                    ` : ''}
+                  </div>
                 </div>
               </div>
               ` : ''}
@@ -3195,10 +3207,10 @@ class App {
         const privateLinkEnabled = privateLinkCheckbox.checked;
         const standardFields = document.getElementById('azure-standard-fields');
         const privateLinkFields = document.getElementById('azure-private-link-fields');
-        const metastoreConfiguration = document.getElementById('metastore-configuration');
+        const unityCatalogConfiguration = document.getElementById('unity-catalog-configuration');
         if (standardFields) standardFields.style.display = privateLinkEnabled ? 'none' : 'block';
         if (privateLinkFields) privateLinkFields.style.display = privateLinkEnabled ? 'block' : 'none';
-        if (metastoreConfiguration) metastoreConfiguration.style.display = privateLinkEnabled ? 'none' : 'block';
+        if (unityCatalogConfiguration) unityCatalogConfiguration.style.display = privateLinkEnabled ? 'none' : 'block';
         if (azureNatGatewayZoneSection) azureNatGatewayZoneSection.style.display = privateLinkEnabled ? 'none' : 'block';
         if (natGatewaySection) natGatewaySection.style.display = privateLinkEnabled ? 'block' : 'none';
         document.querySelectorAll('.azure-standard-required').forEach(input => {
