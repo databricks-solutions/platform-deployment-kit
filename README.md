@@ -56,4 +56,4 @@ Run `npm run build`, then publish `dist/`. Tagged builds are deployed to GitHub 
 
 ## Security
 
-Terraform ZIP generation happens in the browser. Optional saved credentials are encrypted locally and are not sent to an application server. Always review `terraform plan` and the generated README before applying infrastructure changes.
+Terraform ZIP generation happens entirely in the browser. Always review `terraform plan` and the generated README before applying infrastructure changes.
