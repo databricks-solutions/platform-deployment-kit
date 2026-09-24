@@ -110,10 +110,7 @@ class FormHelpers {
     await page.waitForTimeout(300);
   }
 
-  /**
-   * Fill the seven inputs required by the GCP BYOVPC
-   * standalone source.
-   */
+  /** Fill the common inputs required by the GCP BYOVPC sources. */
   static async fillGcpConfig(page, config = {}) {
     const values = {
       project_prefix: 'test-gcp',
@@ -138,6 +135,14 @@ class FormHelpers {
       const field = page.locator(`[name="${fieldName}"]`);
       await field.fill(values[fieldName] || '');
       await field.blur();
+    }
+
+    if (values.psc_subnet_cidr) {
+      const field = page.locator('[name="psc_subnet_cidr"]');
+      if (await field.isVisible().catch(() => false)) {
+        await field.fill(values.psc_subnet_cidr);
+        await field.blur();
+      }
     }
 
     await page.waitForTimeout(300);

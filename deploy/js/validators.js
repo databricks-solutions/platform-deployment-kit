@@ -202,6 +202,10 @@ class Validators {
       errors.azure_private_link_nat_gateway_mode = 'Choose whether to deploy a NAT gateway.';
     }
 
+    if (provider === 'gcp' && enable_private_link && !['single', 'none'].includes(natGatewayMode)) {
+      errors.nat_gateway_mode = 'Choose whether to deploy Cloud NAT.';
+    }
+
     if (provider === 'aws' && config.create_new_vpc && natGatewayMode === 'none' && !enable_private_link) {
       errors.enable_private_link = 'Back-end PrivateLink is required to communicate with the control plane when no NAT gateway is selected.';
     }
@@ -598,13 +602,27 @@ class Validators {
         const subnetCheck = this.validateCIDR(config.subnet_cidr, 8, 29);
         if (!subnetCheck.valid) errors.subnet_cidr = subnetCheck.message;
       }
+
+      if (config.enable_private_link) {
+        if (!config.psc_subnet_cidr || !config.psc_subnet_cidr.trim()) {
+          errors.psc_subnet_cidr = 'PSC endpoint subnet CIDR is required';
+        } else {
+          const pscSubnetCheck = this.validateCIDR(config.psc_subnet_cidr, 8, 29);
+          if (!pscSubnetCheck.valid) {
+            errors.psc_subnet_cidr = pscSubnetCheck.message;
+          } else if (config.subnet_cidr && CIDRUtils.overlaps(config.subnet_cidr, config.psc_subnet_cidr)) {
+            errors.psc_subnet_cidr = 'PSC endpoint subnet must not overlap the Databricks subnet';
+          }
+        }
+        if (!config.workspace_service_attachment || !config.relay_service_attachment) {
+          errors.region = 'Back-end Private Service Connect is not configured for this GCP region';
+        }
+      }
     }
     
     // Pricing tier features
-    if (config.provider !== 'gcp') {
-      const featureErrors = this.validatePricingTierFeatures(config);
-      Object.assign(errors, featureErrors);
-    }
+    const featureErrors = this.validatePricingTierFeatures(config);
+    Object.assign(errors, featureErrors);
     
     // Tags
     if (config.tags) {

@@ -326,9 +326,8 @@ class TemplateEngine {
       vars.terraform_source_url = config.terraform_source_url || '';
     }
 
-    // GCP upstream Terraform input mappings. The upstream source
-    // creates the complete standalone BYOVPC topology; this app only supplies
-    // its seven required variables.
+    // GCP upstream Terraform input mappings. The selected source creates
+    // either the standalone BYOVPC topology or the Back-end PSC topology.
     if (config.provider === 'gcp') {
       const hclString = value => JSON.stringify(String(value || ''));
       vars.google_service_account_email = config.google_service_account_email || '';
@@ -342,6 +341,10 @@ class TemplateEngine {
       vars.databricks_workspace_name_hcl = hclString(config.project_prefix);
       vars.databricks_admin_user_hcl = hclString(vars.databricks_admin_user);
       vars.subnet_cidr_hcl = hclString(vars.subnet_cidr);
+      vars.psc_subnet_cidr_hcl = hclString(config.psc_subnet_cidr);
+      vars.workspace_service_attachment_hcl = hclString(config.workspace_service_attachment);
+      vars.relay_service_attachment_hcl = hclString(config.relay_service_attachment);
+      vars.gcp_nat_summary = vars.enable_nat_gateway ? 'Cloud NAT created' : 'No Cloud NAT';
       vars.terraform_source_commit = config.terraform_source_commit || '';
       vars.terraform_source_ref = config.terraform_source_ref || 'main';
       vars.terraform_source_url = config.terraform_source_url || '';

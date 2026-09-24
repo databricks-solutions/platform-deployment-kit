@@ -2,6 +2,24 @@
  * Main Application - SPA Router and Application Logic
  */
 
+const GCP_PSC_SERVICE_ATTACHMENTS = {
+  'us-central1': ['projects/gcp-prod-general/regions/us-central1/serviceAttachments/plproxy-psc-endpoint-all-ports', 'projects/prod-gcp-us-central1/regions/us-central1/serviceAttachments/ngrok-psc-endpoint'],
+  'us-east1': ['projects/general-prod-useast1-01/regions/us-east1/serviceAttachments/plproxy-psc-endpoint-all-ports', 'projects/prod-gcp-us-east1/regions/us-east1/serviceAttachments/ngrok-psc-endpoint'],
+  'us-east4': ['projects/general-prod-useast4-01/regions/us-east4/serviceAttachments/plproxy-psc-endpoint-all-ports', 'projects/prod-gcp-us-east4/regions/us-east4/serviceAttachments/ngrok-psc-endpoint'],
+  'us-west1': ['projects/general-prod-uswest1-01/regions/us-west1/serviceAttachments/plproxy-psc-endpoint-all-ports', 'projects/prod-gcp-us-west1/regions/us-west1/serviceAttachments/ngrok-psc-endpoint'],
+  'us-west4': ['projects/general-prod-uswest4-01/regions/us-west4/serviceAttachments/plproxy-psc-endpoint-all-ports', 'projects/prod-gcp-us-west4/regions/us-west4/serviceAttachments/ngrok-psc-endpoint'],
+  'northamerica-northeast1': ['projects/general-prod-nanortheast1-01/regions/northamerica-northeast1/serviceAttachments/plproxy-psc-endpoint-all-ports', 'projects/prod-gcp-northamerica-northeast1/regions/northamerica-northeast1/serviceAttachments/ngrok-psc-endpoint'],
+  'southamerica-east1': ['projects/gen-prod-saeast1-01/regions/southamerica-east1/serviceAttachments/plproxy-psc-endpoint-all-ports', 'projects/prod-gcp-southamerica-east1/regions/southamerica-east1/serviceAttachments/ngrok-psc-endpoint'],
+  'europe-west1': ['projects/general-prod-europewest1-01/regions/europe-west1/serviceAttachments/plproxy-psc-endpoint-all-ports', 'projects/prod-gcp-europe-west1/regions/europe-west1/serviceAttachments/ngrok-psc-endpoint'],
+  'europe-west2': ['projects/general-prod-europewest2-01/regions/europe-west2/serviceAttachments/plproxy-psc-endpoint-all-ports', 'projects/prod-gcp-europe-west2/regions/europe-west2/serviceAttachments/ngrok-psc-endpoint'],
+  'europe-west3': ['projects/general-prod-europewest3-01/regions/europe-west3/serviceAttachments/plproxy-psc-endpoint-all-ports', 'projects/prod-gcp-europe-west3/regions/europe-west3/serviceAttachments/ngrok-psc-endpoint'],
+  'asia-northeast1': ['projects/general-prod-asianortheast1-01/regions/asia-northeast1/serviceAttachments/plproxy-psc-endpoint-all-ports', 'projects/prod-gcp-asia-northeast1/regions/asia-northeast1/serviceAttachments/ngrok-psc-endpoint'],
+  'asia-south1': ['projects/gen-prod-asias1-01/regions/asia-south1/serviceAttachments/plproxy-psc-endpoint-all-ports', 'projects/prod-gcp-asia-south1/regions/asia-south1/serviceAttachments/ngrok-psc-endpoint'],
+  'asia-southeast1': ['projects/general-prod-asiasoutheast1-01/regions/asia-southeast1/serviceAttachments/plproxy-psc-endpoint-all-ports', 'projects/prod-gcp-asia-southeast1/regions/asia-southeast1/serviceAttachments/ngrok-psc-endpoint'],
+  'australia-southeast1': ['projects/general-prod-ausoutheast1-01/regions/australia-southeast1/serviceAttachments/plproxy-psc-endpoint-all-ports', 'projects/prod-gcp-australia-southeast1/regions/australia-southeast1/serviceAttachments/ngrok-psc-endpoint'],
+  'me-central2': ['projects/gen-prod-mec2-01/regions/me-central2/serviceAttachments/plproxy-psc-endpoint-all-ports', 'projects/prod-gcp-me-central2/regions/me-central2/serviceAttachments/ngrok-psc-endpoint']
+};
+
 class App {
   constructor() {
     this.currentConfig = Utils.getStorage('config') || {};
@@ -175,6 +193,12 @@ class App {
           group: 'Australia',
           regions: [
             { code: 'australia-southeast1', name: 'Australia Southeast (Sydney)' }
+          ]
+        },
+        {
+          group: 'Middle East',
+          regions: [
+            { code: 'me-central2', name: 'Middle East Central 2 (Dammam)' }
           ]
         },
         {
@@ -811,9 +835,9 @@ class App {
     const configuredNatGatewayMode = this.currentProvider === 'azure'
       ? this.currentConfig.azure_private_link_nat_gateway_mode
       : this.currentConfig.nat_gateway_mode;
-    const supportedNatGatewayModes = this.currentProvider === 'azure'
-      ? ['single', 'none']
-      : ['single', 'per_az', 'none'];
+    const supportedNatGatewayModes = this.currentProvider === 'aws'
+      ? ['single', 'per_az', 'none']
+      : ['single', 'none'];
     const savedNatGatewayMode = supportedNatGatewayModes.includes(configuredNatGatewayMode)
       ? configuredNatGatewayMode
       : (this.currentConfig.enable_nat_gateway === false || this.currentConfig.enable_nat_gateway === 'false')
@@ -999,12 +1023,17 @@ class App {
                 </div>
                 <div class="card-body">
                   ${this.currentProvider === 'gcp' ? `
-                  <div class="alert alert-info mb-4">
+                  <div class="alert alert-info mb-4" id="gcp-standard-network-info">
                     <i class="bi bi-info-circle me-2"></i>
                     This deployment creates a new VPC, one regional subnet with Private Google Access,
                     a Cloud Router, and Cloud NAT for outbound connectivity.
                   </div>
-                  <div class="mb-0">
+                  <div class="alert alert-info mb-4" id="gcp-private-link-network-info" style="display: none;">
+                    <i class="bi bi-info-circle me-2"></i>
+                    This deployment creates a new VPC with dedicated node and PSC subnets, two Back-end
+                    Private Service Connect endpoints, and private DNS records.
+                  </div>
+                  <div class="mb-3">
                     <div class="field-label-with-help">
                       <label class="form-label fw-semibold" for="subnet_cidr">
                         Databricks Subnet CIDR <span class="text-danger">*</span>
@@ -1014,6 +1043,30 @@ class App {
                     <input type="text" class="form-control" id="subnet_cidr" name="subnet_cidr"
                            value="${this.currentConfig.subnet_cidr || '10.10.0.0/20'}"
                            placeholder="e.g., 10.10.0.0/20" required>
+                  </div>
+                  <div class="mb-3" id="gcp-private-link-network-fields" style="display: none;">
+                    <label class="form-label fw-semibold" for="psc_subnet_cidr">
+                      PSC Endpoint Subnet CIDR <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" class="form-control" id="psc_subnet_cidr" name="psc_subnet_cidr"
+                           value="${this.currentConfig.psc_subnet_cidr || '10.10.4.0/28'}"
+                           placeholder="e.g., 10.10.4.0/28">
+                    <div class="form-text">A non-overlapping subnet for the REST API and SCC relay PSC endpoint IPs.</div>
+                  </div>
+                  <div class="mb-3" id="nat-gateway-section"
+                       ${!this.currentConfig.enable_private_link ? 'style="display: none;"' : ''}>
+                    <div class="field-label-with-help">
+                      <label class="form-label fw-semibold" for="nat_gateway_mode">Cloud NAT</label>
+                      ${this.renderHelpButton('nat-gateway', 'Cloud NAT options')}
+                    </div>
+                    <select class="form-select" id="nat_gateway_mode" name="nat_gateway_mode">
+                      <option value="single" ${savedNatGatewayMode === 'single' ? 'selected' : ''}>Deploy Cloud NAT</option>
+                      <option value="none" ${savedNatGatewayMode === 'none' ? 'selected' : ''}>No Cloud NAT</option>
+                    </select>
+                    <div id="nat-gateway-private-link-message" class="alert alert-warning mt-2 mb-0" style="display: none;">
+                      <i class="bi bi-exclamation-triangle me-2"></i>
+                      Without Cloud NAT, cluster nodes have no general internet egress. Back-end PSC and Private Google Access remain available, but public package repositories and data sources require another egress path.
+                    </div>
                   </div>
                   ` : `
                   <div class="mb-3">
@@ -1270,7 +1323,6 @@ class App {
                 </div>
               </div>
               
-              ${this.currentProvider !== 'gcp' ? `
               <div class="card mb-4">
                 <div class="card-header bg-warning text-dark">
                   <h5 class="card-title mb-0">
@@ -1284,21 +1336,23 @@ class App {
                            ${this.currentProvider === 'aws' && (this.currentConfig.pricing_tier || 'ENTERPRISE') !== 'ENTERPRISE' ? 'disabled aria-disabled="true"' : ''}>
                     <label class="form-check-label fw-semibold" for="enable_private_link">
                       ${this.currentProvider === 'azure' ? 'Enable Back-end Private Link' :
-                        this.currentProvider === 'gcp' ? 'Enable Private Service Connect' : 
+                        this.currentProvider === 'gcp' ? 'Enable Back-end Private Service Connect' :
                         'Enable Back-end PrivateLink'}
                     </label>
-                    ${this.renderHelpButton('backend-private-link', this.currentProvider === 'azure' ? 'Back-end Private Link' : 'Back-end PrivateLink')}
+                    ${this.renderHelpButton('backend-private-link', this.currentProvider === 'azure' ? 'Back-end Private Link' : this.currentProvider === 'gcp' ? 'Back-end Private Service Connect' : 'Back-end PrivateLink')}
                   </div>
                   <div id="private-link-warning" class="alert alert-info mt-2" style="display: none;">
                     <i class="bi bi-info-circle me-2"></i>
-                    <strong>Note:</strong> Private connectivity requires 
-                    ${this.currentProvider === 'aws' ? 'Enterprise' : 'Premium'} 
-                    pricing tier.
+                    <strong>Note:</strong> Private connectivity requires
+                    ${this.currentProvider === 'aws'
+                      ? 'the Enterprise pricing tier.'
+                      : this.currentProvider === 'gcp'
+                        ? 'a Databricks Enterprise plan.'
+                        : 'the Premium pricing tier.'}
                   </div>
                   
                 </div>
               </div>
-              ` : ''}
 
               ${this.currentProvider === 'aws' || this.currentProvider === 'azure' ? `
               <div class="card mb-4" id="unity-catalog-configuration"
@@ -1402,6 +1456,10 @@ class App {
     const natGatewayPrivateLinkMessage = document.getElementById('nat-gateway-private-link-message');
     const azureNatGatewayZoneSection = document.getElementById('azure-nat-gateway-zone-section');
     const azurePrivateLinkNatGatewayZoneSection = document.getElementById('azure-private-link-nat-gateway-zone-section');
+    const gcpStandardNetworkInfo = document.getElementById('gcp-standard-network-info');
+    const gcpPrivateLinkNetworkInfo = document.getElementById('gcp-private-link-network-info');
+    const gcpPrivateLinkNetworkFields = document.getElementById('gcp-private-link-network-fields');
+    const gcpPscSubnetInput = document.getElementById('psc_subnet_cidr');
     
     // Subnet size selector elements
     const subnetSizeSelectorContainer = document.getElementById('subnet-size-selector-container');
@@ -2386,6 +2444,7 @@ class App {
     const updateNetworkConfigUI = () => {
       const isCreateNewVpc = createNewVpcCheckbox?.checked !== false;
       const azurePrivateLink = this.currentProvider === 'azure' && privateLinkCheckbox?.checked === true;
+      const gcpPrivateLink = this.currentProvider === 'gcp' && privateLinkCheckbox?.checked === true;
       
       if (isCreateNewVpc) {
         // Creating new VPC - show VPC CIDR, AZs, and subnet-size options
@@ -2393,7 +2452,7 @@ class App {
         if (vpcCidrContainer) vpcCidrContainer.style.display = 'block';
         if (azContainer) azContainer.style.display = 'block';
         if (natGatewaySection) {
-          natGatewaySection.style.display = this.currentProvider === 'aws' || azurePrivateLink ? 'block' : 'none';
+          natGatewaySection.style.display = this.currentProvider === 'aws' || azurePrivateLink || gcpPrivateLink ? 'block' : 'none';
         }
       } else {
         // Using existing VPC
@@ -2422,7 +2481,16 @@ class App {
       if (natGatewayPrivateLinkMessage) {
         const noAwsNat = this.currentProvider === 'aws' && isCreateNewVpc && natGatewaySelect?.value === 'none';
         const noAzurePrivateLinkNat = azurePrivateLink && natGatewaySelect?.value === 'none';
-        natGatewayPrivateLinkMessage.style.display = noAwsNat || noAzurePrivateLinkNat ? 'block' : 'none';
+        const noGcpPrivateLinkNat = gcpPrivateLink && natGatewaySelect?.value === 'none';
+        natGatewayPrivateLinkMessage.style.display = noAwsNat || noAzurePrivateLinkNat || noGcpPrivateLinkNat ? 'block' : 'none';
+      }
+
+      if (gcpStandardNetworkInfo) gcpStandardNetworkInfo.style.display = gcpPrivateLink ? 'none' : 'block';
+      if (gcpPrivateLinkNetworkInfo) gcpPrivateLinkNetworkInfo.style.display = gcpPrivateLink ? 'block' : 'none';
+      if (gcpPrivateLinkNetworkFields) gcpPrivateLinkNetworkFields.style.display = gcpPrivateLink ? 'block' : 'none';
+      if (gcpPscSubnetInput) {
+        if (gcpPrivateLink) gcpPscSubnetInput.setAttribute('required', '');
+        else gcpPscSubnetInput.removeAttribute('required');
       }
 
       if (azurePrivateLinkNatGatewayZoneSection) {
@@ -2545,7 +2613,9 @@ class App {
 
     // Setup private link validation
     const checkPrivateLinkRequirements = () => {
-      const tier = this.currentProvider === 'azure' ? 'PREMIUM' : pricingTierSelect?.value;
+      const tier = this.currentProvider === 'azure' || this.currentProvider === 'gcp'
+        ? 'PREMIUM'
+        : pricingTierSelect?.value;
       const requiredTier = this.currentProvider === 'aws' ? 'ENTERPRISE' : 'PREMIUM';
 
       if (this.currentProvider === 'aws' && privateLinkCheckbox) {
@@ -2656,11 +2726,17 @@ class App {
       config.enable_private_link = document.getElementById('enable_private_link')?.checked || false;
       if (this.currentProvider === 'gcp') {
         config.create_new_vpc = true;
-        config.enable_private_link = false;
-        config.enable_nat_gateway = true;
-        config.nat_gateway_mode = 'single';
-        config.pricing_tier = '';
+        config.pricing_tier = config.enable_private_link ? 'PREMIUM' : '';
         config.subnet_cidr = document.getElementById('subnet_cidr')?.value?.trim() || '';
+        config.psc_subnet_cidr = config.enable_private_link
+          ? (document.getElementById('psc_subnet_cidr')?.value?.trim() || '')
+          : '';
+        const [workspaceAttachment = '', relayAttachment = ''] = GCP_PSC_SERVICE_ATTACHMENTS[config.region] || [];
+        config.workspace_service_attachment = config.enable_private_link ? workspaceAttachment : '';
+        config.relay_service_attachment = config.enable_private_link ? relayAttachment : '';
+        config.metastore_id = '';
+        config.public_access_enabled = true;
+        config.create_private_dns = true;
       }
       if (this.currentProvider === 'azure') {
         config.pricing_tier = 'PREMIUM';
@@ -2679,6 +2755,9 @@ class App {
       } else if (this.currentProvider === 'azure' && config.enable_private_link) {
         config.azure_private_link_nat_gateway_mode = document.getElementById('nat_gateway_mode')?.value || 'single';
         config.nat_gateway_mode = config.azure_private_link_nat_gateway_mode;
+        config.enable_nat_gateway = config.nat_gateway_mode !== 'none';
+      } else if (this.currentProvider === 'gcp' && config.enable_private_link) {
+        config.nat_gateway_mode = document.getElementById('nat_gateway_mode')?.value || 'single';
         config.enable_nat_gateway = config.nat_gateway_mode !== 'none';
       } else {
         config.nat_gateway_mode = 'single';
@@ -2969,6 +3048,10 @@ class App {
             config.azure_private_link_nat_gateway_mode = document.getElementById('nat_gateway_mode')?.value || 'single';
             config.nat_gateway_mode = config.azure_private_link_nat_gateway_mode;
             config.enable_nat_gateway = config.nat_gateway_mode !== 'none';
+          } else if (this.currentProvider === 'gcp' && config.enable_private_link) {
+            config.pricing_tier = 'PREMIUM';
+            config.nat_gateway_mode = document.getElementById('nat_gateway_mode')?.value || 'single';
+            config.enable_nat_gateway = config.nat_gateway_mode !== 'none';
           } else {
             config.nat_gateway_mode = 'single';
             config.enable_nat_gateway = true;
@@ -3196,12 +3279,22 @@ class App {
                       ${config.provider === 'gcp' ? `
                       <tr>
                         <td class="fw-semibold">Cloud NAT:</td>
-                        <td><span class="badge bg-success">Created</span></td>
+                        <td><span class="badge bg-${config.enable_nat_gateway ? 'success' : 'secondary'}">${config.enable_nat_gateway ? 'Created' : 'Not created'}</span></td>
                       </tr>
                       <tr>
                         <td class="fw-semibold">Subnet CIDR:</td>
                         <td><code>${config.subnet_cidr}</code></td>
                       </tr>
+                      ${config.enable_private_link ? `
+                      <tr>
+                        <td class="fw-semibold">Back-end PSC:</td>
+                        <td><span class="badge bg-primary">Enabled</span></td>
+                      </tr>
+                      <tr>
+                        <td class="fw-semibold">PSC Endpoint Subnet:</td>
+                        <td><code>${config.psc_subnet_cidr}</code></td>
+                      </tr>
+                      ` : ''}
                       ` : ''}
                       ${config.provider !== 'gcp' && config.vpc_cidr && (config.provider === 'azure' || config.create_new_vpc || config.create_new_subnets) ? `
                       <tr>

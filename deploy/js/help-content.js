@@ -123,6 +123,21 @@ class HelpContent {
         links: [
           { label: 'Azure NAT Gateway overview', url: 'https://learn.microsoft.com/en-us/azure/nat-gateway/nat-overview' }
         ]
+      },
+      gcp: {
+        title: 'Cloud NAT',
+        overview: 'Cloud NAT gives Databricks nodes without public IP addresses outbound internet access while blocking unsolicited inbound connections.',
+        whenToUse: [
+          'Deploy Cloud NAT when clusters need public package repositories, public data sources, or other internet services.',
+          'Choose no Cloud NAT only when an alternate controlled egress path covers every required destination.'
+        ],
+        considerations: [
+          'Back-end Private Service Connect secures control-plane communication but does not provide general internet access.',
+          'Private Google Access remains available without Cloud NAT for supported Google APIs and services.'
+        ],
+        links: [
+          { label: 'Cloud NAT overview', url: 'https://cloud.google.com/nat/docs/overview' }
+        ]
       }
     },
     'nat-placement': {
@@ -218,6 +233,19 @@ class HelpContent {
         ],
         links: [
           { label: 'Azure Databricks Private Link concepts', url: 'https://learn.microsoft.com/en-us/azure/databricks/security/network/concepts/privatelink-concepts' }
+        ]
+      },
+      gcp: {
+        title: 'Back-end Private Service Connect',
+        overview: 'Back-end Private Service Connect routes classic compute-plane communication to the Databricks control plane through private endpoints.',
+        considerations: [
+          'The generated topology creates separate REST API and secure cluster connectivity relay endpoints in the selected region.',
+          'This does not configure front-end private access, so users continue to access the workspace through its public URL.',
+          'A Databricks Enterprise plan is required. Private Service Connect does not provide general internet egress.'
+        ],
+        links: [
+          { label: 'Private Service Connect for classic compute', url: 'https://docs.databricks.com/gcp/en/security/network/classic/private-service-connect' },
+          { label: 'PSC attachment URIs by region', url: 'https://docs.databricks.com/gcp/en/resources/ip-domain-region#psc' }
         ]
       }
     },

@@ -27,7 +27,7 @@ class TerraformGenerator {
     const provider = config.provider.toLowerCase();
 
     if (provider === 'aws' || provider === 'azure' || provider === 'gcp') {
-      const enablePrivateLink = provider === 'gcp' ? false : Boolean(config.enable_private_link);
+      const enablePrivateLink = Boolean(config.enable_private_link);
       const externalFiles = await this.loader.loadExternalTerraformFiles(provider, enablePrivateLink);
       const metadata = this.loader.getExternalTerraformMetadata?.(provider, enablePrivateLink) || {};
       const variables = this.engine.prepareVariables({
