@@ -729,6 +729,7 @@ class App {
         this.currentProvider = selectedProvider;
         Utils.setStorage('provider', selectedProvider);
         Utils.setStorage('step', 1);
+        window.PlatformAnalytics?.track('cloud_provider_selected', selectedProvider);
         window.location.hash = '/configure';
       } else {
         alert('Please select a cloud provider before continuing.');
@@ -3482,6 +3483,7 @@ class App {
         // Store blob and filename for manual download
         this.downloadBlob = zipBlob;
         this.downloadFilename = filename;
+        window.PlatformAnalytics?.track('project_generated', this.currentProvider);
         
         Utils.setStorage('step', 3);
         Utils.hideLoading();
@@ -3879,6 +3881,7 @@ export DATABRICKS_CLIENT_SECRET="&lt;client-secret&gt;"`;
       // If blob is available, use it; otherwise regenerate the project
       if (this.downloadBlob && this.downloadFilename) {
         Utils.downloadFile(this.downloadBlob, this.downloadFilename);
+        window.PlatformAnalytics?.track('terraform_project_downloaded', this.currentProvider);
         Utils.showFlashMessage('Download started!', 'success');
       } else {
         // Regenerate the project if blob is not available (e.g., after page reload)
@@ -3894,6 +3897,7 @@ export DATABRICKS_CLIENT_SECRET="&lt;client-secret&gt;"`;
           this.downloadFilename = filename;
           
           Utils.downloadFile(zipBlob, filename);
+          window.PlatformAnalytics?.track('terraform_project_downloaded', this.currentProvider);
           Utils.hideLoading();
           Utils.showFlashMessage('Download started!', 'success');
         } catch (err) {
@@ -3962,5 +3966,6 @@ export DATABRICKS_CLIENT_SECRET="&lt;client-secret&gt;"`;
 
 // Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
+  window.PlatformAnalytics?.init();
   new App();
 });
