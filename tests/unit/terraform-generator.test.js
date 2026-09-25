@@ -64,6 +64,27 @@ describe('TerraformGenerator AWS external source', () => {
     await expect(generator.generateProject({ provider: 'aws', project_prefix: 'p' }))
       .rejects.toThrow(/Unsafe or conflicting vendored Terraform filename/);
   });
+
+  it('omits README.md when include_docs is false', async () => {
+    const generator = new TerraformGenerator();
+    generator.loader.loadExternalTerraformFiles = async () => [
+      { name: 'network.tf', content: 'module "vpc" {}\n' }
+    ];
+    generator.loader.loadTemplate = async (_provider, templateName) =>
+      templateName === 'tfvars' ? 'region = "{{region}}"\n' : '# {{project_prefix}}\n';
+
+    const blob = await generator.generateProject({
+      provider: 'aws',
+      project_prefix: 'no-docs',
+      region: 'us-east-1',
+      create_new_vpc: true,
+      include_docs: false,
+      calculated_subnets: [{ name: 'private-a', cidr: '10.0.0.0/24', subnet_type: 'private' }]
+    });
+    const zip = await JSZip.loadAsync(await blob.arrayBuffer());
+    expect(Object.keys(zip.files)).not.toContain('README.md');
+    expect(Object.keys(zip.files)).toContain('terraform.tfvars');
+  });
 });
 
 describe('TerraformGenerator generic (non-cloud) fallback path', () => {

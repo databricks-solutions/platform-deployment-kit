@@ -14,6 +14,14 @@ test.describe('Application smoke tests', () => {
     await expect(page.locator('#app-content')).toBeVisible();
   });
 
+  test('navigates from the home hero CTA to provider selection', async ({ page }) => {
+    // Entry journey: the "Get Started" button on the home page (route /).
+    await expect(page).toHaveURL(/#\/$|\/$|#$/);
+    await page.locator('a[data-navigate][href="#/select-provider"]').click();
+    await expect(page).toHaveURL(/.*#\/select-provider/);
+    await expect(page.locator('.provider-option')).toHaveCount(3);
+  });
+
   test('resets saved configuration', async ({ page }) => {
     await FormHelpers.selectProvider(page, 'aws');
     await page.locator('[name="project_prefix"]').fill('reset-check');

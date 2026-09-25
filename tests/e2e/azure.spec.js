@@ -69,6 +69,13 @@ test.describe('Azure critical journeys', () => {
     await FormHelpers.submitConfigForm(page);
     await expect(page).toHaveURL(/.*#\/summary/);
     await expect(page.getByText(EXISTING_VNET_ID, { exact: true })).toBeVisible();
+
+    // Full journey through to download for the existing-VNet path.
+    const { download, archive } = await downloadProject(page);
+    expect(download.suggestedFilename()).toBe('azure-existing-azure-terraform.zip');
+    const tfvars = await archive.file('terraform.tfvars').async('string');
+    expect(tfvars).toContain('create_new_vnet          = false');
+    expect(tfvars).toContain('existing-vnet');
   });
 
   test('generates Private Link with a NAT gateway', async ({ page }) => {
@@ -102,5 +109,27 @@ test.describe('Azure critical journeys', () => {
     const tfvars = await archive.file('terraform.tfvars').async('string');
     expect(tfvars).toContain('create_nat_gateway = false');
     expect(tfvars).toContain('nat_gateway_zones = []');
+  });
+
+  test('generates a standard project attached to an existing metastore', async ({ page }) => {
+    // Covers the Azure standard-mode Unity Catalog metastore_mode = "existing" branch.
+    await FormHelpers.fillAzureConfig(page, {
+      project_prefix: 'azure-metastore',
+      resource_group_name: 'rg-ms-workspace',
+      azure_vnet_resource_group_name: 'rg-ms-network'
+    });
+    await FormHelpers.fillNetworkConfig(page, {
+      create_new_vpc: true,
+      vpc_cidr: '10.16.0.0/20',
+      azure_nat_gateway_zone: '1'
+    });
+    await page.locator('#metastore_mode_existing').check();
+    await expect(page.locator('#existing-metastore-section')).toBeVisible();
+    await page.locator('#metastore_id').fill('existing-metastore-123');
+
+    await FormHelpers.submitConfigForm(page);
+    const { archive } = await downloadProject(page);
+    const tfvars = await archive.file('terraform.tfvars').async('string');
+    expect(tfvars).toContain('existing-metastore-123');
   });
 });
