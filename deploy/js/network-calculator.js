@@ -138,6 +138,7 @@ class NetworkCalculator {
     this.MAX_VPC_SIZE = 24;
     this.MIN_SUBNET_SIZE = 26;
     this.SERVICE_SUBNET_SIZE = 28;
+    this.AWS_INTRA_SUBNET_SIZE = 27;
   }
 
   /**
@@ -203,9 +204,10 @@ class NetworkCalculator {
    * @param {number} numAZs - Number of availability zones
    * @param {boolean} enablePrivateLink - Whether private link/endpoint is enabled
    * @param {boolean} createServiceSubnet - Whether to create service subnet (defaults to enablePrivateLink)
+   * @param {boolean} enableNatGateway - Whether AWS managed networking includes a NAT gateway
    * @returns {Object} { min, max, default, totalSubnets, maxNodes }
    */
-  calculateSubnetSizeLimits(vpcCIDR, numAZs, enablePrivateLink = false, createServiceSubnet = null) {
+  calculateSubnetSizeLimits(vpcCIDR, numAZs, enablePrivateLink = false, createServiceSubnet = null, enableNatGateway = true) {
     if (!this.validateCIDR(vpcCIDR)) {
       return { error: 'Invalid VPC CIDR format' };
     }
@@ -224,8 +226,13 @@ class NetworkCalculator {
     if (this.provider === 'gcp') {
       // GCP: host + pods + service (if creating service subnet)
       numSubnets = shouldCreateServiceSubnet ? 3 : 2;
+    } else if (this.provider === 'aws') {
+      // NAT deployments have one public subnet per AZ. Standard deployments
+      // also need an intra subnet, while fully private PrivateLink deployments
+      // need a dedicated endpoint subnet.
+      numSubnets = numAZs + (enableNatGateway ? numAZs : 0) + ((!enablePrivateLink || !enableNatGateway) ? 1 : 0);
     } else {
-      // AWS/Azure: 2 subnets per AZ (private + public) + service (if creating service subnet)
+      // Azure: 2 subnets per AZ + service (when requested)
       numSubnets = (numAZs * 2) + (shouldCreateServiceSubnet ? 1 : 0);
     }
     
@@ -297,16 +304,11 @@ class NetworkCalculator {
   }
 
   _getAWSSubnetSizes(vpcSize, pricingTier) {
-    const sizes = {
+    return {
       private: this.calculateSubnetSize(vpcSize, 1),
-      public: this.calculateSubnetSize(vpcSize, 1)
+      public: this.calculateSubnetSize(vpcSize, 1),
+      intra: this.AWS_INTRA_SUBNET_SIZE
     };
-    
-    if (pricingTier === 'ENTERPRISE') {
-      sizes.service = this.SERVICE_SUBNET_SIZE;
-    }
-    
-    return sizes;
   }
 
   _getAzureSubnetSizes(vpcSize, pricingTier) {
@@ -371,8 +373,9 @@ class NetworkCalculator {
    * @param {boolean} enablePrivateLink - Whether private link is enabled
    * @param {number|null} customSubnetSize - Optional custom subnet size (prefix length)
    * @param {boolean} createServiceSubnet - Whether to create service subnet (defaults to enablePrivateLink)
+   * @param {boolean} enableNatGateway - Whether AWS managed networking includes a NAT gateway
    */
-  allocateSubnets(vpcCIDR, availabilityZones, pricingTier = null, enablePrivateLink = false, customSubnetSize = null, createServiceSubnet = null) {
+  allocateSubnets(vpcCIDR, availabilityZones, pricingTier = null, enablePrivateLink = false, customSubnetSize = null, createServiceSubnet = null, enableNatGateway = true) {
     if (!this.validateCIDR(vpcCIDR)) {
       throw new Error('Invalid VPC CIDR format');
     }
@@ -400,7 +403,8 @@ class NetworkCalculator {
         subnetSizes = {
           private: customSubnetSize,
           public: customSubnetSize,
-          service: this.SERVICE_SUBNET_SIZE
+          service: this.SERVICE_SUBNET_SIZE,
+          intra: this.AWS_INTRA_SUBNET_SIZE
         };
       }
     }
@@ -408,7 +412,22 @@ class NetworkCalculator {
     const subnets = [];
     let currentIP = vpcNetworkIP;
     
-    if (this.provider === 'aws' || this.provider === 'azure') {
+    if (this.provider === 'aws') {
+      subnets.push(...this._allocateAWSAzureSubnets(
+        currentIP, availabilityZones, subnetSizes, false, enableNatGateway
+      ));
+      if ((!enablePrivateLink || !enableNatGateway) && subnets.length > 0) {
+        currentIP = this.getNextIPAfterSubnet(subnets[subnets.length - 1].cidr);
+        const intraCIDR = this.getNextSubnetCIDR(currentIP, subnetSizes.intra);
+        subnets.push(new SubnetAllocation(
+          enablePrivateLink ? 'endpoint' : 'intra',
+          intraCIDR,
+          subnetSizes.intra,
+          availabilityZones[0],
+          enablePrivateLink ? 'endpoint' : 'intra'
+        ));
+      }
+    } else if (this.provider === 'azure') {
       subnets.push(...this._allocateAWSAzureSubnets(
         currentIP, availabilityZones, subnetSizes, shouldCreateServiceSubnet
       ));
@@ -421,7 +440,7 @@ class NetworkCalculator {
     return subnets;
   }
 
-  _allocateAWSAzureSubnets(startIP, availabilityZones, subnetSizes, createServiceSubnet) {
+  _allocateAWSAzureSubnets(startIP, availabilityZones, subnetSizes, createServiceSubnet, createPublicSubnets = true) {
     const subnets = [];
     let currentIP = startIP;
     
@@ -440,18 +459,20 @@ class NetworkCalculator {
       // Move to next IP after this subnet
       currentIP = this.getNextIPAfterSubnet(privateCIDR);
       
-      // Public subnet
-      const publicSize = subnetSizes.public;
-      const publicCIDR = this.getNextSubnetCIDR(currentIP, publicSize);
-      subnets.push(new SubnetAllocation(
-        `public-${az}`,
-        publicCIDR,
-        publicSize,
-        az,
-        'public'
-      ));
-      // Move to next IP after this subnet
-      currentIP = this.getNextIPAfterSubnet(publicCIDR);
+      if (createPublicSubnets) {
+        // Public subnet for a NAT gateway
+        const publicSize = subnetSizes.public;
+        const publicCIDR = this.getNextSubnetCIDR(currentIP, publicSize);
+        subnets.push(new SubnetAllocation(
+          `public-${az}`,
+          publicCIDR,
+          publicSize,
+          az,
+          'public'
+        ));
+        // Move to next IP after this subnet
+        currentIP = this.getNextIPAfterSubnet(publicCIDR);
+      }
     }
     
     // Service subnet (only if explicitly requested - e.g., PrivateLink with terraform-managed subnet)
@@ -609,4 +630,3 @@ if (typeof window !== 'undefined') {
   window.SubnetAllocation = SubnetAllocation;
   window.CIDRUtils = CIDRUtils;
 }
-

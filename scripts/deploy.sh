@@ -1,23 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Deploy the ./deploy directory to the gh-pages branch
+# Deploy the built ./dist directory to the gh-pages branch
 # Usage: bash scripts/deploy.sh
 
-DEPLOY_DIR="deploy"
+DEPLOY_DIR="dist"
 BRANCH="gh-pages"
 REMOTE="origin"
-
-if [ ! -d "$DEPLOY_DIR" ]; then
-  echo "Error: $DEPLOY_DIR directory not found"
-  exit 1
-fi
 
 # Run tests before deploying
 echo "Running tests before deploy..."
 bash scripts/test.sh
 echo "All tests passed."
 echo ""
+
+# Resolve the current upstream main branch and create the deployable artifact.
+npm run build
 
 # Get current commit info for the deploy message
 COMMIT_SHA=$(git rev-parse --short HEAD)
@@ -35,10 +33,6 @@ cp -r "$DEPLOY_DIR"/. "$TEMP_DIR"/
 
 # Disable Jekyll processing (ensures all files are served as-is)
 touch "$TEMP_DIR/.nojekyll"
-
-# Write deploy version metadata
-DEPLOY_DATE=$(date -u '+%Y-%m-%d %H:%M UTC')
-printf '{"date":"%s","commit":"%s"}\n' "$DEPLOY_DATE" "$COMMIT_SHA" > "$TEMP_DIR/version.json"
 
 cd "$TEMP_DIR"
 git init -q

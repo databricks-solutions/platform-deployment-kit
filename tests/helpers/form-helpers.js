@@ -8,7 +8,7 @@ class FormHelpers {
    */
   static async selectProvider(page, provider) {
     await page.goto('/#/select-provider');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     
     const providerCard = page.locator(`.provider-option[data-provider="${provider}"]`);
     await providerCard.click();
@@ -16,7 +16,7 @@ class FormHelpers {
     
     const continueBtn = page.locator('#continue-btn');
     await continueBtn.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   }
 
   /**
@@ -42,9 +42,11 @@ class FormHelpers {
     
     if (config.pricing_tier) {
       const field = page.locator('select[name="pricing_tier"]');
-      await field.waitFor({ state: 'visible', timeout: 5000 });
-      await field.selectOption(config.pricing_tier);
-      await page.waitForTimeout(300); // Wait for any dependent fields to update
+      if (await field.count()) {
+        await field.waitFor({ state: 'visible', timeout: 5000 });
+        await field.selectOption(config.pricing_tier);
+        await page.waitForTimeout(300); // Wait for any dependent fields to update
+      }
     }
     
     if (config.resource_group_name) {
@@ -65,16 +67,99 @@ class FormHelpers {
   }
 
   /**
+   * Fill the fields required by the Azure deployment.
+   * Individual tests can override any default while keeping the fixtures valid.
+   */
+  static async fillAzureConfig(page, config = {}) {
+    const values = {
+      project_prefix: 'test-azure',
+      region: 'eastus',
+      azure_subscription_id: '11111111-1111-4111-8111-111111111111',
+      azure_tenant_id: '22222222-2222-4222-8222-222222222222',
+      resource_group_name: 'rg-databricks-workspace',
+      azure_admin_user: 'admin@example.com',
+      azure_root_storage_name: 'dbfsoneclicktest',
+      azure_uc_storage_account_name: 'uconeclicktest',
+      azure_catalog_name: 'oneclick_catalog',
+      azure_storage_credential_name: 'oneclick-storage-credential',
+      azure_external_location_name: 'oneclick-external-location',
+      azure_vnet_resource_group_name: 'rg-databricks-network',
+      ...config
+    };
+
+    await this.fillBasicConfig(page, values);
+
+    for (const fieldName of [
+      'azure_subscription_id',
+      'azure_tenant_id',
+      'azure_admin_user',
+      'azure_root_storage_name',
+      'azure_uc_storage_account_name',
+      'azure_catalog_name',
+      'azure_storage_credential_name',
+      'azure_external_location_name',
+      'azure_vnet_resource_group_name'
+    ]) {
+      const field = page.locator(`[name="${fieldName}"]`);
+      if (await field.isVisible().catch(() => false)) {
+        await field.fill(values[fieldName] || '');
+        await field.blur();
+      }
+    }
+
+    await page.waitForTimeout(300);
+  }
+
+  /** Fill the common inputs required by the GCP BYOVPC sources. */
+  static async fillGcpConfig(page, config = {}) {
+    const values = {
+      project_prefix: 'test-gcp',
+      region: 'us-central1',
+      project_id: 'test-gcp-project',
+      google_service_account_email: 'workspace-creator@test-gcp-project.iam.gserviceaccount.com',
+      databricks_account_id: '11111111-1111-4111-8111-111111111111',
+      databricks_admin_user: 'admin@example.com',
+      subnet_cidr: '10.10.0.0/20',
+      ...config
+    };
+
+    await this.fillBasicConfig(page, values);
+
+    for (const fieldName of [
+      'project_id',
+      'google_service_account_email',
+      'databricks_account_id',
+      'databricks_admin_user',
+      'subnet_cidr'
+    ]) {
+      const field = page.locator(`[name="${fieldName}"]`);
+      await field.fill(values[fieldName] || '');
+      await field.blur();
+    }
+
+    if (values.psc_subnet_cidr) {
+      const field = page.locator('[name="psc_subnet_cidr"]');
+      if (await field.isVisible().catch(() => false)) {
+        await field.fill(values.psc_subnet_cidr);
+        await field.blur();
+      }
+    }
+
+    await page.waitForTimeout(300);
+  }
+
+  /**
    * Fill network configuration
    */
   static async fillNetworkConfig(page, config) {
     // Toggle create new VPC
     const createNewVpc = page.locator('#create_new_vpc');
-    const isChecked = await createNewVpc.isChecked();
-    
-    if (config.create_new_vpc !== undefined && config.create_new_vpc !== isChecked) {
-      await createNewVpc.click();
-      await page.waitForTimeout(300);
+    if (await createNewVpc.count()) {
+      const isChecked = await createNewVpc.isChecked();
+      if (config.create_new_vpc !== undefined && config.create_new_vpc !== isChecked) {
+        await createNewVpc.click();
+        await page.waitForTimeout(300);
+      }
     }
     
     // Fill existing VPC ID if not creating new
@@ -90,21 +175,31 @@ class FormHelpers {
       await page.fill('input[name="vpc_cidr"]', config.vpc_cidr);
       await page.waitForTimeout(800); // Wait for subnet calculation
     }
+
+    if (config.azure_nat_gateway_zone !== undefined) {
+      const natGatewayZone = page.locator('#azure_nat_gateway_zone');
+      if (await natGatewayZone.isVisible().catch(() => false)) {
+        await natGatewayZone.selectOption(config.azure_nat_gateway_zone);
+      }
+    }
     
     // Set availability zones (Choices.js component)
     if (config.availability_zones && Array.isArray(config.availability_zones)) {
-      // Use the helper function which handles Choices.js correctly
-      await this.selectAvailabilityZones(page, config.availability_zones);
+      // Azure uses a fixed subnet topology and no longer renders a zone picker.
+      if (await page.locator('#availability-zones-select').count()) {
+        await this.selectAvailabilityZones(page, config.availability_zones);
+      }
     }
     
     // Toggle private link
     if (config.enable_private_link !== undefined) {
       const privateLinkCheckbox = page.locator('#enable_private_link');
-      const isChecked = await privateLinkCheckbox.isChecked();
-      
-      if (config.enable_private_link !== isChecked) {
-        await privateLinkCheckbox.click();
-        await page.waitForTimeout(500); // Wait for recalculation
+      if (await privateLinkCheckbox.count()) {
+        const isChecked = await privateLinkCheckbox.isChecked();
+        if (config.enable_private_link !== isChecked) {
+          await privateLinkCheckbox.click();
+          await page.waitForTimeout(500); // Wait for recalculation
+        }
       }
     }
   }
@@ -174,7 +269,7 @@ class FormHelpers {
       // Wait for navigation first
       try {
         await page.waitForURL(/.*#\/summary/, { timeout: 5000 });
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
         return;
       } catch (navError) {
         // Navigation didn't happen, check for error messages
@@ -215,7 +310,7 @@ class FormHelpers {
           }
         } else {
           // Navigated somewhere else, assume success
-          await page.waitForLoadState('networkidle');
+          await page.waitForLoadState('domcontentloaded');
           return;
         }
       }
@@ -238,14 +333,9 @@ class FormHelpers {
    * Confirm and generate project in summary page
    */
   static async confirmAndGenerate(page) {
-    const confirmCheckbox = page.locator('#confirm');
-    await confirmCheckbox.check();
-    
     const generateBtn = page.locator('#generate-btn');
     await generateBtn.click();
-    
-    // Wait for download to start (or error message)
-    await page.waitForTimeout(2000);
+    await page.waitForURL(/.*#\/download/, { timeout: 15000 });
   }
 
   /**
@@ -409,4 +499,3 @@ class FormHelpers {
 }
 
 module.exports = FormHelpers;
-

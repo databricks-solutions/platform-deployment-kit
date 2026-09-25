@@ -13,8 +13,7 @@ const dirs = [
   path.join(libsDir, 'choices.js', 'css'),
   path.join(libsDir, 'choices.js', 'js'),
   path.join(libsDir, 'handlebars'),
-  path.join(fontsDir, 'manrope'),
-  path.join(fontsDir, 'space-grotesk'),
+  path.join(fontsDir, 'dm-sans'),
   path.join(fontsDir, 'jetbrains-mono')
 ];
 
@@ -59,15 +58,10 @@ const filesToCopy = [
     from: path.join(__dirname, '..', 'node_modules', 'handlebars', 'dist', 'handlebars.min.js'),
     to: path.join(libsDir, 'handlebars', 'handlebars.min.js')
   },
-  // Fontes - Manrope (variable)
+  // Fonts - DM Sans (variable)
   {
-    from: path.join(__dirname, '..', 'node_modules', '@fontsource-variable', 'manrope', 'files'),
-    to: path.join(fontsDir, 'manrope')
-  },
-  // Fontes - Space Grotesk (variable) - Display font
-  {
-    from: path.join(__dirname, '..', 'node_modules', '@fontsource-variable', 'space-grotesk', 'files'),
-    to: path.join(fontsDir, 'space-grotesk')
+    from: path.join(__dirname, '..', 'node_modules', '@fontsource-variable', 'dm-sans', 'files'),
+    to: path.join(fontsDir, 'dm-sans')
   },
   // Fontes - JetBrains Mono - Monospace
   {
@@ -118,4 +112,3 @@ function copyRecursiveSync(src, dest) {
 }
 
 console.log('\n✅ Libraries copied successfully!');
-

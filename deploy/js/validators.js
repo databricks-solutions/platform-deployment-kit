@@ -10,7 +10,7 @@ class Validators {
    */
   static validateCIDR(cidr, minPrefix = null, maxPrefix = null) {
     if (!cidr) return { valid: true, message: '' };
-    
+
     try {
       const [ip, prefix] = cidr.split('/');
       if (!ip || !prefix) {
@@ -84,6 +84,30 @@ class Validators {
     return { valid: true, message: '' };
   }
 
+  static validateAwsProjectPrefix(name, minLength = 2, maxLength = 20) {
+    if (!name) return { valid: false, message: 'Project name is required' };
+    const trimmed = name.trim();
+    if (trimmed.length < minLength || trimmed.length > maxLength) {
+      return { valid: false, message: `Name must be between ${minLength} and ${maxLength} characters` };
+    }
+    if (!/^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])$/.test(trimmed)) {
+      return { valid: false, message: 'AWS project prefix must use lowercase letters, numbers, hyphens, or periods' };
+    }
+    return { valid: true, message: '' };
+  }
+
+  static validateAzureProjectPrefix(name, minLength = 2, maxLength = 20) {
+    if (!name) return { valid: false, message: 'Project name is required' };
+    const trimmed = name.trim();
+    if (trimmed.length < minLength || trimmed.length > maxLength) {
+      return { valid: false, message: `Name must be between ${minLength} and ${maxLength} characters` };
+    }
+    if (!/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])$/.test(trimmed)) {
+      return { valid: false, message: 'Azure project prefix must use lowercase letters, numbers, or hyphens' };
+    }
+    return { valid: true, message: '' };
+  }
+
   /**
    * Validate region format based on provider
    */
@@ -102,6 +126,20 @@ class Validators {
     if (pattern && !pattern.test(region)) {
       return { valid: false, message: `Invalid ${provider.toUpperCase()} region format` };
     }
+
+    if (provider?.toLowerCase() === 'azure') {
+      const supported = new Set([
+        'australiacentral', 'australiacentral2', 'australiaeast', 'australiasoutheast',
+        'brazilsouth', 'canadacentral', 'canadaeast', 'centralindia', 'centralus',
+        'chinaeast2', 'chinaeast3', 'chinanorth2', 'chinanorth3', 'eastasia', 'eastus',
+        'eastus2', 'francecentral', 'germanywestcentral', 'japaneast', 'japanwest',
+        'koreacentral', 'mexicocentral', 'northcentralus', 'northeurope', 'norwayeast',
+        'qatarcentral', 'southafricanorth', 'southcentralus', 'southeastasia', 'southindia',
+        'swedencentral', 'switzerlandnorth', 'switzerlandwest', 'uaenorth', 'uksouth',
+        'ukwest', 'westcentralus', 'westeurope', 'westindia', 'westus', 'westus2', 'westus3'
+      ]);
+      if (!supported.has(region)) return { valid: false, message: 'Region is not supported by the Azure Terraform source' };
+    }
     
     return { valid: true, message: '' };
   }
@@ -115,7 +153,9 @@ class Validators {
     }
     
     const validTiers = {
-      aws: ['STANDARD', 'PREMIUM', 'ENTERPRISE'],
+      aws: ['PREMIUM', 'ENTERPRISE'],
+      // Keep STANDARD valid for persisted legacy configurations. The Azure UI
+      // now emits only PREMIUM because both selected upstream sources hardcode it.
       azure: ['STANDARD', 'PREMIUM'],
       gcp: ['STANDARD', 'PREMIUM']
     };
@@ -137,14 +177,37 @@ class Validators {
   static validatePricingTierFeatures(config) {
     const errors = {};
     const { provider, pricing_tier, enable_private_link } = config;
+    const requestedNatGatewayMode = String(
+      provider === 'azure' && enable_private_link
+        ? (config.azure_private_link_nat_gateway_mode || config.nat_gateway_mode || '')
+        : (config.nat_gateway_mode || '')
+    ).trim();
+    const natGatewayMode = requestedNatGatewayMode ||
+      ((config.enable_nat_gateway === false || config.enable_nat_gateway === 'false') ? 'none' : 'single');
     
     if (enable_private_link) {
       if (provider === 'aws' && pricing_tier !== 'ENTERPRISE') {
-        errors.enable_private_link = 'AWS PrivateLink requires Enterprise pricing tier. Please upgrade to Enterprise tier.';
+        errors.enable_private_link = 'Back-end PrivateLink requires Enterprise pricing tier. Please upgrade to Enterprise tier.';
       } else if ((provider === 'azure' || provider === 'gcp') && pricing_tier !== 'PREMIUM') {
-        const serviceName = provider === 'azure' ? 'Private Link' : 'Private Service Connect';
+        const serviceName = provider === 'azure' ? 'Back-end Private Link' : 'Private Service Connect';
         errors.enable_private_link = `${serviceName} requires Premium pricing tier`;
       }
+    }
+
+    if (provider === 'aws' && config.create_new_vpc && !['single', 'per_az', 'none'].includes(natGatewayMode)) {
+      errors.nat_gateway_mode = 'Choose a supported NAT gateway option.';
+    }
+
+    if (provider === 'azure' && enable_private_link && !['single', 'none'].includes(natGatewayMode)) {
+      errors.azure_private_link_nat_gateway_mode = 'Choose whether to deploy a NAT gateway.';
+    }
+
+    if (provider === 'gcp' && enable_private_link && !['single', 'none'].includes(natGatewayMode)) {
+      errors.nat_gateway_mode = 'Choose whether to deploy Cloud NAT.';
+    }
+
+    if (provider === 'aws' && config.create_new_vpc && natGatewayMode === 'none' && !enable_private_link) {
+      errors.enable_private_link = 'Back-end PrivateLink is required to communicate with the control plane when no NAT gateway is selected.';
     }
     
     return errors;
@@ -274,6 +337,16 @@ class Validators {
     return { valid: true, message: '' };
   }
 
+  static validateAwsVpcEndpointId(endpointId) {
+    if (!endpointId || typeof endpointId !== 'string') {
+      return { valid: false, message: 'VPC endpoint ID is required' };
+    }
+    if (!/^vpce-[a-f0-9]{8,17}$/i.test(endpointId.trim())) {
+      return { valid: false, message: 'Invalid AWS VPC endpoint ID format (e.g., vpce-0123456789abcdef0)' };
+    }
+    return { valid: true, message: '' };
+  }
+
   /**
    * Validate Azure VNet Resource ID format
    */
@@ -285,6 +358,31 @@ class Validators {
     const pattern = /^\/subscriptions\/[a-f0-9-]+\/resourceGroups\/[^/]+\/providers\/Microsoft\.Network\/virtualNetworks\/[^/]+$/i;
     if (!pattern.test(trimmed)) {
       return { valid: false, message: 'Invalid Azure VNet Resource ID format (e.g., /subscriptions/.../resourceGroups/.../providers/Microsoft.Network/virtualNetworks/my-vnet)' };
+    }
+    return { valid: true, message: '' };
+  }
+
+  static validateUuid(value, label) {
+    if (!value || typeof value !== 'string') return { valid: false, message: `${label} is required` };
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.trim())) {
+      return { valid: false, message: `${label} must be a valid UUID` };
+    }
+    return { valid: true, message: '' };
+  }
+
+  static validateAzureStorageAccountName(value, label) {
+    if (!value || typeof value !== 'string') return { valid: false, message: `${label} is required` };
+    if (!/^[a-z0-9]{3,24}$/.test(value.trim())) {
+      return { valid: false, message: `${label} must contain 3-24 lowercase letters and numbers` };
+    }
+    return { valid: true, message: '' };
+  }
+
+  static validateAzureResourceGroupName(value, label = 'Resource group name') {
+    if (!value || typeof value !== 'string') return { valid: false, message: `${label} is required` };
+    const trimmed = value.trim();
+    if (trimmed.length > 90 || !/^[\w().-]+$/.test(trimmed) || trimmed.endsWith('.')) {
+      return { valid: false, message: `${label} contains unsupported Azure characters` };
     }
     return { valid: true, message: '' };
   }
@@ -327,7 +425,11 @@ class Validators {
     const errors = {};
     
     // Basic fields
-    const projectNameCheck = this.validateProjectName(config.project_prefix);
+    const projectNameCheck = config.provider === 'aws'
+      ? this.validateAwsProjectPrefix(config.project_prefix)
+      : config.provider === 'azure'
+        ? this.validateAzureProjectPrefix(config.project_prefix)
+        : this.validateProjectName(config.project_prefix);
     if (!projectNameCheck.valid) {
       errors.project_prefix = projectNameCheck.message;
     }
@@ -337,18 +439,20 @@ class Validators {
       errors.region = regionCheck.message;
     }
     
-    const tierCheck = this.validatePricingTier(config.pricing_tier, config.provider);
-    if (!tierCheck.valid) {
-      errors.pricing_tier = tierCheck.message;
+    if (config.provider !== 'gcp') {
+      const tierCheck = this.validatePricingTier(config.pricing_tier, config.provider);
+      if (!tierCheck.valid) {
+        errors.pricing_tier = tierCheck.message;
+      }
     }
     
     // Determine if we need subnet configuration (VPC CIDR, AZs, etc.)
-    const needsSubnetConfig = config.create_new_vpc ||
-      (config.provider === 'aws' && config.create_new_subnets !== false);
+    const needsSubnetConfig = config.provider !== 'gcp' &&
+      (config.provider === 'azure' || config.create_new_vpc);
     
     // Network - only validate VPC CIDR if we need subnet config
     if (needsSubnetConfig) {
-      const cidrCheck = this.validateCIDR(config.vpc_cidr, 8, 24);
+      const cidrCheck = this.validateCIDR(config.vpc_cidr, config.provider === 'azure' ? 16 : 8, 24);
       if (!cidrCheck.valid) {
         errors.vpc_cidr = cidrCheck.message;
       }
@@ -374,104 +478,151 @@ class Validators {
         errors.existing_vpc_id = vpcIdCheck.message;
       }
       
-      // If using existing subnets, validate subnet IDs and security group
-      if (config.create_new_subnets === false || config.subnet_mode === 'existing') {
-        // Validate at least 2 subnet IDs
-        if (!config.existing_subnet_ids || config.existing_subnet_ids.length < 2) {
-          errors.existing_subnet_ids = 'At least 2 subnet IDs are required for Databricks (in different AZs)';
-        } else {
-          // Validate each subnet ID format
-          for (let i = 0; i < config.existing_subnet_ids.length; i++) {
-            const subnetCheck = this.validateAwsSubnetId(config.existing_subnet_ids[i]);
-            if (!subnetCheck.valid) {
-              errors.existing_subnet_ids = `Invalid format for Subnet ID ${i + 1}: ${subnetCheck.message}`;
-              break;
-            }
+      // The upstream modules cannot create subnets in an existing VPC.
+      if (!config.existing_subnet_ids || config.existing_subnet_ids.length < 2) {
+        errors.existing_subnet_ids = 'At least 2 subnet IDs are required for Databricks (in different AZs)';
+      } else {
+        for (let i = 0; i < config.existing_subnet_ids.length; i++) {
+          const subnetCheck = this.validateAwsSubnetId(config.existing_subnet_ids[i]);
+          if (!subnetCheck.valid) {
+            errors.existing_subnet_ids = `Invalid format for Subnet ID ${i + 1}: ${subnetCheck.message}`;
+            break;
           }
         }
-        
-        // Validate security group ID
-        if (!config.existing_security_group_id) {
-          errors.existing_security_group_id = 'Security Group ID is required when using existing subnets';
-        } else {
-          const sgCheck = this.validateAwsSecurityGroupId(config.existing_security_group_id);
-          if (!sgCheck.valid) {
-            errors.existing_security_group_id = sgCheck.message;
-          }
+      }
+
+      const sgCheck = this.validateAwsSecurityGroupId(config.existing_security_group_id);
+      if (!sgCheck.valid) errors.existing_security_group_id = sgCheck.message;
+
+      if (config.enable_private_link) {
+        const restCheck = this.validateAwsVpcEndpointId(config.backend_rest_aws_vpce_id);
+        if (!restCheck.valid) errors.backend_rest_aws_vpce_id = restCheck.message;
+        const relayCheck = this.validateAwsVpcEndpointId(config.backend_relay_aws_vpce_id);
+        if (!relayCheck.valid) errors.backend_relay_aws_vpce_id = relayCheck.message;
+      }
+    }
+
+    if (config.provider === 'aws') {
+      if (config.metastore_mode === 'existing') {
+        if (!config.metastore_id || !config.metastore_id.trim()) {
+          errors.metastore_id = 'Existing metastore ID is required';
         }
       }
     }
     
     // Azure-specific: Existing VNet validation
-    if (config.provider === 'azure' && !config.create_new_vpc) {
+    if (config.provider === 'azure' && !config.enable_private_link && !config.create_new_vpc) {
       const vnetIdCheck = this.validateAzureVnetId(config.existing_vpc_id);
       if (!vnetIdCheck.valid) {
         errors.existing_vpc_id = vnetIdCheck.message;
       }
-      const pubSubnetCheck = this.validateAzureSubnetName(config.existing_public_subnet_name);
-      if (!pubSubnetCheck.valid) {
-        errors.existing_public_subnet_name = pubSubnetCheck.message;
-      }
-      const privSubnetCheck = this.validateAzureSubnetName(config.existing_private_subnet_name);
-      if (!privSubnetCheck.valid) {
-        errors.existing_private_subnet_name = privSubnetCheck.message;
-      }
-    }
-
-    // GCP-specific: Existing VPC validation
-    if (config.provider === 'gcp' && !config.create_new_vpc) {
-      const vpcNameCheck = this.validateGcpResourceName(config.existing_vpc_id, 'VPC name');
-      if (!vpcNameCheck.valid) {
-        errors.existing_vpc_id = vpcNameCheck.message;
-      }
-      const subnetCheck = this.validateGcpResourceName(config.existing_subnet_name, 'Subnet name');
-      if (!subnetCheck.valid) {
-        errors.existing_subnet_name = subnetCheck.message;
-      }
-      const podRangeCheck = this.validateGcpResourceName(config.existing_pod_range_name, 'Pod IP range name');
-      if (!podRangeCheck.valid) {
-        errors.existing_pod_range_name = podRangeCheck.message;
-      }
-      const svcRangeCheck = this.validateGcpResourceName(config.existing_service_range_name, 'Service IP range name');
-      if (!svcRangeCheck.valid) {
-        errors.existing_service_range_name = svcRangeCheck.message;
-      }
     }
 
     // Provider-specific
-    if (config.provider === 'azure' && !config.resource_group_name) {
-      errors.resource_group_name = 'Resource group name is required for Azure';
+    if (config.provider === 'azure') {
+      const subscriptionCheck = this.validateUuid(config.azure_subscription_id, 'Azure subscription ID');
+      if (!subscriptionCheck.valid) errors.azure_subscription_id = subscriptionCheck.message;
+
+      if (config.enable_private_link) {
+        if (!config.create_new_vpc) errors.create_new_vpc = 'Back-end Private Link requires a new dedicated VNet';
+        if (!['new', 'existing'].includes(config.azure_resource_group_mode)) {
+          errors.azure_resource_group_mode = 'Choose whether to create or reuse the data plane resource group';
+        }
+        if (config.azure_resource_group_mode === 'existing') {
+          const rgCheck = this.validateAzureResourceGroupName(
+            config.azure_existing_resource_group_name,
+            'Existing resource group name'
+          );
+          if (!rgCheck.valid) errors.azure_existing_resource_group_name = rgCheck.message;
+        }
+      } else {
+        const tenantCheck = this.validateUuid(config.azure_tenant_id, 'Azure tenant ID');
+        if (!tenantCheck.valid) errors.azure_tenant_id = tenantCheck.message;
+        const rgCheck = this.validateAzureResourceGroupName(config.resource_group_name, 'Workspace resource group');
+        if (!rgCheck.valid) errors.resource_group_name = rgCheck.message;
+        if (!config.azure_admin_user || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(config.azure_admin_user.trim())) {
+          errors.azure_admin_user = 'Workspace admin user must be a valid email address';
+        }
+        const rootStorageCheck = this.validateAzureStorageAccountName(
+          config.azure_root_storage_name,
+          'Workspace root storage account'
+        );
+        if (!rootStorageCheck.valid) errors.azure_root_storage_name = rootStorageCheck.message;
+        const ucStorageCheck = this.validateAzureStorageAccountName(
+          config.azure_uc_storage_account_name,
+          'UC storage account'
+        );
+        if (!ucStorageCheck.valid) errors.azure_uc_storage_account_name = ucStorageCheck.message;
+        for (const [field, label] of [
+          ['azure_catalog_name', 'Catalog name'],
+          ['azure_storage_credential_name', 'Storage credential name'],
+          ['azure_external_location_name', 'External location name']
+        ]) {
+          if (!config[field] || !config[field].trim()) errors[field] = `${label} is required`;
+        }
+        if (config.metastore_mode === 'existing' && (!config.metastore_id || !config.metastore_id.trim())) {
+          errors.metastore_id = 'Existing metastore ID is required';
+        }
+        if (config.create_new_vpc) {
+          const vnetRgCheck = this.validateAzureResourceGroupName(
+            config.azure_vnet_resource_group_name,
+            'VNet resource group name'
+          );
+          if (!vnetRgCheck.valid) errors.azure_vnet_resource_group_name = vnetRgCheck.message;
+          if (config.azure_vnet_resource_group_name?.trim().toLowerCase() === config.resource_group_name?.trim().toLowerCase()) {
+            errors.azure_vnet_resource_group_name = 'VNet and workspace resource groups must have different names';
+          }
+        } else {
+          const match = String(config.existing_vpc_id || '').match(/\/resourceGroups\/([^/]+)\//i);
+          if (match?.[1]?.toLowerCase() === config.resource_group_name?.trim().toLowerCase()) {
+            errors.existing_vpc_id = 'Existing VNet and workspace resource groups must have different names';
+          }
+        }
+      }
     }
-    
-    if (config.provider === 'gcp' && !config.project_id) {
-      errors.project_id = 'GCP Project ID is required';
+
+    if (config.provider === 'gcp') {
+      if (!config.project_id || !config.project_id.trim()) {
+        errors.project_id = 'GCP Project ID is required';
+      }
+      if (!config.google_service_account_email ||
+          !/^[^\s@]+@[^\s@]+\.iam\.gserviceaccount\.com$/.test(config.google_service_account_email.trim())) {
+        errors.google_service_account_email = 'Enter a valid Google service account email';
+      }
+      if (!config.databricks_account_id || !config.databricks_account_id.trim()) {
+        errors.databricks_account_id = 'Databricks Account ID is required';
+      }
+      if (!config.databricks_admin_user ||
+          !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(config.databricks_admin_user.trim())) {
+        errors.databricks_admin_user = 'Workspace admin user must be a valid email address';
+      }
+      if (!config.subnet_cidr || !config.subnet_cidr.trim()) {
+        errors.subnet_cidr = 'Databricks subnet CIDR is required';
+      } else {
+        const subnetCheck = this.validateCIDR(config.subnet_cidr, 8, 29);
+        if (!subnetCheck.valid) errors.subnet_cidr = subnetCheck.message;
+      }
+
+      if (config.enable_private_link) {
+        if (!config.psc_subnet_cidr || !config.psc_subnet_cidr.trim()) {
+          errors.psc_subnet_cidr = 'PSC endpoint subnet CIDR is required';
+        } else {
+          const pscSubnetCheck = this.validateCIDR(config.psc_subnet_cidr, 8, 29);
+          if (!pscSubnetCheck.valid) {
+            errors.psc_subnet_cidr = pscSubnetCheck.message;
+          } else if (config.subnet_cidr && CIDRUtils.overlaps(config.subnet_cidr, config.psc_subnet_cidr)) {
+            errors.psc_subnet_cidr = 'PSC endpoint subnet must not overlap the Databricks subnet';
+          }
+        }
+        if (!config.workspace_service_attachment || !config.relay_service_attachment) {
+          errors.region = 'Back-end Private Service Connect is not configured for this GCP region';
+        }
+      }
     }
     
     // Pricing tier features
     const featureErrors = this.validatePricingTierFeatures(config);
     Object.assign(errors, featureErrors);
-    
-    // AWS-specific: PrivateLink subnet validation
-    if (config.provider === 'aws' && config.enable_private_link) {
-      // When using existing subnets (not creating new ones), user must provide PrivateLink subnet
-      const usingExistingSubnets = !config.create_new_vpc && 
-        (config.create_new_subnets === false || config.subnet_mode === 'existing');
-      
-      if (usingExistingSubnets && config.privatelink_subnet_mode === 'terraform_managed') {
-        errors.privatelink_subnet_mode = 'When using existing subnets, you must select "Use Existing Subnet" for PrivateLink and provide a subnet ID';
-      }
-      
-      if (config.privatelink_subnet_mode === 'user_managed') {
-        if (!config.existing_privatelink_subnet_id) {
-          errors.existing_privatelink_subnet_id = 'Subnet ID is required when using user-managed PrivateLink subnet';
-        } else {
-          const subnetCheck = this.validateAwsSubnetId(config.existing_privatelink_subnet_id);
-          if (!subnetCheck.valid) {
-            errors.existing_privatelink_subnet_id = subnetCheck.message;
-          }
-        }
-      }
-    }
     
     // Tags
     if (config.tags) {
@@ -492,4 +643,3 @@ class Validators {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = Validators;
 }
-

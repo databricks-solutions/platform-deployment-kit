@@ -8,7 +8,7 @@ class NavigationHelpers {
    */
   static async navigateTo(page, route) {
     await page.goto(`/#${route}`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   }
 
   /**
@@ -18,7 +18,7 @@ class NavigationHelpers {
     const backButton = page.locator('a[data-navigate]:has-text("Back")').first();
     if (await backButton.isVisible()) {
       await backButton.click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
     }
   }
 
@@ -27,7 +27,7 @@ class NavigationHelpers {
    */
   static async reset(page) {
     await page.goto('/#/reset');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   }
 
   /**
@@ -74,4 +74,3 @@ class NavigationHelpers {
 }
 
 module.exports = NavigationHelpers;
-

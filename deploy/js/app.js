@@ -2,6 +2,24 @@
  * Main Application - SPA Router and Application Logic
  */
 
+const GCP_PSC_SERVICE_ATTACHMENTS = {
+  'us-central1': ['projects/gcp-prod-general/regions/us-central1/serviceAttachments/plproxy-psc-endpoint-all-ports', 'projects/prod-gcp-us-central1/regions/us-central1/serviceAttachments/ngrok-psc-endpoint'],
+  'us-east1': ['projects/general-prod-useast1-01/regions/us-east1/serviceAttachments/plproxy-psc-endpoint-all-ports', 'projects/prod-gcp-us-east1/regions/us-east1/serviceAttachments/ngrok-psc-endpoint'],
+  'us-east4': ['projects/general-prod-useast4-01/regions/us-east4/serviceAttachments/plproxy-psc-endpoint-all-ports', 'projects/prod-gcp-us-east4/regions/us-east4/serviceAttachments/ngrok-psc-endpoint'],
+  'us-west1': ['projects/general-prod-uswest1-01/regions/us-west1/serviceAttachments/plproxy-psc-endpoint-all-ports', 'projects/prod-gcp-us-west1/regions/us-west1/serviceAttachments/ngrok-psc-endpoint'],
+  'us-west4': ['projects/general-prod-uswest4-01/regions/us-west4/serviceAttachments/plproxy-psc-endpoint-all-ports', 'projects/prod-gcp-us-west4/regions/us-west4/serviceAttachments/ngrok-psc-endpoint'],
+  'northamerica-northeast1': ['projects/general-prod-nanortheast1-01/regions/northamerica-northeast1/serviceAttachments/plproxy-psc-endpoint-all-ports', 'projects/prod-gcp-northamerica-northeast1/regions/northamerica-northeast1/serviceAttachments/ngrok-psc-endpoint'],
+  'southamerica-east1': ['projects/gen-prod-saeast1-01/regions/southamerica-east1/serviceAttachments/plproxy-psc-endpoint-all-ports', 'projects/prod-gcp-southamerica-east1/regions/southamerica-east1/serviceAttachments/ngrok-psc-endpoint'],
+  'europe-west1': ['projects/general-prod-europewest1-01/regions/europe-west1/serviceAttachments/plproxy-psc-endpoint-all-ports', 'projects/prod-gcp-europe-west1/regions/europe-west1/serviceAttachments/ngrok-psc-endpoint'],
+  'europe-west2': ['projects/general-prod-europewest2-01/regions/europe-west2/serviceAttachments/plproxy-psc-endpoint-all-ports', 'projects/prod-gcp-europe-west2/regions/europe-west2/serviceAttachments/ngrok-psc-endpoint'],
+  'europe-west3': ['projects/general-prod-europewest3-01/regions/europe-west3/serviceAttachments/plproxy-psc-endpoint-all-ports', 'projects/prod-gcp-europe-west3/regions/europe-west3/serviceAttachments/ngrok-psc-endpoint'],
+  'asia-northeast1': ['projects/general-prod-asianortheast1-01/regions/asia-northeast1/serviceAttachments/plproxy-psc-endpoint-all-ports', 'projects/prod-gcp-asia-northeast1/regions/asia-northeast1/serviceAttachments/ngrok-psc-endpoint'],
+  'asia-south1': ['projects/gen-prod-asias1-01/regions/asia-south1/serviceAttachments/plproxy-psc-endpoint-all-ports', 'projects/prod-gcp-asia-south1/regions/asia-south1/serviceAttachments/ngrok-psc-endpoint'],
+  'asia-southeast1': ['projects/general-prod-asiasoutheast1-01/regions/asia-southeast1/serviceAttachments/plproxy-psc-endpoint-all-ports', 'projects/prod-gcp-asia-southeast1/regions/asia-southeast1/serviceAttachments/ngrok-psc-endpoint'],
+  'australia-southeast1': ['projects/general-prod-ausoutheast1-01/regions/australia-southeast1/serviceAttachments/plproxy-psc-endpoint-all-ports', 'projects/prod-gcp-australia-southeast1/regions/australia-southeast1/serviceAttachments/ngrok-psc-endpoint'],
+  'me-central2': ['projects/gen-prod-mec2-01/regions/me-central2/serviceAttachments/plproxy-psc-endpoint-all-ports', 'projects/prod-gcp-me-central2/regions/me-central2/serviceAttachments/ngrok-psc-endpoint']
+};
+
 class App {
   constructor() {
     this.currentConfig = Utils.getStorage('config') || {};
@@ -178,6 +196,12 @@ class App {
           ]
         },
         {
+          group: 'Middle East',
+          regions: [
+            { code: 'me-central2', name: 'Middle East Central 2 (Dammam)' }
+          ]
+        },
+        {
           group: 'South America',
           regions: [
             { code: 'southamerica-east1', name: 'South America East (São Paulo)' }
@@ -185,6 +209,28 @@ class App {
         }
       ]
     };
+
+    if (provider?.toLowerCase() === 'azure') {
+      const supported = [
+        'australiacentral', 'australiacentral2', 'australiaeast', 'australiasoutheast',
+        'brazilsouth', 'canadacentral', 'canadaeast', 'centralindia', 'centralus',
+        'chinaeast2', 'chinaeast3', 'chinanorth2', 'chinanorth3', 'eastasia', 'eastus',
+        'eastus2', 'francecentral', 'germanywestcentral', 'japaneast', 'japanwest',
+        'koreacentral', 'mexicocentral', 'northcentralus', 'northeurope', 'norwayeast',
+        'qatarcentral', 'southafricanorth', 'southcentralus', 'southeastasia', 'southindia',
+        'swedencentral', 'switzerlandnorth', 'switzerlandwest', 'uaenorth', 'uksouth',
+        'ukwest', 'westcentralus', 'westeurope', 'westindia', 'westus', 'westus2', 'westus3'
+      ];
+      const supportedSet = new Set(supported);
+      const groups = regions.azure.map(group => ({
+        ...group,
+        regions: group.regions.filter(region => supportedSet.has(region.code))
+      })).filter(group => group.regions.length > 0);
+      const known = new Set(groups.flatMap(group => group.regions.map(region => region.code)));
+      const additional = supported.filter(code => !known.has(code)).map(code => ({ code, name: code }));
+      if (additional.length) groups.push({ group: 'Additional Supported Regions', regions: additional });
+      return groups;
+    }
 
     return regions[provider?.toLowerCase()] || [];
   }
@@ -222,10 +268,11 @@ class App {
   renderPricingTierOptions(provider, selectedTier) {
     const tiers = provider === 'aws' 
       ? [
-          { value: 'STANDARD', label: 'Standard' },
           { value: 'PREMIUM', label: 'Premium' },
           { value: 'ENTERPRISE', label: 'Enterprise' }
         ]
+      : provider === 'azure'
+        ? [{ value: 'PREMIUM', label: 'Premium' }]
       : [
           { value: 'STANDARD', label: 'Standard' },
           { value: 'PREMIUM', label: 'Premium' }
@@ -239,6 +286,116 @@ class App {
       const selected = tier.value === effectiveSelection ? 'selected' : '';
       return `<option value="${tier.value}" ${selected}>${tier.label}</option>`;
     }).join('');
+  }
+
+  /**
+   * Render a compact, accessible trigger for provider-specific guidance.
+   */
+  renderHelpButton(topicId, label) {
+    return `
+      <button type="button" class="context-help-trigger" data-help-topic="${topicId}"
+              aria-label="Learn more about ${label}" aria-controls="contextHelpDrawer"
+              title="Learn more about ${label}">
+        <i class="bi bi-info-circle" aria-hidden="true"></i>
+      </button>
+    `;
+  }
+
+  /**
+   * Handle help triggers rendered by SPA routes and populate the shared drawer.
+   */
+  setupContextualHelp() {
+    const drawer = document.getElementById('contextHelpDrawer');
+    if (!drawer || typeof HelpContent === 'undefined') return;
+
+    document.addEventListener('click', event => {
+      const trigger = event.target.closest('[data-help-topic]');
+      if (!trigger) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      this.openContextualHelp(trigger.dataset.helpTopic, trigger);
+    });
+
+    document.addEventListener('keydown', event => {
+      if (event.key !== 'Escape' || (!drawer.classList.contains('show') && !drawer.classList.contains('showing'))) return;
+      const offcanvas = bootstrap.Offcanvas.getOrCreateInstance(drawer);
+      if (drawer.classList.contains('showing') && !drawer.classList.contains('show')) {
+        drawer.addEventListener('shown.bs.offcanvas', () => offcanvas.hide(), { once: true });
+      } else {
+        offcanvas.hide();
+      }
+    }, true);
+
+    drawer.addEventListener('hidden.bs.offcanvas', () => {
+      if (this.contextHelpTrigger?.isConnected) {
+        this.contextHelpTrigger.focus();
+      }
+    });
+  }
+
+  openContextualHelp(topicId, trigger) {
+    const topic = HelpContent.getTopic(topicId, this.currentProvider);
+    const drawer = document.getElementById('contextHelpDrawer');
+    const title = document.getElementById('contextHelpTitle');
+    const provider = document.getElementById('contextHelpProvider');
+    const body = document.getElementById('contextHelpBody');
+    if (!topic || !drawer || !title || !provider || !body) return;
+
+    const providerNames = { aws: 'AWS guidance', azure: 'Azure guidance', gcp: 'GCP guidance' };
+    title.textContent = topic.title;
+    provider.textContent = providerNames[this.currentProvider] || 'Configuration guidance';
+    body.replaceChildren();
+
+    const overview = document.createElement('p');
+    overview.className = 'context-help-overview';
+    overview.textContent = topic.overview;
+    body.appendChild(overview);
+
+    const appendListSection = (heading, items) => {
+      if (!items?.length) return;
+      const section = document.createElement('section');
+      section.className = 'context-help-section';
+      const sectionTitle = document.createElement('h3');
+      sectionTitle.textContent = heading;
+      const list = document.createElement('ul');
+      items.forEach(item => {
+        const listItem = document.createElement('li');
+        listItem.textContent = item;
+        list.appendChild(listItem);
+      });
+      section.append(sectionTitle, list);
+      body.appendChild(section);
+    };
+
+    appendListSection('When to use each option', topic.whenToUse);
+    appendListSection('Requirements and considerations', topic.considerations);
+
+    if (topic.links?.length) {
+      const section = document.createElement('section');
+      section.className = 'context-help-section context-help-links';
+      const sectionTitle = document.createElement('h3');
+      sectionTitle.textContent = 'Official documentation';
+      section.appendChild(sectionTitle);
+      topic.links.forEach(link => {
+        const anchor = document.createElement('a');
+        anchor.href = link.url;
+        anchor.target = '_blank';
+        anchor.rel = 'noopener noreferrer';
+        anchor.className = 'context-help-link';
+        const label = document.createElement('span');
+        label.textContent = link.label;
+        const icon = document.createElement('i');
+        icon.className = 'bi bi-box-arrow-up-right';
+        icon.setAttribute('aria-hidden', 'true');
+        anchor.append(label, icon);
+        section.appendChild(anchor);
+      });
+      body.appendChild(section);
+    }
+
+    this.contextHelpTrigger = trigger;
+    bootstrap.Offcanvas.getOrCreateInstance(drawer).show(trigger);
   }
 
   /**
@@ -298,6 +455,7 @@ class App {
    * Get currently selected availability zones
    */
   getSelectedAvailabilityZones() {
+    if (this.currentProvider === 'azure') return ['1'];
     const azSelect = document.getElementById('availability-zones-select');
     if (!azSelect) return [];
     
@@ -341,6 +499,7 @@ class App {
   init() {
     // Setup navigation
     this.setupNavigation();
+    this.setupContextualHelp();
     
     // Handle hash routing
     window.addEventListener('hashchange', () => this.handleRoute());
@@ -351,671 +510,8 @@ class App {
       Utils.updateProgress(this.currentStep);
     }
     
-    // Update navbar based on provider selection
-    this.updateNavbar();
-    
-    // Check and show install prompt on navigation
-    this.checkInstallPrompt();
-    
-    // Setup credential modal event listeners
-    this.setupCredentialModal();
-    
-    // Setup master password modal event listeners
-    this.setupMasterPasswordModals();
   }
 
-  updateNavbar() {
-    // Configure Provider menu is always visible
-    // Update credential status indicators
-    this.updateCredentialStatusIndicators();
-  }
-
-  /**
-   * Setup credential modal event listeners
-   */
-  setupCredentialModal() {
-    const modal = document.getElementById('configureProviderModal');
-    if (modal) {
-      // When trying to open the credentials modal, check vault state first
-      modal.addEventListener('show.bs.modal', (e) => {
-        // Check if vault exists and needs to be unlocked
-        if (Utils.hasCredentialsVault() && !Utils.isVaultUnlocked()) {
-          e.preventDefault();
-          this.showUnlockVaultModal();
-          return;
-        }
-        
-        // If no vault exists, show setup modal first
-        if (!Utils.hasCredentialsVault()) {
-          e.preventDefault();
-          this.showSetupVaultModal();
-          return;
-        }
-        
-        // Vault is unlocked, update UI
-        this.updateCredentialStatusIndicators();
-        this.updateVaultStatusBanner();
-        
-        // Populate fields with masked values for all providers
-        this.populateCredentialFields();
-      });
-    }
-  }
-
-  /**
-   * Populate credential fields with masked values if credentials exist
-   * Fields are locked when credentials are present
-   */
-  async populateCredentialFields() {
-    for (const provider of ['aws', 'azure', 'gcp']) {
-      await this.updateProviderCredentialFields(provider);
-    }
-  }
-
-  /**
-   * Update credential fields for a specific provider
-   * @param {string} provider - Cloud provider (aws, azure, gcp)
-   */
-  async updateProviderCredentialFields(provider) {
-    const accountIdInput = document.getElementById(`${provider}-account-id`);
-    const clientIdInput = document.getElementById(`${provider}-client-id`);
-    const clientSecretInput = document.getElementById(`${provider}-client-secret`);
-    const saveBtn = document.getElementById(`${provider}-save-btn`);
-    const clearBtn = document.getElementById(`${provider}-clear-btn`);
-
-    // Get stored credentials
-    let credentials = null;
-    if (Utils.isVaultUnlocked()) {
-      credentials = await Utils.getProviderCredentials(provider);
-    }
-
-    const hasCredentials = credentials && 
-      (credentials.accountId || credentials.clientId || credentials.clientSecret);
-
-    if (hasCredentials) {
-      // Show masked values and lock fields
-      if (accountIdInput) {
-        accountIdInput.value = credentials.accountId ? Utils.maskSensitiveValue(credentials.accountId) : '';
-        accountIdInput.readOnly = true;
-        accountIdInput.classList.add('credential-locked');
-      }
-      if (clientIdInput) {
-        clientIdInput.value = credentials.clientId ? Utils.maskSensitiveValue(credentials.clientId) : '';
-        clientIdInput.readOnly = true;
-        clientIdInput.classList.add('credential-locked');
-      }
-      if (clientSecretInput) {
-        clientSecretInput.value = credentials.clientSecret ? Utils.maskSensitiveValue(credentials.clientSecret) : '';
-        clientSecretInput.readOnly = true;
-        clientSecretInput.classList.add('credential-locked');
-      }
-
-      // Disable save button, enable clear button
-      if (saveBtn) {
-        saveBtn.disabled = true;
-        saveBtn.innerHTML = '<i class="bi bi-lock-fill me-1"></i>Credentials Saved';
-      }
-      if (clearBtn) {
-        clearBtn.classList.remove('btn-outline-danger');
-        clearBtn.classList.add('btn-danger');
-      }
-    } else {
-      // Clear fields and unlock
-      this.unlockProviderCredentialFields(provider);
-    }
-  }
-
-  /**
-   * Unlock credential fields for a specific provider (make them editable)
-   * @param {string} provider - Cloud provider (aws, azure, gcp)
-   */
-  unlockProviderCredentialFields(provider) {
-    const accountIdInput = document.getElementById(`${provider}-account-id`);
-    const clientIdInput = document.getElementById(`${provider}-client-id`);
-    const clientSecretInput = document.getElementById(`${provider}-client-secret`);
-    const saveBtn = document.getElementById(`${provider}-save-btn`);
-    const clearBtn = document.getElementById(`${provider}-clear-btn`);
-
-    // Clear and unlock all fields
-    if (accountIdInput) {
-      accountIdInput.value = '';
-      accountIdInput.readOnly = false;
-      accountIdInput.classList.remove('credential-locked');
-      accountIdInput.placeholder = 'Enter your Databricks Account ID';
-    }
-    if (clientIdInput) {
-      clientIdInput.value = '';
-      clientIdInput.readOnly = false;
-      clientIdInput.classList.remove('credential-locked');
-      clientIdInput.placeholder = 'Enter Client ID';
-    }
-    if (clientSecretInput) {
-      clientSecretInput.value = '';
-      clientSecretInput.readOnly = false;
-      clientSecretInput.classList.remove('credential-locked');
-      clientSecretInput.placeholder = 'Enter Client Secret';
-    }
-
-    // Enable save button, reset clear button style
-    if (saveBtn) {
-      saveBtn.disabled = false;
-      saveBtn.innerHTML = '<i class="bi bi-save me-1"></i>Save Credentials';
-    }
-    if (clearBtn) {
-      clearBtn.classList.remove('btn-danger');
-      clearBtn.classList.add('btn-outline-danger');
-    }
-  }
-
-  /**
-   * Setup master password modal event listeners
-   */
-  setupMasterPasswordModals() {
-    // Setup modal
-    this.setupMasterPasswordSetupModal();
-    
-    // Unlock modal
-    this.setupMasterPasswordUnlockModal();
-    
-    // Change password modal
-    this.setupChangePasswordModal();
-    
-    // Vault control buttons in credentials modal
-    this.setupVaultControlButtons();
-  }
-
-  /**
-   * Setup the master password setup modal handlers
-   */
-  setupMasterPasswordSetupModal() {
-    const newPasswordInput = document.getElementById('master-password-new');
-    const confirmPasswordInput = document.getElementById('master-password-confirm');
-    const setupButton = document.getElementById('btn-setup-master-password');
-    const toggleNewBtn = document.getElementById('toggle-master-password-new');
-    const toggleConfirmBtn = document.getElementById('toggle-master-password-confirm');
-
-    // Password visibility toggles
-    if (toggleNewBtn && newPasswordInput) {
-      toggleNewBtn.addEventListener('click', () => this.togglePasswordVisibility(newPasswordInput, toggleNewBtn));
-    }
-    if (toggleConfirmBtn && confirmPasswordInput) {
-      toggleConfirmBtn.addEventListener('click', () => this.togglePasswordVisibility(confirmPasswordInput, toggleConfirmBtn));
-    }
-
-    // Password validation
-    const validateSetupForm = () => {
-      const newPass = newPasswordInput?.value || '';
-      const confirmPass = confirmPasswordInput?.value || '';
-      
-      this.updatePasswordStrength(newPass);
-      
-      const isValid = newPass.length >= 8 && newPass === confirmPass;
-      if (setupButton) setupButton.disabled = !isValid;
-      
-      // Show mismatch warning
-      if (confirmPass && newPass !== confirmPass) {
-        confirmPasswordInput.classList.add('is-invalid');
-      } else {
-        confirmPasswordInput.classList.remove('is-invalid');
-      }
-    };
-
-    if (newPasswordInput) newPasswordInput.addEventListener('input', validateSetupForm);
-    if (confirmPasswordInput) confirmPasswordInput.addEventListener('input', validateSetupForm);
-
-    // Setup button click
-    if (setupButton) {
-      setupButton.addEventListener('click', async () => {
-        const password = newPasswordInput?.value;
-        
-        if (!password || password.length < 8) {
-          Utils.showFlashMessage('Password must be at least 8 characters.', 'error');
-          return;
-        }
-
-        setupButton.disabled = true;
-        setupButton.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Creating...';
-
-        try {
-          await Utils.setupCredentialsVault(password);
-          await Utils.refreshCredentialsCache();
-          
-          // Remove focus and clear form before closing modal (fixes aria-hidden warning)
-          if (newPasswordInput) {
-            newPasswordInput.blur();
-            newPasswordInput.value = '';
-          }
-          if (confirmPasswordInput) {
-            confirmPasswordInput.blur();
-            confirmPasswordInput.value = '';
-          }
-          
-          // Close setup modal
-          const setupModal = bootstrap.Modal.getInstance(document.getElementById('masterPasswordSetupModal'));
-          if (setupModal) setupModal.hide();
-          
-          Utils.showFlashMessage('Credentials vault created successfully\!', 'success');
-          
-          // Now open the credentials modal
-          setTimeout(() => {
-            const credentialsModal = new bootstrap.Modal(document.getElementById('configureProviderModal'));
-            credentialsModal.show();
-          }, 300);
-        } catch (error) {
-          Utils.showFlashMessage(`Failed to create vault: ${error.message}`, 'error');
-        } finally {
-          setupButton.disabled = false;
-          setupButton.innerHTML = '<i class="bi bi-shield-check me-1"></i>Create Vault';
-        }
-      });
-    }
-  }
-
-  /**
-   * Setup the master password unlock modal handlers
-   */
-  setupMasterPasswordUnlockModal() {
-    const passwordInput = document.getElementById('master-password-unlock');
-    const unlockButton = document.getElementById('btn-unlock-vault');
-    const deleteButton = document.getElementById('btn-delete-vault');
-    const toggleBtn = document.getElementById('toggle-master-password-unlock');
-    const errorMessage = document.getElementById('unlock-error-message');
-
-    // Password visibility toggle
-    if (toggleBtn && passwordInput) {
-      toggleBtn.addEventListener('click', () => this.togglePasswordVisibility(passwordInput, toggleBtn));
-    }
-
-    // Unlock button click
-    if (unlockButton) {
-      unlockButton.addEventListener('click', async () => {
-        const password = passwordInput?.value;
-        
-        if (!password) {
-          Utils.showFlashMessage('Please enter your master password.', 'warning');
-          return;
-        }
-
-        unlockButton.disabled = true;
-        unlockButton.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Unlocking...';
-        passwordInput.classList.remove('is-invalid');
-
-        try {
-          await Utils.unlockVault(password);
-          await Utils.refreshCredentialsCache();
-          
-          // Remove focus from input before closing modal (fixes aria-hidden warning)
-          if (passwordInput) {
-            passwordInput.blur();
-            passwordInput.value = '';
-          }
-          
-          // Close unlock modal
-          const unlockModal = bootstrap.Modal.getInstance(document.getElementById('masterPasswordUnlockModal'));
-          if (unlockModal) unlockModal.hide();
-          
-          Utils.showFlashMessage('Vault unlocked successfully\!', 'success');
-          
-          // Update indicators
-          this.updateCredentialStatusIndicators();
-          
-          // Only open credentials modal if NOT unlocking from download page
-          if (!this._unlockFromDownloadPage) {
-            setTimeout(() => {
-              const credentialsModal = new bootstrap.Modal(document.getElementById('configureProviderModal'));
-              credentialsModal.show();
-            }, 300);
-          }
-          
-          // Reset the flag
-          this._unlockFromDownloadPage = false;
-        } catch (error) {
-          passwordInput.classList.add('is-invalid');
-          if (errorMessage) errorMessage.textContent = error.message;
-        } finally {
-          unlockButton.disabled = false;
-          unlockButton.innerHTML = '<i class="bi bi-unlock me-1"></i>Unlock';
-        }
-      });
-    }
-
-    // Allow Enter key to submit
-    if (passwordInput) {
-      passwordInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          unlockButton?.click();
-        }
-      });
-    }
-
-    // Delete vault button
-    if (deleteButton) {
-      deleteButton.addEventListener('click', () => {
-        if (confirm('Are you sure you want to delete the credentials vault? This will permanently delete all stored credentials and cannot be undone.')) {
-          Utils.deleteCredentialsVault();
-          
-          // Remove focus before closing modal (fixes aria-hidden warning)
-          if (passwordInput) {
-            passwordInput.blur();
-            passwordInput.value = '';
-          }
-          
-          // Close unlock modal
-          const unlockModal = bootstrap.Modal.getInstance(document.getElementById('masterPasswordUnlockModal'));
-          if (unlockModal) unlockModal.hide();
-          
-          Utils.showFlashMessage('Credentials vault deleted.', 'info');
-          this.updateCredentialStatusIndicators();
-        }
-      });
-    }
-  }
-
-  /**
-   * Setup change password modal handlers
-   */
-  setupChangePasswordModal() {
-    const currentPasswordInput = document.getElementById('current-master-password');
-    const newPasswordInput = document.getElementById('new-master-password');
-    const confirmPasswordInput = document.getElementById('confirm-new-master-password');
-    const changeButton = document.getElementById('btn-change-master-password');
-
-    if (changeButton) {
-      changeButton.addEventListener('click', async () => {
-        const currentPass = currentPasswordInput?.value;
-        const newPass = newPasswordInput?.value;
-        const confirmPass = confirmPasswordInput?.value;
-
-        if (!currentPass || !newPass || !confirmPass) {
-          Utils.showFlashMessage('Please fill in all fields.', 'warning');
-          return;
-        }
-
-        if (newPass.length < 8) {
-          Utils.showFlashMessage('New password must be at least 8 characters.', 'error');
-          return;
-        }
-
-        if (newPass !== confirmPass) {
-          Utils.showFlashMessage('New passwords do not match.', 'error');
-          return;
-        }
-
-        changeButton.disabled = true;
-        changeButton.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Changing...';
-
-        try {
-          await Utils.changeMasterPassword(currentPass, newPass);
-          
-          // Remove focus and clear form before closing modal (fixes aria-hidden warning)
-          if (currentPasswordInput) {
-            currentPasswordInput.blur();
-            currentPasswordInput.value = '';
-          }
-          if (newPasswordInput) {
-            newPasswordInput.blur();
-            newPasswordInput.value = '';
-          }
-          if (confirmPasswordInput) {
-            confirmPasswordInput.blur();
-            confirmPasswordInput.value = '';
-          }
-          
-          // Close modal
-          const changeModal = bootstrap.Modal.getInstance(document.getElementById('changeMasterPasswordModal'));
-          if (changeModal) changeModal.hide();
-          
-          Utils.showFlashMessage('Master password changed successfully\!', 'success');
-        } catch (error) {
-          Utils.showFlashMessage(`Failed to change password: ${error.message}`, 'error');
-        } finally {
-          changeButton.disabled = false;
-          changeButton.innerHTML = '<i class="bi bi-check-lg me-1"></i>Change Password';
-        }
-      });
-    }
-  }
-
-  /**
-   * Setup vault control buttons in credentials modal
-   */
-  setupVaultControlButtons() {
-    const lockButton = document.getElementById('btn-lock-vault');
-    const changePasswordLink = document.getElementById('btn-change-password-link');
-
-    if (lockButton) {
-      lockButton.addEventListener('click', () => {
-        Utils.lockVault();
-        
-        // Close credentials modal
-        const credentialsModal = bootstrap.Modal.getInstance(document.getElementById('configureProviderModal'));
-        if (credentialsModal) credentialsModal.hide();
-        
-        Utils.showFlashMessage('Vault locked.', 'info');
-        this.updateCredentialStatusIndicators();
-      });
-    }
-
-    if (changePasswordLink) {
-      changePasswordLink.addEventListener('click', () => {
-        // Close credentials modal and open change password modal
-        const credentialsModal = bootstrap.Modal.getInstance(document.getElementById('configureProviderModal'));
-        if (credentialsModal) credentialsModal.hide();
-        
-        setTimeout(() => {
-          const changeModal = new bootstrap.Modal(document.getElementById('changeMasterPasswordModal'));
-          changeModal.show();
-        }, 300);
-      });
-    }
-  }
-
-  /**
-   * Toggle password input visibility
-   */
-  togglePasswordVisibility(input, button) {
-    if (input.type === 'password') {
-      input.type = 'text';
-      button.innerHTML = '<i class="bi bi-eye-slash"></i>';
-    } else {
-      input.type = 'password';
-      button.innerHTML = '<i class="bi bi-eye"></i>';
-    }
-  }
-
-  /**
-   * Update password strength indicator
-   */
-  updatePasswordStrength(password) {
-    const strengthBar = document.querySelector('#password-strength .progress-bar');
-    const strengthText = document.getElementById('strength-text');
-    
-    if (!strengthBar || !strengthText) return;
-
-    let strength = 0;
-    let text = 'Weak';
-    let colorClass = 'bg-danger';
-
-    if (password.length >= 8) strength += 25;
-    if (password.length >= 12) strength += 25;
-    if (/[A-Z]/.test(password)) strength += 15;
-    if (/[a-z]/.test(password)) strength += 10;
-    if (/[0-9]/.test(password)) strength += 15;
-    if (/[^A-Za-z0-9]/.test(password)) strength += 10;
-
-    if (strength >= 80) {
-      text = 'Strong';
-      colorClass = 'bg-success';
-    } else if (strength >= 50) {
-      text = 'Medium';
-      colorClass = 'bg-warning';
-    } else if (strength >= 25) {
-      text = 'Weak';
-      colorClass = 'bg-danger';
-    } else {
-      text = 'Very weak';
-      colorClass = 'bg-danger';
-    }
-
-    strengthBar.style.width = `${strength}%`;
-    strengthBar.className = `progress-bar ${colorClass}`;
-    strengthText.textContent = text;
-  }
-
-  /**
-   * Show the setup vault modal
-   */
-  showSetupVaultModal() {
-    const modal = new bootstrap.Modal(document.getElementById('masterPasswordSetupModal'));
-    modal.show();
-  }
-
-  /**
-   * Show the unlock vault modal
-   */
-  showUnlockVaultModal() {
-    const modal = new bootstrap.Modal(document.getElementById('masterPasswordUnlockModal'));
-    modal.show();
-  }
-
-  /**
-   * Update the vault status banner in credentials modal
-   */
-  updateVaultStatusBanner() {
-    const banner = document.getElementById('vault-status-banner');
-    const statusIcon = document.getElementById('vault-status-icon');
-    const statusText = document.getElementById('vault-status-text');
-    
-    if (!banner) return;
-
-    if (Utils.isVaultUnlocked()) {
-      banner.style.display = 'block';
-      if (statusIcon) {
-        statusIcon.className = 'bi bi-shield-fill-check text-success me-2';
-      }
-      if (statusText) {
-        statusText.textContent = 'Vault unlocked - credentials are encrypted';
-      }
-    } else {
-      banner.style.display = 'none';
-    }
-  }
-
-  /**
-   * Update credential status indicators in the modal tabs
-   */
-  async updateCredentialStatusIndicators() {
-    for (const provider of ['aws', 'azure', 'gcp']) {
-      const indicator = document.getElementById(`${provider}-creds-status`);
-      if (indicator) {
-        let hasCredentials = false;
-        
-        if (Utils.isVaultUnlocked()) {
-          hasCredentials = await Utils.hasProviderCredentials(provider);
-        }
-        
-        if (hasCredentials) {
-          indicator.innerHTML = '<i class="bi bi-check-circle-fill text-success ms-1"></i>';
-          indicator.title = 'Credentials configured';
-        } else {
-          indicator.innerHTML = '';
-          indicator.title = '';
-        }
-      }
-    }
-  }
-
-  /**
-   * Save provider credentials from the modal form
-   * @param {string} provider - Cloud provider (aws, azure, gcp)
-   */
-  async saveProviderCredentials(provider) {
-    // Check if vault is unlocked
-    if (!Utils.isVaultUnlocked()) {
-      Utils.showFlashMessage('Please unlock the credentials vault first.', 'warning');
-      return;
-    }
-
-    const accountIdInput = document.getElementById(`${provider}-account-id`);
-    const clientIdInput = document.getElementById(`${provider}-client-id`);
-    const clientSecretInput = document.getElementById(`${provider}-client-secret`);
-
-    // Check if fields are locked (already have credentials)
-    if (accountIdInput?.readOnly || clientIdInput?.readOnly || clientSecretInput?.readOnly) {
-      Utils.showFlashMessage('Credentials are locked. Click Clear to edit.', 'warning');
-      return;
-    }
-
-    const credentials = {
-      accountId: accountIdInput ? accountIdInput.value.trim() : '',
-      clientId: clientIdInput ? clientIdInput.value.trim() : '',
-      clientSecret: clientSecretInput ? clientSecretInput.value.trim() : ''
-    };
-
-    // Check if at least one credential is provided
-    if (!credentials.accountId && !credentials.clientId && !credentials.clientSecret) {
-      Utils.showFlashMessage('Please enter at least one credential value.', 'warning');
-      return;
-    }
-
-    try {
-      // Save to encrypted storage
-      const success = await Utils.setProviderCredentials(provider, credentials);
-
-      if (success) {
-        // Update fields to show masked values and lock them
-        await this.updateProviderCredentialFields(provider);
-
-        // Update status indicators
-        await this.updateCredentialStatusIndicators();
-
-        Utils.showFlashMessage(`${provider.toUpperCase()} credentials saved securely.`, 'success');
-      } else {
-        Utils.showFlashMessage('Failed to save credentials. Please try again.', 'error');
-      }
-    } catch (error) {
-      Utils.showFlashMessage(`Error: ${error.message}`, 'error');
-    }
-  }
-
-  /**
-   * Clear provider credentials
-   * @param {string} provider - Cloud provider (aws, azure, gcp)
-   */
-  async clearProviderCredentials(provider) {
-    if (!Utils.isVaultUnlocked()) {
-      Utils.showFlashMessage('Please unlock the credentials vault first.', 'warning');
-      return;
-    }
-
-    try {
-      await Utils.clearProviderCredentials(provider);
-      
-      // Unlock fields and clear values
-      this.unlockProviderCredentialFields(provider);
-
-      // Update status indicators
-      await this.updateCredentialStatusIndicators();
-
-      Utils.showFlashMessage(`${provider.toUpperCase()} credentials cleared. You can now enter new credentials.`, 'info');
-    } catch (error) {
-      Utils.showFlashMessage(`Error: ${error.message}`, 'error');
-    }
-  }
-
-  checkInstallPrompt() {
-    // Show install banner after user interacts with the app
-    // This provides better UX than showing immediately
-    setTimeout(() => {
-      if (window.deferredPrompt && !localStorage.getItem('pwa-install-dismissed')) {
-        const banner = document.getElementById('install-banner');
-        if (banner && banner.style.display === 'none') {
-          banner.style.display = 'block';
-        }
-      }
-    }, 3000); // Show after 3 seconds of interaction
-  }
 
   setupNavigation() {
     // Handle all navigation links
@@ -1038,63 +534,31 @@ class App {
     if (handler) {
       await handler();
     }
-    
-    // Check install prompt after route change
-    this.checkInstallPrompt();
   }
 
   // Route Handlers
   renderHome() {
     const content = `
-      <!-- Hero Section -->
       <section class="hero-section">
         <div class="container">
           <div class="row align-items-center min-vh-50">
             <div class="col-lg-6">
-              <h1 class="hero-title">
-                Deploy Databricks Infrastructure in Minutes
-              </h1>
+              <h1 class="hero-title">Deploy Databricks Infrastructure in Minutes</h1>
               <p class="hero-subtitle">
-                One-Click Deployer simplifies Databricks infrastructure deployment across AWS, Azure, and GCP. 
-                Transform complex Terraform configurations into a simple, guided experience with intelligent automation.
+                Generate a ready-to-deploy Terraform project for AWS, Azure, or GCP
+                through a simple, guided configuration flow.
               </p>
               <div class="hero-cta">
                 <a href="#/select-provider" class="btn btn-primary btn-lg" data-navigate>
                   <i class="bi bi-rocket-takeoff me-2" aria-hidden="true"></i>
                   Get Started
                 </a>
-                <button class="btn btn-outline-primary btn-lg" id="hero-install-btn" style="display: none;">
-                  <i class="bi bi-download me-2" aria-hidden="true"></i>
-                  Install App
-                </button>
-              </div>
-              
-              <!-- Quick Stats -->
-              <div class="row mt-5 g-3 stagger-children">
-                <div class="col-4">
-                  <div class="glass p-3 rounded-3 text-center">
-                    <div class="h2 fw-bold mb-1 text-gradient">3</div>
-                    <div class="text-sm text-muted">Cloud Providers</div>
-                  </div>
-                </div>
-                <div class="col-4">
-                  <div class="glass p-3 rounded-3 text-center">
-                    <div class="h2 fw-bold mb-1 text-gradient">90%</div>
-                    <div class="text-sm text-muted">Time Saved</div>
-                  </div>
-                </div>
-                <div class="col-4">
-                  <div class="glass p-3 rounded-3 text-center">
-                    <div class="h2 fw-bold mb-1 text-gradient">100%</div>
-                    <div class="text-sm text-muted">Best Practices</div>
-                  </div>
-                </div>
               </div>
             </div>
             <div class="col-lg-6">
               <div class="hero-illustration animate-fade-up" style="animation-delay: 0.3s;">
                 <div class="hero-terminal">
-                  <div class="hero-terminal-header">
+                  <div class="hero-terminal-header" aria-hidden="true">
                     <span class="hero-terminal-dot red"></span>
                     <span class="hero-terminal-dot yellow"></span>
                     <span class="hero-terminal-dot green"></span>
@@ -1105,20 +569,19 @@ class App {
                     <div class="hero-code-line"><span class="success">✓ Provider configured successfully</span></div>
                     <div class="hero-code-line mt-2"><span class="prompt">$</span> <span class="command">terraform apply</span></div>
                     <div class="hero-code-line"><span class="output">Creating Databricks workspace...</span></div>
-                    <div class="hero-code-line"><span class="success">✓ Apply complete\! Resources: 12 added</span></div>
+                    <div class="hero-code-line"><span class="success">✓ Apply complete! Resources created</span></div>
                   </div>
                 </div>
-                <!-- Floating provider badges -->
                 <div class="hero-float-element aws d-none d-lg-flex align-items-center gap-2">
-                  <i class="bi bi-cloud text-warning"></i>
+                  <i class="bi bi-cloud text-warning" aria-hidden="true"></i>
                   <span class="text-sm">AWS</span>
                 </div>
                 <div class="hero-float-element azure d-none d-lg-flex align-items-center gap-2">
-                  <i class="bi bi-cloud text-info"></i>
+                  <i class="bi bi-cloud text-info" aria-hidden="true"></i>
                   <span class="text-sm">Azure</span>
                 </div>
                 <div class="hero-float-element gcp d-none d-lg-flex align-items-center gap-2">
-                  <i class="bi bi-cloud text-primary-accent"></i>
+                  <i class="bi bi-cloud text-primary-accent" aria-hidden="true"></i>
                   <span class="text-sm">GCP</span>
                 </div>
               </div>
@@ -1126,458 +589,10 @@ class App {
           </div>
         </div>
       </section>
-
-      <!-- What We Do Section -->
-      <section class="what-we-do-section">
-        <div class="container">
-          <div class="row">
-            <div class="col-lg-10 mx-auto text-center mb-5">
-              <h2 class="h1 fw-bold mb-3">What We Do</h2>
-              <p class="lead text-muted mb-5">
-                One-Click Deployer is a Progressive Web App (PWA) that generates production-ready Terraform configurations 
-                for Databricks workspaces across multiple cloud providers. We eliminate the complexity of infrastructure 
-                as code by providing an intuitive, visual interface that handles all the technical details for you.
-              </p>
-            </div>
-          </div>
-          
-          <div class="row g-4">
-            <div class="col-md-6 col-lg-4">
-              <div class="what-we-do-card">
-                <div class="icon-wrapper">
-                  <i class="bi bi-code-slash" aria-hidden="true"></i>
-                </div>
-                <h4 class="fw-bold mb-3">Generate Terraform Code</h4>
-                <p class="text-muted mb-0">
-                  Automatically generate complete Terraform projects with all necessary files, modules, and configurations. 
-                  No manual coding required—just fill out a simple form.
-                </p>
-              </div>
-            </div>
-            
-            <div class="col-md-6 col-lg-4">
-              <div class="what-we-do-card">
-                <div class="icon-wrapper">
-                  <i class="bi bi-calculator" aria-hidden="true"></i>
-                </div>
-                <h4 class="fw-bold mb-3">Smart Network Calculations</h4>
-                <p class="text-muted mb-0">
-                  Our intelligent calculator automatically determines optimal subnet allocations, CIDR blocks, and network 
-                  configurations based on your requirements and cloud provider best practices.
-                </p>
-              </div>
-            </div>
-            
-            <div class="col-md-6 col-lg-4">
-              <div class="what-we-do-card">
-                <div class="icon-wrapper">
-                  <i class="bi bi-shield-check" aria-hidden="true"></i>
-                </div>
-                <h4 class="fw-bold mb-3">Enterprise Security</h4>
-                <p class="text-muted mb-0">
-                  Built-in security configurations including private connectivity options (PrivateLink, Private Service Connect), 
-                  IAM roles, and network isolation following cloud provider security best practices.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Why Install Locally Section - HIGHLIGHTED -->
-      <section class="py-5">
-        <div class="container">
-          <div class="install-section">
-            <div class="install-icon">
-              <i class="bi bi-phone" aria-hidden="true"></i>
-            </div>
-            <div class="text-center mb-5">
-              <h2 class="h1 fw-bold mb-3">Why Install One-Click Deployer Locally?</h2>
-              <p class="lead text-muted mb-4">
-                Install this Progressive Web App on your device for the best experience. Get instant access, 
-                work offline, and enjoy native app performance—all while keeping your data private and secure.
-              </p>
-            </div>
-            
-            <div class="row g-4 mb-5">
-              <div class="col-md-6 col-lg-4">
-                <div class="install-benefit-card">
-                  <div class="benefit-icon">
-                    <i class="bi bi-wifi-off" aria-hidden="true"></i>
-                  </div>
-                  <h5 class="fw-bold">Complete Offline Access</h5>
-                  <p>
-                    Use the app even without an internet connection. All functionality works offline, so you can generate 
-                    Terraform configurations anywhere, anytime.
-                  </p>
-                </div>
-              </div>
-              
-              <div class="col-md-6 col-lg-4">
-                <div class="install-benefit-card">
-                  <div class="benefit-icon">
-                    <i class="bi bi-lightning-charge" aria-hidden="true"></i>
-                  </div>
-                  <h5 class="fw-bold">Faster Performance</h5>
-                  <p>
-                    Installed apps load instantly and run smoother than web versions. Experience native app performance 
-                    with faster response times and seamless interactions.
-                  </p>
-                </div>
-              </div>
-              
-              <div class="col-md-6 col-lg-4">
-                <div class="install-benefit-card">
-                  <div class="benefit-icon">
-                    <i class="bi bi-app" aria-hidden="true"></i>
-                  </div>
-                  <h5 class="fw-bold">Native App Experience</h5>
-                  <p>
-                    Access the app directly from your home screen with a dedicated icon. Enjoy a full-screen experience 
-                    without browser chrome, just like a native application.
-                  </p>
-                </div>
-              </div>
-              
-              <div class="col-md-6 col-lg-4">
-                <div class="install-benefit-card">
-                  <div class="benefit-icon">
-                    <i class="bi bi-shield-lock" aria-hidden="true"></i>
-                  </div>
-                  <h5 class="fw-bold">Enhanced Privacy & Security</h5>
-                  <p>
-                    All processing happens locally on your device. Your configurations and data never leave your machine, 
-                    ensuring complete privacy and security.
-                  </p>
-                </div>
-              </div>
-              
-              <div class="col-md-6 col-lg-4">
-                <div class="install-benefit-card">
-                  <div class="benefit-icon">
-                    <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
-                  </div>
-                  <h5 class="fw-bold">Automatic Updates</h5>
-                  <p>
-                    The app automatically updates in the background, ensuring you always have the latest features and 
-                    improvements without manual intervention.
-                  </p>
-                </div>
-              </div>
-              
-              <div class="col-md-6 col-lg-4">
-                <div class="install-benefit-card">
-                  <div class="benefit-icon">
-                    <i class="bi bi-speedometer2" aria-hidden="true"></i>
-                  </div>
-                  <h5 class="fw-bold">Quick Access</h5>
-                  <p>
-                    Launch the app instantly from your home screen or app drawer. No need to remember URLs or bookmark 
-                    pages—just tap and go.
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            <div class="install-cta">
-              <button class="btn btn-primary btn-install-large" id="install-btn-hero">
-                <i class="bi bi-download me-2" aria-hidden="true"></i>
-                Install One-Click Deployer Now
-              </button>
-              <p class="text-muted small mt-3 mb-0">
-                <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
-                Installation is free and takes less than a minute. Works on desktop and mobile devices.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Features Section -->
-      <section class="py-5">
-        <div class="container">
-          <div class="row">
-            <div class="col-lg-8 mx-auto text-center mb-5">
-              <h2 class="h1 fw-bold mb-3">Why Choose One-Click Deployer?</h2>
-              <p class="lead text-muted">
-                Eliminate the complexity barrier in Databricks infrastructure deployment 
-                with our intuitive, production-ready solution.
-              </p>
-            </div>
-          </div>
-          
-          <div class="row g-4 stagger-children">
-            <div class="col-md-6 col-lg-4">
-              <div class="card h-100">
-                <div class="card-body p-4 text-center">
-                  <div class="feature-icon icon-cyan">
-                    <i class="bi bi-lightning-charge-fill" aria-hidden="true"></i>
-                  </div>
-                  <h5 class="fw-bold">Zero Terraform Knowledge Required</h5>
-                  <p class="mb-0">
-                    Visual forms replace complex code writing. Anyone can deploy 
-                    enterprise-grade infrastructure without deep technical expertise.
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            <div class="col-md-6 col-lg-4">
-              <div class="card h-100">
-                <div class="card-body p-4 text-center">
-                  <div class="feature-icon icon-green">
-                    <i class="bi bi-shield-check" aria-hidden="true"></i>
-                  </div>
-                  <h5 class="fw-bold">Production-Ready Output</h5>
-                  <p class="mb-0">
-                    Generated code follows enterprise best practices with built-in 
-                    security, networking, and compliance configurations.
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            <div class="col-md-6 col-lg-4">
-              <div class="card h-100">
-                <div class="card-body p-4 text-center">
-                  <div class="feature-icon icon-blue">
-                    <i class="bi bi-clouds-fill" aria-hidden="true"></i>
-                  </div>
-                  <h5 class="fw-bold">Multi-Cloud Native</h5>
-                  <p class="mb-0">
-                    Single interface for AWS, Azure, and GCP. Deploy consistently 
-                    across all major cloud providers with provider-specific optimizations.
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            <div class="col-md-6 col-lg-4">
-              <div class="card h-100">
-                <div class="card-body p-4 text-center">
-                  <div class="feature-icon icon-amber">
-                    <i class="bi bi-clock-fill" aria-hidden="true"></i>
-                  </div>
-                  <h5 class="fw-bold">Minutes, Not Hours</h5>
-                  <p class="mb-0">
-                    Reduce deployment preparation time from hours to minutes. 
-                    Focus on your data projects, not infrastructure complexity.
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            <div class="col-md-6 col-lg-4">
-              <div class="card h-100">
-                <div class="card-body p-4 text-center">
-                  <div class="feature-icon icon-rose">
-                    <i class="bi bi-gear-fill" aria-hidden="true"></i>
-                  </div>
-                  <h5 class="fw-bold">Intelligent Automation</h5>
-                  <p class="mb-0">
-                    Smart defaults, automatic network calculations, and real-time 
-                    validation prevent configuration errors before they happen.
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            <div class="col-md-6 col-lg-4">
-              <div class="card h-100">
-                <div class="card-body p-4 text-center">
-                  <div class="feature-icon icon-purple">
-                    <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
-                  </div>
-                  <h5 class="fw-bold">Keep Evolving</h5>
-                  <p class="mb-0">
-                    Start with our generated code and continue evolving your 
-                    infrastructure by adding custom Terraform modules and resources.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- How It Works Section -->
-      <section class="py-5 bg-surface">
-        <div class="container">
-          <div class="row">
-            <div class="col-lg-8 mx-auto text-center mb-5">
-              <h2 class="h1 fw-bold mb-3">How It Works</h2>
-              <p class="lead text-muted">
-                Three simple steps to production-ready Databricks infrastructure.
-              </p>
-            </div>
-          </div>
-          
-          <div class="row g-4 stagger-children">
-            <div class="col-md-4">
-              <div class="text-center">
-                <div class="d-flex align-items-center justify-content-center gap-3 mb-3">
-                  <div class="step-number">1</div>
-                  <h5 class="fw-bold mb-0">Choose Your Cloud</h5>
-                </div>
-                <p>
-                  Select your preferred cloud provider from AWS, Azure, or Google Cloud Platform.
-                </p>
-              </div>
-            </div>
-            
-            <div class="col-md-4">
-              <div class="text-center">
-                <div class="d-flex align-items-center justify-content-center gap-3 mb-3">
-                  <div class="step-number">2</div>
-                  <h5 class="fw-bold mb-0">Configure Settings</h5>
-                </div>
-                <p>
-                  Fill out the guided form with your preferences. Network settings are calculated automatically.
-                </p>
-              </div>
-            </div>
-            
-            <div class="col-md-4">
-              <div class="text-center">
-                <div class="d-flex align-items-center justify-content-center gap-3 mb-3">
-                  <div class="step-number">3</div>
-                  <h5 class="fw-bold mb-0">Deploy & Go</h5>
-                </div>
-                <p>
-                  Download your complete Terraform project and deploy with standard Terraform commands.
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <div class="text-center mt-5">
-            <a href="#/select-provider" class="btn btn-primary btn-lg" data-navigate>
-              Start Building Now
-              <i class="bi bi-arrow-right ms-2" aria-hidden="true"></i>
-            </a>
-          </div>
-        </div>
-      </section>
-
-      <!-- Supported Providers Preview -->
-      <section class="py-5">
-        <div class="container">
-          <div class="row">
-            <div class="col-lg-8 mx-auto text-center mb-5">
-              <h2 class="h1 fw-bold mb-3">Supported Cloud Providers</h2>
-              <p class="lead text-muted">
-                Deploy Databricks workspaces on any major cloud platform with provider-specific optimizations.
-              </p>
-            </div>
-          </div>
-          
-          <div class="row g-4">
-            <div class="col-md-4">
-              <div class="card border-0 shadow-sm provider-card h-100">
-                <div class="card-body p-4 text-center">
-                  <div class="provider-logo mb-3">
-                    <i class="bi bi-amazon text-warning" style="font-size: 3rem;"></i>
-                  </div>
-                  <h5 class="fw-bold">Amazon Web Services</h5>
-                  <ul class="list-unstyled text-muted small">
-                    <li><i class="bi bi-check text-success me-1"></i> VPC & Subnet Management</li>
-                    <li><i class="bi bi-check text-success me-1"></i> PrivateLink Integration</li>
-                    <li><i class="bi bi-check text-success me-1"></i> Cross-Account IAM Roles</li>
-                    <li><i class="bi bi-check text-success me-1"></i> Enterprise Security</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-            
-            <div class="col-md-4">
-              <div class="card border-0 shadow-sm provider-card h-100">
-                <div class="card-body p-4 text-center">
-                  <div class="provider-logo mb-3">
-                    <i class="bi bi-microsoft text-info" style="font-size: 3rem;"></i>
-                  </div>
-                  <h5 class="fw-bold">Microsoft Azure</h5>
-                  <ul class="list-unstyled text-muted small">
-                    <li><i class="bi bi-check text-success me-1"></i> VNet & Resource Groups</li>
-                    <li><i class="bi bi-check text-success me-1"></i> Private Link Support</li>
-                    <li><i class="bi bi-check text-success me-1"></i> Managed Identity</li>
-                    <li><i class="bi bi-check text-success me-1"></i> Premium Features</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-            
-            <div class="col-md-4">
-              <div class="card border-0 shadow-sm provider-card h-100">
-                <div class="card-body p-4 text-center">
-                  <div class="provider-logo mb-3">
-                    <i class="bi bi-google text-success" style="font-size: 3rem;"></i>
-                  </div>
-                  <h5 class="fw-bold">Google Cloud Platform</h5>
-                  <ul class="list-unstyled text-muted small">
-                    <li><i class="bi bi-check text-success me-1"></i> VPC & Subnet Networks</li>
-                    <li><i class="bi bi-check text-success me-1"></i> Private Service Connect</li>
-                    <li><i class="bi bi-check text-success me-1"></i> Service Account Integration</li>
-                    <li><i class="bi bi-check text-success me-1"></i> Private Google Access</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- CTA Section -->
-      <section class="py-5 bg-primary text-white">
-        <div class="container">
-          <div class="row">
-            <div class="col-lg-8 mx-auto text-center">
-              <h2 class="h1 fw-bold mb-3">Ready to Simplify Your Databricks Deployment?</h2>
-              <p class="lead mb-4">
-                Join developers and data engineers who have streamlined their infrastructure deployment process. 
-                Generate production-ready Terraform code in minutes, not hours.
-              </p>
-              <div class="d-flex gap-3 justify-content-center flex-wrap">
-                <a href="#/select-provider" class="btn btn-light btn-lg px-5" data-navigate>
-                  <i class="bi bi-play-circle me-2" aria-hidden="true"></i>
-                  Start Your Deployment
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
     `;
-    
+
     this.render(content);
     Utils.updateProgress(0);
-    
-    // Setup install button in hero section
-    const heroInstallBtn = document.getElementById('hero-install-btn');
-    const installBtnHero = document.getElementById('install-btn-hero');
-    
-    const installPWAHandler = async () => {
-      if (typeof window.installPWA === 'function') {
-        await window.installPWA();
-      } else {
-        // Fallback if function not yet available
-        console.warn('Install PWA function not available yet');
-      }
-    };
-    
-    if (heroInstallBtn) {
-      heroInstallBtn.addEventListener('click', installPWAHandler);
-      
-      // Show button if install is available (check after a delay to ensure deferredPrompt is set)
-      setTimeout(() => {
-        if (window.deferredPrompt) {
-          heroInstallBtn.style.display = 'inline-block';
-        }
-      }, 1000);
-    }
-    
-    if (installBtnHero) {
-      installBtnHero.addEventListener('click', installPWAHandler);
-    }
   }
 
   renderProviderSelection() {
@@ -1587,10 +602,6 @@ class App {
           <div class="col-lg-10 mx-auto">
             <div class="text-center mb-5">
               <h1 class="text-gradient mb-3">Choose Your Cloud Provider</h1>
-              <p class="lead">
-                Select the cloud provider where you want to deploy your Databricks workspace.
-                Each provider has unique features and capabilities optimized for different use cases.
-              </p>
             </div>
 
             <div class="row g-4 mb-5 stagger-children">
@@ -1604,7 +615,7 @@ class App {
                       <i class="bi bi-cloud-fill"></i>
                     </div>
                     <h4>Amazon Web Services</h4>
-                    <p>Complete VPC management with subnets, security groups, and PrivateLink support.</p>
+                    <p>Complete VPC management with subnets, security groups, and Back-end PrivateLink support.</p>
                     <ul class="list-unstyled text-start mb-4 text-sm">
                       <li class="mb-2 d-flex align-items-start">
                         <i class="bi bi-check2 text-success me-2 mt-1"></i>
@@ -1612,7 +623,7 @@ class App {
                       </li>
                       <li class="mb-2 d-flex align-items-start">
                         <i class="bi bi-check2 text-success me-2 mt-1"></i>
-                        <span>PrivateLink (Enterprise tier)</span>
+                        <span>Back-end PrivateLink (Enterprise tier)</span>
                       </li>
                       <li class="mb-2 d-flex align-items-start">
                         <i class="bi bi-check2 text-success me-2 mt-1"></i>
@@ -1633,7 +644,7 @@ class App {
                       <i class="bi bi-microsoft"></i>
                     </div>
                     <h4>Microsoft Azure</h4>
-                    <p>Virtual networks, resource groups, and Private Link with Azure AD integration.</p>
+                    <p>Virtual networks, resource groups, and Back-end Private Link with Azure AD integration.</p>
                     <ul class="list-unstyled text-start mb-4 text-sm">
                       <li class="mb-2 d-flex align-items-start">
                         <i class="bi bi-check2 text-success me-2 mt-1"></i>
@@ -1641,7 +652,7 @@ class App {
                       </li>
                       <li class="mb-2 d-flex align-items-start">
                         <i class="bi bi-check2 text-success me-2 mt-1"></i>
-                        <span>Private Link (Premium tier)</span>
+                        <span>Back-end Private Link (Premium tier)</span>
                       </li>
                       <li class="mb-2 d-flex align-items-start">
                         <i class="bi bi-check2 text-success me-2 mt-1"></i>
@@ -1718,7 +729,7 @@ class App {
         this.currentProvider = selectedProvider;
         Utils.setStorage('provider', selectedProvider);
         Utils.setStorage('step', 1);
-        this.updateNavbar();
+        window.PlatformAnalytics?.track('cloud_provider_selected', selectedProvider);
         window.location.hash = '/configure';
       } else {
         alert('Please select a cloud provider before continuing.');
@@ -1808,26 +819,57 @@ class App {
       '<i class="bi bi-microsoft text-info me-2" style="font-size: 2rem;"></i>' :
       '<i class="bi bi-google text-success me-2" style="font-size: 2rem;"></i>';
     
-    const providerName = Utils.getProviderName(this.currentProvider);
+    const providerShortName = this.currentProvider === 'aws'
+      ? 'AWS'
+      : this.currentProvider === 'azure'
+        ? 'Azure'
+        : 'GCP';
+    const configurationDescription = this.currentProvider === 'aws'
+      ? 'Configure workspace, VPC, NAT, and Back-end PrivateLink options for your AWS Terraform project.'
+      : this.currentProvider === 'azure'
+        ? 'Configure workspace, VNet, NAT, and Back-end Private Link options for your Azure Terraform project.'
+        : 'Configure workspace, project, service account, and network inputs for your GCP Terraform project.';
     const vpcLabel = this.currentProvider === 'azure' ? 'VNet CIDR Block' : 'VPC CIDR Block';
     const vpcDesc = this.currentProvider === 'azure' ? 
-      'CIDR block for the VNet (between /8 and /24)' :
+      'CIDR block for the VNet or subnet allocation (between /16 and /24)' :
       'CIDR block for the VPC (between /8 and /24)';
+    const configuredNatGatewayMode = this.currentProvider === 'azure'
+      ? this.currentConfig.azure_private_link_nat_gateway_mode
+      : this.currentConfig.nat_gateway_mode;
+    const supportedNatGatewayModes = this.currentProvider === 'aws'
+      ? ['single', 'per_az', 'none']
+      : ['single', 'none'];
+    const savedNatGatewayMode = supportedNatGatewayModes.includes(configuredNatGatewayMode)
+      ? configuredNatGatewayMode
+      : (this.currentConfig.enable_nat_gateway === false || this.currentConfig.enable_nat_gateway === 'false')
+        ? 'none'
+        : 'single';
+    const configuredAzureNatGatewayZone = Object.prototype.hasOwnProperty.call(
+      this.currentConfig,
+      'azure_nat_gateway_zone'
+    ) ? String(this.currentConfig.azure_nat_gateway_zone) : '1';
+    const savedAzureNatGatewayZone = ['', '1', '2', '3'].includes(configuredAzureNatGatewayZone)
+      ? configuredAzureNatGatewayZone
+      : '1';
+    const configuredAzurePrivateLinkNatGatewayZone = Object.prototype.hasOwnProperty.call(
+      this.currentConfig,
+      'azure_private_link_nat_gateway_zone'
+    ) ? String(this.currentConfig.azure_private_link_nat_gateway_zone) : '';
+    const savedAzurePrivateLinkNatGatewayZone = ['', '1', '2', '3'].includes(configuredAzurePrivateLinkNatGatewayZone)
+      ? configuredAzurePrivateLinkNatGatewayZone
+      : '';
     
     // Load configuration form based on provider
     const content = `
-      <div class="container my-5">
+      <div class="container my-5 configuration-page">
         <div class="row">
           <div class="col-xl-8 mx-auto">
             <div class="text-center mb-5">
               <div class="provider-badge mb-3">
                 ${providerIcon}
-                <span class="h2 fw-bold text-capitalize">${this.currentProvider} Configuration</span>
+                <span class="h2 fw-bold">${providerShortName} Configuration</span>
               </div>
-              <p class="lead text-muted">
-                Configure your Databricks deployment settings for ${this.currentProvider.toUpperCase()}. 
-                All network calculations are handled automatically based on your selections.
-              </p>
+              <p class="lead text-muted">${configurationDescription}</p>
             </div>
             
             <form id="config-form" novalidate>
@@ -1842,13 +884,17 @@ class App {
                   <div class="row g-3">
                     <div class="col-md-6">
                       <label class="form-label fw-semibold">
-                        Project Prefix
+                        ${this.currentProvider === 'gcp' ? 'Workspace Name' : 'Project Prefix'}
                         <span class="text-danger">*</span>
                       </label>
-                      <input type="text" class="form-control" name="project_prefix" 
+                      <input type="text" class="form-control" name="project_prefix"
                              value="${this.currentConfig.project_prefix || ''}" 
                              placeholder="e.g., my-databricks-project" required>
-                      <div class="form-text">Prefix for all resource names (2-20 characters, alphanumeric and hyphens only)</div>
+                      <div class="form-text">${this.currentProvider === 'gcp'
+                        ? 'Name for the new Databricks workspace (2-20 characters)'
+                        : this.currentProvider === 'aws'
+                        ? 'Prefix for all resource names (2-20 lowercase letters, numbers, hyphens, or periods). Do not use underscores; use hyphens instead.'
+                        : 'Prefix for all resource names (2-20 characters, alphanumeric and hyphens only). Do not use underscores; use hyphens instead.'}</div>
                     </div>
                     <div class="col-md-6">
                       <label class="form-label fw-semibold">
@@ -1860,26 +906,75 @@ class App {
                       </select>
                       <div class="form-text">Cloud provider region for resource deployment</div>
                     </div>
+                    ${this.currentProvider === 'aws' ? `
                     <div class="col-md-6">
-                      <label class="form-label fw-semibold">
-                        Databricks Pricing Tier
-                        <span class="text-danger">*</span>
-                      </label>
+                      <div class="field-label-with-help">
+                        <label class="form-label fw-semibold">
+                          Databricks Pricing Tier
+                          <span class="text-danger">*</span>
+                        </label>
+                        ${this.renderHelpButton('pricing-tier', 'Databricks pricing tier')}
+                      </div>
                       <select class="form-select" name="pricing_tier" required>
                         ${this.renderPricingTierOptions(this.currentProvider, this.currentConfig.pricing_tier)}
                       </select>
-                      <div class="form-text">Databricks workspace pricing tier (affects available features)</div>
                     </div>
+                    ` : ''}
                     ${this.currentProvider === 'azure' ? `
                       <div class="col-md-6">
-                        <label class="form-label fw-semibold">
-                          Resource Group Name
-                          <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" class="form-control" name="resource_group_name" 
-                               value="${this.currentConfig.resource_group_name || ''}" 
-                               placeholder="e.g., rg-databricks-prod" required>
-                        <div class="form-text">Azure Resource Group name for all resources</div>
+                        <label class="form-label fw-semibold">Azure Subscription ID <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="azure_subscription_id"
+                               value="${this.currentConfig.azure_subscription_id || ''}"
+                               placeholder="00000000-0000-0000-0000-000000000000" required>
+                      </div>
+                    ` : ''}
+                    ${this.currentProvider === 'azure' ? `
+                      <div id="azure-standard-fields" class="col-12">
+                        <div class="row g-3">
+                          <div class="col-md-6">
+                            <label class="form-label fw-semibold">Azure Tenant ID <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control azure-standard-required" name="azure_tenant_id"
+                                   value="${this.currentConfig.azure_tenant_id || ''}"
+                                   placeholder="00000000-0000-0000-0000-000000000000">
+                          </div>
+                          <div class="col-md-6">
+                            <label class="form-label fw-semibold">Workspace Resource Group <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control azure-standard-required" name="resource_group_name"
+                                   value="${this.currentConfig.resource_group_name || ''}"
+                                   placeholder="e.g., rg-databricks-workspace">
+                          </div>
+                          <div class="col-md-6">
+                            <label class="form-label fw-semibold">Workspace Admin User <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control azure-standard-required" name="azure_admin_user"
+                                   value="${this.currentConfig.azure_admin_user || ''}"
+                                   placeholder="admin@example.com">
+                          </div>
+                          <div class="col-md-6">
+                            <label class="form-label fw-semibold">Workspace Root Storage Account <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control azure-standard-required" name="azure_root_storage_name"
+                                   value="${this.currentConfig.azure_root_storage_name || ''}"
+                                   placeholder="dbfsuniquename">
+                            <div class="form-text">Globally unique, 3-24 lowercase letters and numbers.</div>
+                          </div>
+                        </div>
+                      </div>
+                      <div id="azure-private-link-fields" class="col-12" style="display: none;">
+                        <div class="row g-3">
+                          <div class="col-md-6">
+                            <label class="form-label fw-semibold">Data Plane Resource Group</label>
+                            <select class="form-select" name="azure_resource_group_mode" id="azure_resource_group_mode">
+                              <option value="new" ${this.currentConfig.azure_resource_group_mode !== 'existing' ? 'selected' : ''}>Create a new resource group</option>
+                              <option value="existing" ${this.currentConfig.azure_resource_group_mode === 'existing' ? 'selected' : ''}>Use an existing resource group</option>
+                            </select>
+                            <div class="form-text">New resource group name: <code>rg-${this.currentConfig.project_prefix || '&lt;project-prefix&gt;'}-dp</code></div>
+                          </div>
+                          <div class="col-md-6" id="azure-existing-resource-group-field" style="display: none;">
+                            <label class="form-label fw-semibold">Existing Resource Group Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="azure_existing_resource_group_name"
+                                   value="${this.currentConfig.azure_existing_resource_group_name || ''}"
+                                   placeholder="e.g., rg-databricks-data-plane">
+                          </div>
+                        </div>
                       </div>
                     ` : ''}
                     ${this.currentProvider === 'gcp' ? `
@@ -1892,6 +987,28 @@ class App {
                                value="${this.currentConfig.project_id || ''}" 
                                placeholder="e.g., my-gcp-project-123" required>
                         <div class="form-text">Google Cloud Project ID for resource deployment</div>
+                      </div>
+                      <div class="col-md-6">
+                        <div class="field-label-with-help">
+                          <label class="form-label fw-semibold">Google Service Account Email <span class="text-danger">*</span></label>
+                          ${this.renderHelpButton('gcp-service-account', 'Google service account')}
+                        </div>
+                        <input type="email" class="form-control" name="google_service_account_email"
+                               value="${this.currentConfig.google_service_account_email || ''}"
+                               placeholder="workspace-creator@my-project.iam.gserviceaccount.com" required>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label fw-semibold">Databricks Account ID <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="databricks_account_id"
+                               value="${this.currentConfig.databricks_account_id || ''}"
+                               placeholder="e.g., 00000000-0000-0000-0000-000000000000" required>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label fw-semibold">Workspace Admin User <span class="text-danger">*</span></label>
+                        <input type="email" class="form-control" name="databricks_admin_user"
+                               value="${this.currentConfig.databricks_admin_user || ''}"
+                               placeholder="admin@example.com" required>
+                        <div class="form-text">This user must already exist in the Databricks account.</div>
                       </div>
                     ` : ''}
                   </div>
@@ -1906,17 +1023,122 @@ class App {
                   </h5>
                 </div>
                 <div class="card-body">
+                  ${this.currentProvider === 'gcp' ? `
+                  <div class="alert alert-info mb-4" id="gcp-standard-network-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    This deployment creates a new VPC, one regional subnet with Private Google Access,
+                    a Cloud Router, and Cloud NAT for outbound connectivity.
+                  </div>
+                  <div class="alert alert-info mb-4" id="gcp-private-link-network-info" style="display: none;">
+                    <i class="bi bi-info-circle me-2"></i>
+                    This deployment creates a new VPC with dedicated node and PSC subnets, two Back-end
+                    Private Service Connect endpoints, and private DNS records.
+                  </div>
+                  <div class="mb-3">
+                    <div class="field-label-with-help">
+                      <label class="form-label fw-semibold" for="subnet_cidr">
+                        Databricks Subnet CIDR <span class="text-danger">*</span>
+                      </label>
+                      ${this.renderHelpButton('subnet-sizing', 'Databricks subnet CIDR')}
+                    </div>
+                    <input type="text" class="form-control" id="subnet_cidr" name="subnet_cidr"
+                           value="${this.currentConfig.subnet_cidr || '10.10.0.0/20'}"
+                           placeholder="e.g., 10.10.0.0/20" required>
+                  </div>
+                  <div class="mb-3" id="gcp-private-link-network-fields" style="display: none;">
+                    <label class="form-label fw-semibold" for="psc_subnet_cidr">
+                      PSC Endpoint Subnet CIDR <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" class="form-control" id="psc_subnet_cidr" name="psc_subnet_cidr"
+                           value="${this.currentConfig.psc_subnet_cidr || '10.10.4.0/28'}"
+                           placeholder="e.g., 10.10.4.0/28">
+                    <div class="form-text">A non-overlapping subnet for the REST API and SCC relay PSC endpoint IPs.</div>
+                  </div>
+                  <div class="mb-3" id="nat-gateway-section"
+                       ${!this.currentConfig.enable_private_link ? 'style="display: none;"' : ''}>
+                    <div class="field-label-with-help">
+                      <label class="form-label fw-semibold" for="nat_gateway_mode">Cloud NAT</label>
+                      ${this.renderHelpButton('nat-gateway', 'Cloud NAT options')}
+                    </div>
+                    <select class="form-select" id="nat_gateway_mode" name="nat_gateway_mode">
+                      <option value="single" ${savedNatGatewayMode === 'single' ? 'selected' : ''}>Deploy Cloud NAT</option>
+                      <option value="none" ${savedNatGatewayMode === 'none' ? 'selected' : ''}>No Cloud NAT</option>
+                    </select>
+                    <div id="nat-gateway-private-link-message" class="alert alert-warning mt-2 mb-0" style="display: none;">
+                      <i class="bi bi-exclamation-triangle me-2"></i>
+                      Without Cloud NAT, cluster nodes have no general internet egress. Back-end PSC and Private Google Access remain available, but public package repositories and data sources require another egress path.
+                    </div>
+                  </div>
+                  ` : `
                   <div class="mb-3">
                     <div class="form-check form-switch">
                       <input class="form-check-input" type="checkbox" id="create_new_vpc" name="create_new_vpc" checked>
                       <label class="form-check-label fw-semibold" for="create_new_vpc">
                         ${this.currentProvider === 'azure' ? 'Create New VNet' : 'Create New VPC'}
                       </label>
+                      ${this.renderHelpButton('network-mode', this.currentProvider === 'azure' ? 'new or existing VNet' : 'new or existing VPC')}
                     </div>
-                    <div class="form-text">${this.currentProvider === 'azure' ? 
-                      'Create a new Virtual Network or use an existing one' : 
-                      'Create a new VPC or use an existing one'}</div>
                   </div>
+                  ${this.currentProvider === 'azure' ? `
+                  <div class="mb-3" id="azure-vnet-resource-group-field">
+                    <label class="form-label fw-semibold">VNet Resource Group Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="azure_vnet_resource_group_name"
+                           value="${this.currentConfig.azure_vnet_resource_group_name || ''}"
+                           placeholder="e.g., rg-databricks-network">
+                    <div class="form-text">Must differ from the workspace resource group.</div>
+                  </div>
+                  <div class="mb-3" id="azure-nat-gateway-zone-section"
+                       ${this.currentConfig.enable_private_link ? 'style="display: none;"' : ''}>
+                    <div class="field-label-with-help">
+                      <label class="form-label fw-semibold" for="azure_nat_gateway_zone">NAT Gateway Placement</label>
+                      ${this.renderHelpButton('nat-placement', 'NAT gateway placement')}
+                    </div>
+                    <select class="form-select" id="azure_nat_gateway_zone" name="azure_nat_gateway_zone">
+                      <option value="1" ${savedAzureNatGatewayZone === '1' ? 'selected' : ''}>Availability Zone 1 (default)</option>
+                      <option value="2" ${savedAzureNatGatewayZone === '2' ? 'selected' : ''}>Availability Zone 2</option>
+                      <option value="3" ${savedAzureNatGatewayZone === '3' ? 'selected' : ''}>Availability Zone 3</option>
+                      <option value="" ${savedAzureNatGatewayZone === '' ? 'selected' : ''}>Regional / non-zonal</option>
+                    </select>
+                  </div>
+                  ` : ''}
+                  ${this.currentProvider === 'aws' || this.currentProvider === 'azure' ? `
+                  <div class="mb-3" id="nat-gateway-section"
+                       ${this.currentProvider === 'azure' && !this.currentConfig.enable_private_link ? 'style="display: none;"' : ''}>
+                    <div class="field-label-with-help">
+                      <label class="form-label fw-semibold" for="nat_gateway_mode">NAT Gateway</label>
+                      ${this.renderHelpButton('nat-gateway', 'NAT gateway options')}
+                    </div>
+                    <select class="form-select" id="nat_gateway_mode"
+                            name="${this.currentProvider === 'azure' ? 'azure_private_link_nat_gateway_mode' : 'nat_gateway_mode'}">
+                      <option value="single" ${savedNatGatewayMode === 'single' ? 'selected' : ''}>Single NAT gateway</option>
+                      ${this.currentProvider === 'aws' ? `
+                      <option value="per_az" ${savedNatGatewayMode === 'per_az' ? 'selected' : ''}>One NAT gateway per availability zone</option>
+                      ` : ''}
+                      <option value="none" ${savedNatGatewayMode === 'none' ? 'selected' : ''}>No NAT gateway</option>
+                    </select>
+                    ${this.currentProvider === 'azure' ? `
+                    <div class="mt-3" id="azure-private-link-nat-gateway-zone-section"
+                         ${savedNatGatewayMode === 'none' ? 'style="display: none;"' : ''}>
+                      <div class="field-label-with-help">
+                        <label class="form-label fw-semibold" for="azure_private_link_nat_gateway_zone">NAT Gateway Placement</label>
+                        ${this.renderHelpButton('nat-placement', 'NAT gateway placement')}
+                      </div>
+                      <select class="form-select" id="azure_private_link_nat_gateway_zone" name="azure_private_link_nat_gateway_zone">
+                        <option value="" ${savedAzurePrivateLinkNatGatewayZone === '' ? 'selected' : ''}>Regional / non-zonal (recommended)</option>
+                        <option value="1" ${savedAzurePrivateLinkNatGatewayZone === '1' ? 'selected' : ''}>Availability Zone 1</option>
+                        <option value="2" ${savedAzurePrivateLinkNatGatewayZone === '2' ? 'selected' : ''}>Availability Zone 2</option>
+                        <option value="3" ${savedAzurePrivateLinkNatGatewayZone === '3' ? 'selected' : ''}>Availability Zone 3</option>
+                      </select>
+                    </div>
+                    ` : ''}
+                    <div id="nat-gateway-private-link-message" class="alert alert-warning mt-2 mb-0" style="display: none;">
+                      <i class="bi bi-exclamation-triangle me-2"></i>
+                      ${this.currentProvider === 'azure'
+                        ? 'Without a NAT gateway, cluster nodes have no general internet egress. Ensure required traffic is covered by the configured service endpoints or routed through a firewall/NVA.'
+                        : 'Back-end PrivateLink is required to communicate with the control plane when no NAT gateway is selected.'}
+                    </div>
+                  </div>
+                  ` : ''}
                   <div class="collapse mb-3" id="existing-vpc-section" style="display: none;">
                     <div class="card border-secondary mb-3">
                       <div class="card-body">
@@ -1937,41 +1159,25 @@ class App {
                         </div>
                         
                         ${this.currentProvider === 'aws' ? `
-                        <div class="mb-3">
-                          <label class="form-label fw-semibold">Subnet Configuration</label>
-                          <div class="form-check">
-                            <input class="form-check-input" type="radio" name="subnet_mode" id="subnet_mode_create" value="create" checked>
-                            <label class="form-check-label" for="subnet_mode_create">
-                              <strong>Create New Subnets</strong>
-                              <span class="text-muted d-block small">Terraform will create new subnets in the existing VPC</span>
-                            </label>
-                          </div>
-                          <div class="form-check mt-2">
-                            <input class="form-check-input" type="radio" name="subnet_mode" id="subnet_mode_existing" value="existing">
-                            <label class="form-check-label" for="subnet_mode_existing">
-                              <strong>Use Existing Subnets</strong>
-                              <span class="text-muted d-block small">Provide IDs of existing subnets (minimum 2, in different AZs)</span>
-                            </label>
-                          </div>
-                        </div>
-                        
-                        <div id="existing-subnets-section" class="mt-3" style="display: none;">
+                        <div id="existing-subnets-section" class="mt-3">
                           <div class="alert alert-info">
                             <i class="bi bi-info-circle me-2"></i>
-                            <strong>Requirements:</strong> At least 2 private subnets in different Availability Zones are required for Databricks.
+                            <strong>Requirements:</strong> Provide at least 2 existing private subnets in different Availability Zones and an existing security group.
                           </div>
                           <div id="existing-subnets-container">
                             <div class="row mb-2 existing-subnet-row">
                               <div class="col-md-10">
                                 <label class="form-label">Subnet ID 1 <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control existing-subnet-input" name="existing_subnet_ids[]" 
+                                <input type="text" class="form-control existing-subnet-input" name="existing_subnet_ids[]"
+                                       value="${this.currentConfig.existing_subnet_ids?.[0] || ''}"
                                        placeholder="e.g., subnet-0a1b2c3d4e5f67890">
                               </div>
                             </div>
                             <div class="row mb-2 existing-subnet-row">
                               <div class="col-md-10">
                                 <label class="form-label">Subnet ID 2 <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control existing-subnet-input" name="existing_subnet_ids[]" 
+                                <input type="text" class="form-control existing-subnet-input" name="existing_subnet_ids[]"
+                                       value="${this.currentConfig.existing_subnet_ids?.[1] || ''}"
                                        placeholder="e.g., subnet-1a2b3c4d5e6f78901">
                               </div>
                               <div class="col-md-2 d-flex align-items-end">
@@ -1989,9 +1195,29 @@ class App {
                                 <span class="text-danger">*</span>
                               </label>
                               <input type="text" class="form-control" name="existing_security_group_id" id="existing_security_group_id"
+                                     value="${this.currentConfig.existing_security_group_id || ''}"
                                      placeholder="e.g., sg-0123456789abcdef0">
                               <div class="form-text">Security group for Databricks workspace nodes</div>
                             </div>
+                          </div>
+                          <div id="existing-privatelink-endpoints-section" class="row mt-3" style="display: none;">
+                            <div class="col-md-6">
+                              <label class="form-label fw-semibold" for="backend_rest_aws_vpce_id">
+                                REST API VPC Endpoint ID <span class="text-danger">*</span>
+                              </label>
+                              <input type="text" class="form-control" id="backend_rest_aws_vpce_id" name="backend_rest_aws_vpce_id"
+                                     value="${this.currentConfig.backend_rest_aws_vpce_id || ''}"
+                                     placeholder="e.g., vpce-0123456789abcdef0">
+                            </div>
+                            <div class="col-md-6">
+                              <label class="form-label fw-semibold" for="backend_relay_aws_vpce_id">
+                                SCC Relay VPC Endpoint ID <span class="text-danger">*</span>
+                              </label>
+                              <input type="text" class="form-control" id="backend_relay_aws_vpce_id" name="backend_relay_aws_vpce_id"
+                                     value="${this.currentConfig.backend_relay_aws_vpce_id || ''}"
+                                     placeholder="e.g., vpce-1234567890abcdef0">
+                            </div>
+                            <div class="form-text">Required only when Back-end PrivateLink uses an existing VPC.</div>
                           </div>
                         </div>
                         ` : ''}
@@ -2000,28 +1226,8 @@ class App {
                         <div class="mb-3">
                           <div class="alert alert-info">
                             <i class="bi bi-info-circle me-2"></i>
-                            <strong>Requirements:</strong> The existing VNet must have two subnets with
-                            <code>Microsoft.Databricks/workspaces</code> delegation and an associated NSG.
-                          </div>
-                        </div>
-                        <div class="row mb-3">
-                          <div class="col-md-6">
-                            <label class="form-label fw-semibold">
-                              Public (Host) Subnet Name <span class="text-danger">*</span>
-                            </label>
-                            <input type="text" class="form-control" name="existing_public_subnet_name" id="existing_public_subnet_name"
-                                   placeholder="e.g., databricks-public-subnet"
-                                   value="${this.currentConfig.existing_public_subnet_name || ''}">
-                            <div class="form-text">Name of the subnet delegated for Databricks host nodes</div>
-                          </div>
-                          <div class="col-md-6">
-                            <label class="form-label fw-semibold">
-                              Private (Container) Subnet Name <span class="text-danger">*</span>
-                            </label>
-                            <input type="text" class="form-control" name="existing_private_subnet_name" id="existing_private_subnet_name"
-                                   placeholder="e.g., databricks-private-subnet"
-                                   value="${this.currentConfig.existing_private_subnet_name || ''}">
-                            <div class="form-text">Name of the subnet delegated for Databricks container nodes</div>
+                            <strong>Deployment behavior:</strong> Terraform creates two delegated Databricks subnets,
+                            their NSG, and a NAT gateway inside this existing VNet. Ensure the calculated CIDRs are unused.
                           </div>
                         </div>
                         ` : ''}
@@ -2075,58 +1281,35 @@ class App {
                       <span class="text-danger">*</span>
                     </label>
                     <input type="text" class="form-control" name="vpc_cidr" 
-                           value="${this.currentConfig.vpc_cidr || '10.0.0.0/22'}" 
-                           placeholder="e.g., 10.0.0.0/22" required>
+                           value="${this.currentConfig.vpc_cidr || (this.currentProvider === 'azure' ? '10.0.0.0/20' : '10.0.0.0/22')}"
+                           placeholder="e.g., ${this.currentProvider === 'azure' ? '10.0.0.0/20' : '10.0.0.0/22'}" required>
                     <div class="form-text">${vpcDesc}</div>
                   </div>
+                  ${this.currentProvider !== 'azure' ? `
                   <div class="mb-3">
-                    <label class="form-label fw-semibold" for="availability-zones-select">
-                      Availability Zones
-                      <span class="text-danger">*</span>
-                    </label>
+                    <div class="field-label-with-help">
+                      <label class="form-label fw-semibold" for="availability-zones-select">
+                        Availability Zones
+                        <span class="text-danger">*</span>
+                      </label>
+                      ${this.renderHelpButton('availability-zones', 'Availability Zones')}
+                    </div>
                     <select id="availability-zones-select" class="form-select" name="availability_zones" multiple required>
                       <option value="" disabled>Select availability zones</option>
                     </select>
-                    <div class="form-text">Type to search and select availability zones. Selected zones will appear as tags.</div>
                   </div>
-                  <div id="subnet-size-slider-container" class="mb-4" style="display: none;">
-                    <label class="form-label fw-semibold">
-                      <i class="bi bi-sliders me-2"></i>
-                      Subnet Size
-                      <span class="text-muted small ms-2" id="subnet-size-info"></span>
-                    </label>
-                    <div class="subnet-slider-wrapper">
-                      <input type="range" class="form-range subnet-size-slider" id="subnet-size-slider" 
-                             min="17" max="28" step="1" value="26" name="custom_subnet_size">
-                      <div class="slider-labels d-flex justify-content-between mt-1">
-                        <span class="small text-muted" id="slider-label-min">Larger subnets</span>
-                        <span class="small text-muted" id="slider-label-max">Smaller subnets</span>
+                  ` : ''}
+                  <div id="subnet-size-selector-container" class="mb-4" style="display: none;">
+                    <div class="field-label-with-help">
+                      <div class="form-label fw-semibold">
+                        <i class="bi bi-sliders me-2"></i>
+                        Subnet Size
+                        <span class="text-muted small ms-2" id="subnet-size-info"></span>
                       </div>
+                      ${this.renderHelpButton('subnet-sizing', 'subnet sizing')}
                     </div>
-                    <div class="subnet-size-details mt-3">
-                      <div class="row g-2 text-center">
-                        <div class="col-4">
-                          <div class="subnet-metric">
-                            <div class="h5 mb-0 text-primary" id="subnet-size-display">/<span>26</span></div>
-                            <div class="small text-muted">Subnet Prefix</div>
-                          </div>
-                        </div>
-                        <div class="col-4">
-                          <div class="subnet-metric">
-                            <div class="h5 mb-0 text-success" id="subnet-ips-display">64</div>
-                            <div class="small text-muted">IPs per Subnet</div>
-                          </div>
-                        </div>
-                        <div class="col-4">
-                          <div class="subnet-metric">
-                            <div class="h5 mb-0 text-info" id="subnet-nodes-display">~30</div>
-                            <div class="small text-muted">Max Nodes</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="form-text mt-2" id="subnet-size-description">
-                      Adjust the subnet size based on your expected cluster size. Larger subnets support more concurrent nodes.
+                    <div id="subnet-size-options" class="subnet-size-options" role="radiogroup" aria-label="Subnet size">
+                      <div class="subnet-size-empty">Complete the network settings to see available subnet sizes.</div>
                     </div>
                   </div>
                   <div id="subnets-preview" class="mt-4" style="display: none;">
@@ -2137,6 +1320,7 @@ class App {
                     <div id="subnets-container"></div>
                     <div id="network-summary" class="mt-3"></div>
                   </div>
+                  `}
                 </div>
               </div>
               
@@ -2149,63 +1333,100 @@ class App {
                 </div>
                 <div class="card-body">
                   <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="enable_private_link" name="enable_private_link">
+                    <input class="form-check-input" type="checkbox" id="enable_private_link" name="enable_private_link"
+                           ${this.currentProvider === 'aws' && (this.currentConfig.pricing_tier || 'ENTERPRISE') !== 'ENTERPRISE' ? 'disabled aria-disabled="true"' : ''}>
                     <label class="form-check-label fw-semibold" for="enable_private_link">
-                      ${this.currentProvider === 'azure' ? 'Enable Private Link' : 
-                        this.currentProvider === 'gcp' ? 'Enable Private Service Connect' : 
-                        'Enable AWS PrivateLink'}
+                      ${this.currentProvider === 'azure' ? 'Enable Back-end Private Link' :
+                        this.currentProvider === 'gcp' ? 'Enable Back-end Private Service Connect' :
+                        'Enable Back-end PrivateLink'}
                     </label>
+                    ${this.renderHelpButton('backend-private-link', this.currentProvider === 'azure' ? 'Back-end Private Link' : this.currentProvider === 'gcp' ? 'Back-end Private Service Connect' : 'Back-end PrivateLink')}
                   </div>
-                  <div class="form-text">${this.currentProvider === 'aws' ? 
-                    'Enable AWS PrivateLink (requires Enterprise tier)' :
-                    this.currentProvider === 'azure' ?
-                    'Enable Azure Private Link (requires Premium tier)' :
-                    'Enable Private Service Connect (requires Premium tier)'}</div>
                   <div id="private-link-warning" class="alert alert-info mt-2" style="display: none;">
                     <i class="bi bi-info-circle me-2"></i>
-                    <strong>Note:</strong> Private connectivity requires 
-                    ${this.currentProvider === 'aws' ? 'Enterprise' : 'Premium'} 
-                    pricing tier.
+                    <strong>Note:</strong> Private connectivity requires
+                    ${this.currentProvider === 'aws'
+                      ? 'the Enterprise pricing tier.'
+                      : this.currentProvider === 'gcp'
+                        ? 'a Databricks Enterprise plan.'
+                        : 'the Premium pricing tier.'}
                   </div>
                   
-                  ${this.currentProvider === 'aws' ? `
-                  <!-- PrivateLink Subnet Mode Options (AWS only) -->
-                  <div id="privatelink-subnet-options" class="mt-3" style="display: none;">
-                    <label class="form-label fw-semibold">PrivateLink Subnet Configuration</label>
-                    <div class="form-text mb-2">Choose how to configure the subnet for PrivateLink VPC Endpoints.</div>
-                    
-                    <div class="form-check">
-                      <input class="form-check-input" type="radio" name="privatelink_subnet_mode" 
-                             id="privatelink_subnet_terraform" value="terraform_managed" checked>
-                      <label class="form-check-label" for="privatelink_subnet_terraform">
-                        <strong>New Subnet</strong>
-                        <span class="text-muted d-block small">Terraform will create and manage a new subnet for PrivateLink endpoints</span>
-                      </label>
-                    </div>
-                    <div class="form-check mt-2">
-                      <input class="form-check-input" type="radio" name="privatelink_subnet_mode" 
-                             id="privatelink_subnet_user" value="user_managed">
-                      <label class="form-check-label" for="privatelink_subnet_user">
-                        <strong>Existing Subnet</strong>
-                        <span class="text-muted d-block small">Provide an existing subnet ID for PrivateLink endpoints</span>
-                      </label>
-                    </div>
-                    
-                    <div id="existing-privatelink-subnet-section" class="mt-3" style="display: none;">
-                      <label class="form-label" for="existing_privatelink_subnet_id">
-                        Existing Subnet ID <span class="text-danger">*</span>
-                      </label>
-                      <input type="text" class="form-control" id="existing_privatelink_subnet_id" 
-                             name="existing_privatelink_subnet_id" 
-                             placeholder="e.g., subnet-0abc123def456789a">
-                      <div class="form-text">
-                        The subnet must be in the same VPC and have connectivity to AWS PrivateLink services.
-                      </div>
-                    </div>
-                  </div>
-                  ` : ''}
                 </div>
               </div>
+
+              ${this.currentProvider === 'aws' || this.currentProvider === 'azure' ? `
+              <div class="card mb-4" id="unity-catalog-configuration"
+                   ${this.currentProvider === 'azure' && this.currentConfig.enable_private_link ? 'style="display: none;"' : ''}>
+                <div class="card-header bg-primary text-white">
+                  <h5 class="card-title mb-0">
+                    <i class="bi bi-database-fill-gear me-2"></i>
+                    Unity Catalog Configuration
+                  </h5>
+                </div>
+                <div class="card-body">
+                  <div class="row g-3 align-items-start">
+                    <div class="col-md-6">
+                      <div class="field-label-with-help">
+                        <label class="form-label fw-semibold">Unity Catalog Metastore <span class="text-danger">*</span></label>
+                        ${this.renderHelpButton('metastore', 'Unity Catalog metastore')}
+                      </div>
+                      <div class="form-check">
+                        <input class="form-check-input" type="radio" name="metastore_mode" id="metastore_mode_create"
+                               value="create" ${this.currentConfig.metastore_mode !== 'existing' ? 'checked' : ''}>
+                        <label class="form-check-label" for="metastore_mode_create">Create a new metastore</label>
+                      </div>
+                      <div class="form-check mt-2">
+                        <input class="form-check-input" type="radio" name="metastore_mode" id="metastore_mode_existing"
+                               value="existing" ${this.currentConfig.metastore_mode === 'existing' ? 'checked' : ''}>
+                        <label class="form-check-label" for="metastore_mode_existing">Attach an existing metastore</label>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div id="new-metastore-section">
+                        <label class="form-label" for="metastore_name">Metastore Name</label>
+                        <input type="text" class="form-control" id="metastore_name" name="metastore_name"
+                               value="${this.currentConfig.metastore_name || ''}"
+                               placeholder="Defaults to &lt;project-prefix&gt;-metastore">
+                      </div>
+                      <div id="existing-metastore-section" style="display: none;">
+                        <label class="form-label" for="metastore_id">Existing Metastore ID <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="metastore_id" name="metastore_id"
+                               value="${this.currentConfig.metastore_id || ''}"
+                               placeholder="e.g., 12345678-1234-1234-1234-123456789abc">
+                      </div>
+                    </div>
+                    ${this.currentProvider === 'azure' ? `
+                    <div class="col-md-6">
+                      <label class="form-label fw-semibold">UC Storage Account <span class="text-danger">*</span></label>
+                      <input type="text" class="form-control azure-standard-required" name="azure_uc_storage_account_name"
+                             value="${this.currentConfig.azure_uc_storage_account_name || ''}"
+                             placeholder="ucuniquename">
+                      <div class="form-text">Globally unique, 3-24 lowercase letters and numbers.</div>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label fw-semibold">Catalog Name <span class="text-danger">*</span></label>
+                      <input type="text" class="form-control azure-standard-required" name="azure_catalog_name"
+                             value="${this.currentConfig.azure_catalog_name || ''}"
+                             placeholder="my_catalog">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label fw-semibold">Storage Credential Name <span class="text-danger">*</span></label>
+                      <input type="text" class="form-control azure-standard-required" name="azure_storage_credential_name"
+                             value="${this.currentConfig.azure_storage_credential_name || ''}"
+                             placeholder="my-storage-credential">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label fw-semibold">External Location Name <span class="text-danger">*</span></label>
+                      <input type="text" class="form-control azure-standard-required" name="azure_external_location_name"
+                             value="${this.currentConfig.azure_external_location_name || ''}"
+                             placeholder="my-external-location">
+                    </div>
+                    ` : ''}
+                  </div>
+                </div>
+              </div>
+              ` : ''}
               
               <div class="d-flex justify-content-between">
                 <a href="#/select-provider" class="btn btn-outline-secondary btn-lg" data-navigate>
@@ -2231,32 +1452,94 @@ class App {
     const pricingTierSelect = document.querySelector('select[name="pricing_tier"]');
     const privateLinkCheckbox = document.getElementById('enable_private_link');
     const privateLinkWarning = document.getElementById('private-link-warning');
+    const natGatewaySelect = document.getElementById('nat_gateway_mode');
+    const natGatewaySection = document.getElementById('nat-gateway-section');
+    const natGatewayPrivateLinkMessage = document.getElementById('nat-gateway-private-link-message');
+    const azureNatGatewayZoneSection = document.getElementById('azure-nat-gateway-zone-section');
+    const azurePrivateLinkNatGatewayZoneSection = document.getElementById('azure-private-link-nat-gateway-zone-section');
+    const gcpStandardNetworkInfo = document.getElementById('gcp-standard-network-info');
+    const gcpPrivateLinkNetworkInfo = document.getElementById('gcp-private-link-network-info');
+    const gcpPrivateLinkNetworkFields = document.getElementById('gcp-private-link-network-fields');
+    const gcpPscSubnetInput = document.getElementById('psc_subnet_cidr');
     
-    // Subnet size slider elements
-    const subnetSizeSliderContainer = document.getElementById('subnet-size-slider-container');
-    const subnetSizeSlider = document.getElementById('subnet-size-slider');
-    const subnetSizeDisplay = document.querySelector('#subnet-size-display span');
-    const subnetIpsDisplay = document.getElementById('subnet-ips-display');
-    const subnetNodesDisplay = document.getElementById('subnet-nodes-display');
-    const sliderLabelMin = document.getElementById('slider-label-min');
-    const sliderLabelMax = document.getElementById('slider-label-max');
-    
-    // Store current slider limits
-    let currentSliderLimits = null;
-    let userHasAdjustedSubnetSize = false;
-    
-    // Function to update slider display values
-    const updateSliderDisplay = (prefixSize) => {
-      if (!subnetSizeDisplay || !subnetIpsDisplay || !subnetNodesDisplay) return;
-      
-      const ips = Math.pow(2, 32 - prefixSize);
-      // Each Databricks node requires 2 IPs, minus 5 reserved
-      const usableIPs = Math.max(0, ips - 5);
-      const maxNodes = Math.floor(usableIPs / 2);
-      
-      subnetSizeDisplay.textContent = prefixSize;
-      subnetIpsDisplay.textContent = Utils.formatNumber(ips);
-      subnetNodesDisplay.textContent = `~${Utils.formatNumber(maxNodes)}`;
+    // Subnet size selector elements
+    const subnetSizeSelectorContainer = document.getElementById('subnet-size-selector-container');
+    const subnetSizeOptions = document.getElementById('subnet-size-options');
+
+    // Store the current available range and user choice.
+    let currentSubnetLimits = null;
+    const configuredSubnetSize = parseInt(this.currentConfig.custom_subnet_size, 10);
+    let selectedSubnetSize = Number.isNaN(configuredSubnetSize) ? null : configuredSubnetSize;
+    let userHasAdjustedSubnetSize = selectedSubnetSize !== null;
+
+    const readSelectedSubnetSize = () => {
+      const selectedControl = subnetSizeOptions?.querySelector(
+        'input[name="custom_subnet_size"]:checked, input.subnet-size-range'
+      );
+      if (!selectedControl) return selectedSubnetSize;
+      const value = parseInt(selectedControl.value, 10);
+      return Number.isNaN(value) ? selectedSubnetSize : value;
+    };
+
+    const renderSubnetSizeOptions = (limits, selectedPrefix) => {
+      if (!subnetSizeOptions) return;
+
+      if (!limits?.valid) {
+        subnetSizeOptions.className = 'subnet-size-options';
+        subnetSizeOptions.setAttribute('role', 'radiogroup');
+        subnetSizeOptions.innerHTML = '<div class="subnet-size-empty">No compatible subnet sizes are available for this configuration.</div>';
+        return;
+      }
+
+      const prefixes = [];
+      for (let prefix = limits.min; prefix <= limits.max; prefix += 1) {
+        prefixes.push(prefix);
+      }
+
+      // Cards make a short list easy to scan. A slider keeps larger ranges compact.
+      if (prefixes.length <= 4) {
+        subnetSizeOptions.className = 'subnet-size-options';
+        subnetSizeOptions.setAttribute('role', 'radiogroup');
+        subnetSizeOptions.innerHTML = prefixes.map(prefix => {
+          const ips = limits.getIPsForSize(prefix);
+          const maxNodes = limits.getMaxNodes(prefix);
+          return `
+            <div class="subnet-size-choice">
+              <input class="subnet-size-radio" type="radio" name="custom_subnet_size"
+                     id="subnet-size-${prefix}" value="${prefix}"
+                     ${prefix === selectedPrefix ? 'checked' : ''}>
+              <label class="subnet-size-option" for="subnet-size-${prefix}">
+                <span class="subnet-size-prefix">/${prefix}</span>
+                <span class="subnet-size-capacity">${Utils.formatNumber(ips)} IPs</span>
+                <span class="subnet-size-nodes">~${Utils.formatNumber(maxNodes)} max nodes</span>
+              </label>
+            </div>
+          `;
+        }).join('');
+        return;
+      }
+
+      const selectedIps = limits.getIPsForSize(selectedPrefix);
+      const selectedMaxNodes = limits.getMaxNodes(selectedPrefix);
+      const minIps = limits.getIPsForSize(limits.min);
+      const maxIps = limits.getIPsForSize(limits.max);
+      subnetSizeOptions.className = 'subnet-size-range-wrapper';
+      subnetSizeOptions.removeAttribute('role');
+      subnetSizeOptions.innerHTML = `
+        <label class="visually-hidden" for="subnet-size-range">Subnet size</label>
+        <input class="subnet-size-range" type="range" id="subnet-size-range"
+               name="custom_subnet_size" min="${limits.min}" max="${limits.max}"
+               step="1" value="${selectedPrefix}">
+        <div class="subnet-size-range-labels" aria-hidden="true">
+          <span>/${limits.min} (${Utils.formatNumber(minIps)} IPs)</span>
+          <span>/${limits.max} (${Utils.formatNumber(maxIps)} IPs)</span>
+        </div>
+        <div class="subnet-size-range-summary" aria-live="polite">
+          <strong data-subnet-prefix>/${selectedPrefix}</strong>
+          <span data-subnet-ips>${Utils.formatNumber(selectedIps)} IPs</span>
+          <span data-subnet-nodes>~${Utils.formatNumber(selectedMaxNodes)} max nodes</span>
+        </div>
+      `;
     };
     
     // Function to check if "Create New VPC" is active
@@ -2265,143 +1548,116 @@ class App {
       return createNewVpcCheckbox?.checked !== false;
     };
     
-    // Function to check if we should show subnet configuration (VPC CIDR, AZs, slider)
+    // Function to check if we should show subnet configuration (VPC CIDR, AZs, selector)
     const shouldShowSubnetConfig = () => {
       const createNewVpc = isCreateNewVpcActive();
       if (createNewVpc) return true;
       
-      // For AWS with existing VPC, check subnet mode
+      // The AWS configurations cannot create subnets inside an existing VPC.
       if (this.currentProvider === 'aws') {
-        const subnetModeCreate = document.getElementById('subnet_mode_create');
-        return subnetModeCreate?.checked === true;
+        return false;
       }
+
+      // The Azure standard source creates new workspace subnets even when it
+      // reuses an existing VNet.
+      if (this.currentProvider === 'azure') return true;
       
-      // Azure/GCP with existing VNet use pre-configured subnets — no subnet config needed
+      // GCP with an existing VPC uses pre-configured subnets.
       return false;
     };
     
-    // Function to update slider limits based on current configuration
-    const updateSliderLimits = () => {
+    // Function to update available subnet sizes based on current configuration
+    const updateSubnetSizeOptions = () => {
       const vpcCidr = vpcCidrInput?.value;
       const enablePrivateLink = privateLinkCheckbox?.checked || false;
+      const natGatewayChoiceApplies = this.currentProvider === 'aws' ||
+        (this.currentProvider === 'azure' && enablePrivateLink);
+      const enableNatGateway = !natGatewayChoiceApplies || natGatewaySelect?.value !== 'none';
       const zones = this.getSelectedAvailabilityZones();
       const showSubnetConfig = shouldShowSubnetConfig();
       
-      // Determine if we should create service subnet
-      // Only create if PrivateLink is enabled AND user chose "New Subnet" (terraform_managed)
-      const privatelinkTerraformManaged = document.getElementById('privatelink_subnet_terraform')?.checked ?? true;
-      const createServiceSubnet = enablePrivateLink && privatelinkTerraformManaged;
+      // Azure and GCP retain their existing private-connectivity service subnet.
+      const createServiceSubnet = this.currentProvider !== 'aws' && enablePrivateLink;
       
-      // Always show slider container when subnet configuration is needed
       if (!showSubnetConfig) {
-        if (subnetSizeSliderContainer) {
-          subnetSizeSliderContainer.style.display = 'none';
+        if (subnetSizeSelectorContainer) {
+          subnetSizeSelectorContainer.style.display = 'none';
         }
-        currentSliderLimits = null;
+        currentSubnetLimits = null;
+        selectedSubnetSize = null;
         return;
       }
-      
-      // Show slider container when subnet configuration is needed
-      if (subnetSizeSliderContainer) {
-        subnetSizeSliderContainer.style.display = 'block';
+
+      if (subnetSizeSelectorContainer) {
+        subnetSizeSelectorContainer.style.display = 'block';
       }
-      
-      // If missing data, show disabled state
+
       if (!vpcCidr || zones.length === 0) {
-        if (subnetSizeSlider) {
-          subnetSizeSlider.disabled = true;
-          subnetSizeSlider.classList.add('disabled');
+        if (subnetSizeOptions) {
+          subnetSizeOptions.className = 'subnet-size-options';
+          subnetSizeOptions.setAttribute('role', 'radiogroup');
+          subnetSizeOptions.innerHTML = '<div class="subnet-size-empty">Complete the VPC CIDR and Availability Zones to see available sizes.</div>';
         }
-        if (sliderLabelMin) {
-          sliderLabelMin.textContent = 'Larger subnets';
-        }
-        if (sliderLabelMax) {
-          sliderLabelMax.textContent = 'Smaller subnets';
-        }
-        // Show placeholder values
-        if (subnetSizeDisplay) subnetSizeDisplay.textContent = '--';
-        if (subnetIpsDisplay) subnetIpsDisplay.textContent = '--';
-        if (subnetNodesDisplay) subnetNodesDisplay.textContent = '--';
-        currentSliderLimits = null;
+        currentSubnetLimits = null;
+        selectedSubnetSize = null;
         return;
       }
       
       try {
         const networkCalc = new NetworkCalculator(this.currentProvider);
-        const limits = networkCalc.calculateSubnetSizeLimits(vpcCidr, zones.length, enablePrivateLink, createServiceSubnet);
+        const limits = networkCalc.calculateSubnetSizeLimits(
+          vpcCidr,
+          zones.length,
+          enablePrivateLink,
+          createServiceSubnet,
+          enableNatGateway
+        );
         
         if (limits.error || !limits.valid) {
-          if (subnetSizeSlider) {
-            subnetSizeSlider.disabled = true;
-            subnetSizeSlider.classList.add('disabled');
-          }
-          currentSliderLimits = null;
+          currentSubnetLimits = null;
+          selectedSubnetSize = null;
+          renderSubnetSizeOptions(null, null);
           return;
         }
-        
+
+        const previousValue = readSelectedSubnetSize();
+        const hadCurrentLimits = currentSubnetLimits !== null;
         // Check if limits have changed
-        const limitsChanged = !currentSliderLimits || 
-                              currentSliderLimits.min !== limits.min || 
-                              currentSliderLimits.max !== limits.max;
+        const limitsChanged = !currentSubnetLimits ||
+                              currentSubnetLimits.min !== limits.min ||
+                              currentSubnetLimits.max !== limits.max;
         
         // If limits changed, reset the user adjustment flag
-        if (limitsChanged) {
+        if (limitsChanged && hadCurrentLimits) {
           userHasAdjustedSubnetSize = false;
         }
         
-        currentSliderLimits = limits;
-        
-        // Enable slider
-        if (subnetSizeSlider) {
-          subnetSizeSlider.disabled = false;
-          subnetSizeSlider.classList.remove('disabled');
-          
-          const previousValue = parseInt(subnetSizeSlider.value, 10);
-          subnetSizeSlider.min = limits.min;
-          subnetSizeSlider.max = limits.max;
-          
-          // Determine new value based on user interaction
-          let newValue;
-          if (userHasAdjustedSubnetSize && !limitsChanged) {
-            // Preserve user choice, clamping to new limits if necessary
-            newValue = Math.max(limits.min, Math.min(limits.max, previousValue));
-          } else {
-            // Use default: largest subnet possible (limits.min = smallest prefix = most IPs)
-            newValue = limits.min;
-          }
-          subnetSizeSlider.value = newValue;
-          
-          // Update labels
-          if (sliderLabelMin) {
-            const minIps = Math.pow(2, 32 - limits.min);
-            sliderLabelMin.textContent = `/${limits.min} (${Utils.formatNumber(minIps)} IPs)`;
-          }
-          if (sliderLabelMax) {
-            const maxIps = Math.pow(2, 32 - limits.max);
-            sliderLabelMax.textContent = `/${limits.max} (${Utils.formatNumber(maxIps)} IPs)`;
-          }
-          
-          // Update display
-          updateSliderDisplay(parseInt(subnetSizeSlider.value, 10));
-        }
+        currentSubnetLimits = limits;
+        selectedSubnetSize = userHasAdjustedSubnetSize && (!limitsChanged || !hadCurrentLimits) && previousValue !== null
+          ? Math.max(limits.min, Math.min(limits.max, previousValue))
+          : limits.default;
+        renderSubnetSizeOptions(limits, selectedSubnetSize);
       } catch (err) {
         console.error('Error calculating subnet limits:', err);
-        if (subnetSizeSlider) {
-          subnetSizeSlider.disabled = true;
-          subnetSizeSlider.classList.add('disabled');
-        }
-        currentSliderLimits = null;
+        currentSubnetLimits = null;
+        selectedSubnetSize = null;
+        renderSubnetSizeOptions(null, null);
       }
     };
-    
-    // Add slider event listener
-    if (subnetSizeSlider) {
-      subnetSizeSlider.addEventListener('input', () => {
-        const value = parseInt(subnetSizeSlider.value, 10);
-        updateSliderDisplay(value);
+
+    if (subnetSizeOptions) {
+      subnetSizeOptions.addEventListener('input', (event) => {
+        if (!event.target?.classList.contains('subnet-size-range') || !currentSubnetLimits?.valid) return;
+        const prefix = parseInt(event.target.value, 10);
+        selectedSubnetSize = prefix;
+        subnetSizeOptions.querySelector('[data-subnet-prefix]').textContent = `/${prefix}`;
+        subnetSizeOptions.querySelector('[data-subnet-ips]').textContent = `${Utils.formatNumber(currentSubnetLimits.getIPsForSize(prefix))} IPs`;
+        subnetSizeOptions.querySelector('[data-subnet-nodes]').textContent = `~${Utils.formatNumber(currentSubnetLimits.getMaxNodes(prefix))} max nodes`;
       });
-      
-      subnetSizeSlider.addEventListener('change', () => {
+
+      subnetSizeOptions.addEventListener('change', (event) => {
+        if (event.target?.name !== 'custom_subnet_size') return;
+        selectedSubnetSize = parseInt(event.target.value, 10);
         userHasAdjustedSubnetSize = true;
         if (typeof calculateSubnets === 'function') {
           calculateSubnets();
@@ -2411,18 +1667,17 @@ class App {
     
     const calculateSubnets = Utils.debounce(() => {
       const vpcCidr = vpcCidrInput?.value;
-      const pricingTier = pricingTierSelect?.value;
+      const pricingTier = this.currentProvider === 'azure' ? 'PREMIUM' : pricingTierSelect?.value;
       const enablePrivateLink = privateLinkCheckbox?.checked || false;
+      const enableNatGateway = this.currentProvider !== 'aws' || natGatewaySelect?.value !== 'none';
       const zones = this.getSelectedAvailabilityZones();
       const showSubnetConfig = shouldShowSubnetConfig();
       
-      // Determine if we should create service subnet
-      // Only create if PrivateLink is enabled AND user chose "New Subnet" (terraform_managed)
-      const privatelinkTerraformManaged = document.getElementById('privatelink_subnet_terraform')?.checked ?? true;
-      const createServiceSubnet = enablePrivateLink && privatelinkTerraformManaged;
+      // Azure and GCP retain their existing private-connectivity service subnet.
+      const createServiceSubnet = this.currentProvider !== 'aws' && enablePrivateLink;
       
-      // Update slider limits first
-      updateSliderLimits();
+      // Update available subnet sizes first
+      updateSubnetSizeOptions();
       
       const preview = document.getElementById('subnets-preview');
       const container = document.getElementById('subnets-container');
@@ -2461,13 +1716,17 @@ class App {
       try {
         const networkCalc = new NetworkCalculator(this.currentProvider);
         
-        // Get custom subnet size from slider if available
-        let customSubnetSize = null;
-        if (subnetSizeSlider && currentSliderLimits && currentSliderLimits.valid) {
-          customSubnetSize = parseInt(subnetSizeSlider.value, 10);
-        }
+        const customSubnetSize = currentSubnetLimits?.valid ? selectedSubnetSize : null;
         
-        const subnets = networkCalc.allocateSubnets(vpcCidr, zones, pricingTier, enablePrivateLink, customSubnetSize, createServiceSubnet);
+        const subnets = networkCalc.allocateSubnets(
+          vpcCidr,
+          zones,
+          pricingTier,
+          enablePrivateLink,
+          customSubnetSize,
+          createServiceSubnet,
+          enableNatGateway
+        );
         const summary = networkCalc.calculateNetworkSummary(vpcCidr, subnets);
         
         // Validate allocation fits in VPC
@@ -2498,7 +1757,7 @@ class App {
                   <div class="text-muted small">
                     <div><strong>CIDR:</strong> ${subnet.cidr}</div>
                     <div><strong>Size:</strong> /${subnet.size}</div>
-                    <div><strong>Zone:</strong> ${subnet.availability_zone}</div>
+                    ${this.currentProvider === 'azure' ? '' : `<div><strong>Zone:</strong> ${subnet.availability_zone}</div>`}
                   </div>
                 </div>
               </div>
@@ -3176,84 +2435,125 @@ class App {
     const createNewVpcCheckbox = document.getElementById('create_new_vpc');
     const existingVpcSection = document.getElementById('existing-vpc-section');
     const existingSubnetsSection = document.getElementById('existing-subnets-section');
-    const subnetModeCreate = document.getElementById('subnet_mode_create');
-    const subnetModeExisting = document.getElementById('subnet_mode_existing');
+    const existingPrivatelinkEndpointsSection = document.getElementById('existing-privatelink-endpoints-section');
     const vpcCidrContainer = document.querySelector('input[name="vpc_cidr"]')?.closest('.mb-3');
     const azContainer = document.querySelector('#availability-zones-select')?.closest('.mb-3');
+    const azureVnetResourceGroupField = document.getElementById('azure-vnet-resource-group-field');
+    const azureVnetResourceGroupInput = document.querySelector('input[name="azure_vnet_resource_group_name"]');
     
-    // Helper function to update UI based on VPC and subnet mode
+    // Helper function to update UI based on VPC mode
     const updateNetworkConfigUI = () => {
       const isCreateNewVpc = createNewVpcCheckbox?.checked !== false;
-      const isUseExistingSubnets = subnetModeExisting?.checked === true;
+      const azurePrivateLink = this.currentProvider === 'azure' && privateLinkCheckbox?.checked === true;
+      const gcpPrivateLink = this.currentProvider === 'gcp' && privateLinkCheckbox?.checked === true;
       
       if (isCreateNewVpc) {
-        // Creating new VPC - show VPC CIDR, AZs, subnet slider
+        // Creating new VPC - show VPC CIDR, AZs, and subnet-size options
         if (existingVpcSection) existingVpcSection.style.display = 'none';
         if (vpcCidrContainer) vpcCidrContainer.style.display = 'block';
         if (azContainer) azContainer.style.display = 'block';
+        if (natGatewaySection) {
+          natGatewaySection.style.display = this.currentProvider === 'aws' || azurePrivateLink || gcpPrivateLink ? 'block' : 'none';
+        }
       } else {
         // Using existing VPC
         if (existingVpcSection) existingVpcSection.style.display = 'block';
         
         if (this.currentProvider === 'aws') {
-          if (isUseExistingSubnets) {
-            // Using existing subnets - hide VPC CIDR, AZs, subnet slider
-            if (vpcCidrContainer) vpcCidrContainer.style.display = 'none';
-            if (azContainer) azContainer.style.display = 'none';
-            if (existingSubnetsSection) existingSubnetsSection.style.display = 'block';
-          } else {
-            // Creating new subnets in existing VPC - show VPC CIDR, AZs
-            if (vpcCidrContainer) vpcCidrContainer.style.display = 'block';
-            if (azContainer) azContainer.style.display = 'block';
-            if (existingSubnetsSection) existingSubnetsSection.style.display = 'none';
-          }
+          if (vpcCidrContainer) vpcCidrContainer.style.display = 'none';
+          if (azContainer) azContainer.style.display = 'none';
+          if (existingSubnetsSection) existingSubnetsSection.style.display = 'block';
+          if (natGatewaySection) natGatewaySection.style.display = 'none';
+        } else if (this.currentProvider === 'azure') {
+          // The Azure standard source creates the workspace subnets in the existing VNet.
+          if (vpcCidrContainer) vpcCidrContainer.style.display = 'block';
+          if (azContainer) azContainer.style.display = 'none';
+          if (natGatewaySection) natGatewaySection.style.display = 'none';
         } else {
-          // Azure/GCP - hide VPC CIDR, AZs, subnet slider (existing VNet uses pre-configured subnets)
           if (vpcCidrContainer) vpcCidrContainer.style.display = 'none';
           if (azContainer) azContainer.style.display = 'none';
         }
+      }
+
+      if (azureVnetResourceGroupField) {
+        azureVnetResourceGroupField.style.display = !azurePrivateLink && isCreateNewVpc ? 'block' : 'none';
+      }
+
+      if (natGatewayPrivateLinkMessage) {
+        const noAwsNat = this.currentProvider === 'aws' && isCreateNewVpc && natGatewaySelect?.value === 'none';
+        const noAzurePrivateLinkNat = azurePrivateLink && natGatewaySelect?.value === 'none';
+        const noGcpPrivateLinkNat = gcpPrivateLink && natGatewaySelect?.value === 'none';
+        natGatewayPrivateLinkMessage.style.display = noAwsNat || noAzurePrivateLinkNat || noGcpPrivateLinkNat ? 'block' : 'none';
+      }
+
+      if (gcpStandardNetworkInfo) gcpStandardNetworkInfo.style.display = gcpPrivateLink ? 'none' : 'block';
+      if (gcpPrivateLinkNetworkInfo) gcpPrivateLinkNetworkInfo.style.display = gcpPrivateLink ? 'block' : 'none';
+      if (gcpPrivateLinkNetworkFields) gcpPrivateLinkNetworkFields.style.display = gcpPrivateLink ? 'block' : 'none';
+      if (gcpPscSubnetInput) {
+        if (gcpPrivateLink) gcpPscSubnetInput.setAttribute('required', '');
+        else gcpPscSubnetInput.removeAttribute('required');
+      }
+
+      if (azurePrivateLinkNatGatewayZoneSection) {
+        const showPlacement = azurePrivateLink && natGatewaySelect?.value !== 'none';
+        azurePrivateLinkNatGatewayZoneSection.style.display = showPlacement ? 'block' : 'none';
       }
       
       // Toggle required attributes based on what's visible
       const vpcCidrInput = document.querySelector('input[name="vpc_cidr"]');
       const existingVpcIdInput = document.getElementById('existing_vpc_id');
+      const azSelect = document.getElementById('availability-zones-select');
+      const awsExistingInputs = document.querySelectorAll('#existing-subnets-section input');
+      const restEndpointInput = document.getElementById('backend_rest_aws_vpce_id');
+      const relayEndpointInput = document.getElementById('backend_relay_aws_vpce_id');
 
       if (isCreateNewVpc) {
         // Creating new VPC — VPC CIDR required, existing fields not required
         if (vpcCidrInput) vpcCidrInput.setAttribute('required', '');
+        if (azSelect) azSelect.setAttribute('required', '');
         if (existingVpcIdInput) existingVpcIdInput.removeAttribute('required');
         document.querySelectorAll('#existing-vpc-section input').forEach(el => el.removeAttribute('required'));
+        if (existingPrivatelinkEndpointsSection) existingPrivatelinkEndpointsSection.style.display = 'none';
       } else {
         // Using existing VPC/VNet — existing ID required, VPC CIDR depends on provider
         if (existingVpcIdInput) existingVpcIdInput.setAttribute('required', '');
 
         if (this.currentProvider === 'aws') {
-          const isExistingSubnets = subnetModeExisting?.checked === true;
-          if (isExistingSubnets) {
-            if (vpcCidrInput) vpcCidrInput.removeAttribute('required');
-          } else {
-            if (vpcCidrInput) vpcCidrInput.setAttribute('required', '');
-          }
-        } else {
-          // Azure/GCP with existing VNet — no VPC CIDR needed
           if (vpcCidrInput) vpcCidrInput.removeAttribute('required');
+          if (azSelect) azSelect.removeAttribute('required');
+          awsExistingInputs.forEach(input => input.setAttribute('required', ''));
+          const needsEndpoints = privateLinkCheckbox?.checked === true;
+          if (existingPrivatelinkEndpointsSection) {
+            existingPrivatelinkEndpointsSection.style.display = needsEndpoints ? 'flex' : 'none';
+          }
+          for (const input of [restEndpointInput, relayEndpointInput]) {
+            if (!input) continue;
+            if (needsEndpoints) input.setAttribute('required', '');
+            else input.removeAttribute('required');
+          }
+        } else if (this.currentProvider === 'azure') {
+          if (vpcCidrInput) vpcCidrInput.setAttribute('required', '');
+          if (azSelect) azSelect.removeAttribute('required');
+        } else {
+          if (vpcCidrInput) vpcCidrInput.removeAttribute('required');
+          if (azSelect) azSelect.removeAttribute('required');
         }
       }
 
-      // Update subnet slider and preview visibility
+      if (azureVnetResourceGroupInput) {
+        if (this.currentProvider === 'azure' && !azurePrivateLink && isCreateNewVpc) {
+          azureVnetResourceGroupInput.setAttribute('required', '');
+        } else {
+          azureVnetResourceGroupInput.removeAttribute('required');
+        }
+      }
+
+      // Update subnet-size options and preview visibility
       calculateSubnets();
     };
 
     if (createNewVpcCheckbox) {
       createNewVpcCheckbox.addEventListener('change', updateNetworkConfigUI);
-    }
-    
-    // Setup subnet mode radio buttons (AWS only)
-    if (subnetModeCreate) {
-      subnetModeCreate.addEventListener('change', updateNetworkConfigUI);
-    }
-    if (subnetModeExisting) {
-      subnetModeExisting.addEventListener('change', updateNetworkConfigUI);
     }
     
     // Setup add subnet button
@@ -3297,11 +2597,58 @@ class App {
       });
     }
     
+    const azureResourceGroupMode = document.getElementById('azure_resource_group_mode');
+    const azureExistingResourceGroupField = document.getElementById('azure-existing-resource-group-field');
+    const azureExistingResourceGroupInput = document.querySelector('input[name="azure_existing_resource_group_name"]');
+    const updateAzureResourceGroupUI = () => {
+      if (this.currentProvider !== 'azure') return;
+      const useExisting = privateLinkCheckbox?.checked === true && azureResourceGroupMode?.value === 'existing';
+      if (azureExistingResourceGroupField) {
+        azureExistingResourceGroupField.style.display = useExisting ? 'block' : 'none';
+      }
+      if (azureExistingResourceGroupInput) {
+        if (useExisting) azureExistingResourceGroupInput.setAttribute('required', '');
+        else azureExistingResourceGroupInput.removeAttribute('required');
+      }
+    };
+
     // Setup private link validation
     const checkPrivateLinkRequirements = () => {
-      const tier = pricingTierSelect?.value;
-      const privateLinkEnabled = privateLinkCheckbox?.checked || false;
+      const tier = this.currentProvider === 'azure' || this.currentProvider === 'gcp'
+        ? 'PREMIUM'
+        : pricingTierSelect?.value;
       const requiredTier = this.currentProvider === 'aws' ? 'ENTERPRISE' : 'PREMIUM';
+
+      if (this.currentProvider === 'aws' && privateLinkCheckbox) {
+        const enterpriseSelected = tier === 'ENTERPRISE';
+        if (!enterpriseSelected) privateLinkCheckbox.checked = false;
+        privateLinkCheckbox.disabled = !enterpriseSelected;
+        privateLinkCheckbox.setAttribute('aria-disabled', String(!enterpriseSelected));
+      }
+
+      if (this.currentProvider === 'azure' && privateLinkCheckbox) {
+        const privateLinkEnabled = privateLinkCheckbox.checked;
+        const standardFields = document.getElementById('azure-standard-fields');
+        const privateLinkFields = document.getElementById('azure-private-link-fields');
+        const unityCatalogConfiguration = document.getElementById('unity-catalog-configuration');
+        if (standardFields) standardFields.style.display = privateLinkEnabled ? 'none' : 'block';
+        if (privateLinkFields) privateLinkFields.style.display = privateLinkEnabled ? 'block' : 'none';
+        if (unityCatalogConfiguration) unityCatalogConfiguration.style.display = privateLinkEnabled ? 'none' : 'block';
+        if (azureNatGatewayZoneSection) azureNatGatewayZoneSection.style.display = privateLinkEnabled ? 'none' : 'block';
+        if (natGatewaySection) natGatewaySection.style.display = privateLinkEnabled ? 'block' : 'none';
+        document.querySelectorAll('.azure-standard-required').forEach(input => {
+          if (privateLinkEnabled) input.removeAttribute('required');
+          else input.setAttribute('required', '');
+        });
+        if (createNewVpcCheckbox) {
+          if (privateLinkEnabled) createNewVpcCheckbox.checked = true;
+          createNewVpcCheckbox.disabled = privateLinkEnabled;
+          createNewVpcCheckbox.setAttribute('aria-disabled', String(privateLinkEnabled));
+        }
+        updateAzureResourceGroupUI();
+      }
+
+      const privateLinkEnabled = privateLinkCheckbox?.checked || false;
       
       if (privateLinkEnabled && tier !== requiredTier && privateLinkWarning) {
         privateLinkWarning.style.display = 'block';
@@ -3310,57 +2657,64 @@ class App {
       }
     };
     
-    // Setup PrivateLink subnet mode options (AWS only)
-    const privatelinkSubnetOptions = document.getElementById('privatelink-subnet-options');
-    const privatelinkSubnetTerraform = document.getElementById('privatelink_subnet_terraform');
-    const privatelinkSubnetUser = document.getElementById('privatelink_subnet_user');
-    const existingPrivatelinkSubnetSection = document.getElementById('existing-privatelink-subnet-section');
-    
-    const updatePrivatelinkSubnetUI = () => {
-      const privateLinkEnabled = privateLinkCheckbox?.checked || false;
-      
-      // Show/hide the subnet mode options based on PrivateLink checkbox
-      if (privatelinkSubnetOptions) {
-        privatelinkSubnetOptions.style.display = privateLinkEnabled ? 'block' : 'none';
-      }
-      
-      // Show/hide the existing subnet ID input based on radio selection
-      if (existingPrivatelinkSubnetSection) {
-        const userManaged = privatelinkSubnetUser?.checked || false;
-        existingPrivatelinkSubnetSection.style.display = userManaged ? 'block' : 'none';
+    // The AWS deployments require exactly one metastore path.
+    const metastoreModeCreate = document.getElementById('metastore_mode_create');
+    const metastoreModeExisting = document.getElementById('metastore_mode_existing');
+    const newMetastoreSection = document.getElementById('new-metastore-section');
+    const existingMetastoreSection = document.getElementById('existing-metastore-section');
+    const metastoreIdInput = document.getElementById('metastore_id');
+    const updateMetastoreUI = () => {
+      const useExisting = metastoreModeExisting?.checked === true;
+      if (newMetastoreSection) newMetastoreSection.style.display = useExisting ? 'none' : 'block';
+      if (existingMetastoreSection) existingMetastoreSection.style.display = useExisting ? 'block' : 'none';
+      if (metastoreIdInput) {
+        const metastoreVisible = this.currentProvider !== 'azure' || privateLinkCheckbox?.checked !== true;
+        if (useExisting && metastoreVisible) metastoreIdInput.setAttribute('required', '');
+        else metastoreIdInput.removeAttribute('required');
       }
     };
-    
-    // Add event listeners for PrivateLink subnet mode
-    privatelinkSubnetTerraform?.addEventListener('change', () => {
-      updatePrivatelinkSubnetUI();
-      calculateSubnets(); // Recalculate subnets when subnet mode changes
-    });
-    privatelinkSubnetUser?.addEventListener('change', () => {
-      updatePrivatelinkSubnetUI();
-      calculateSubnets(); // Recalculate subnets when subnet mode changes
-    });
+    metastoreModeCreate?.addEventListener('change', updateMetastoreUI);
+    metastoreModeExisting?.addEventListener('change', updateMetastoreUI);
+    azureResourceGroupMode?.addEventListener('change', updateAzureResourceGroupUI);
     
     privateLinkCheckbox?.addEventListener('change', checkPrivateLinkRequirements);
     pricingTierSelect?.addEventListener('change', checkPrivateLinkRequirements);
+    natGatewaySelect?.addEventListener('change', () => {
+      updateNetworkConfigUI();
+      calculateSubnets();
+    });
     
     // Real-time subnet calculation event listeners
     // Note: calculateSubnets is already defined earlier in the function
     vpcCidrInput?.addEventListener('input', calculateSubnets);
     pricingTierSelect?.addEventListener('change', () => {
       checkPrivateLinkRequirements();
+      updateNetworkConfigUI();
       calculateSubnets();
     });
     privateLinkCheckbox?.addEventListener('change', () => {
       checkPrivateLinkRequirements();
-      updatePrivatelinkSubnetUI();
+      updateMetastoreUI();
+      updateNetworkConfigUI();
       calculateSubnets();
     });
     
     // Note: Change listeners for availability zone selects are added above in the initialization section
     // Note: Remove button handlers are added above in the addAvailabilityZoneRow function
     
-    // Trigger initial calculations - always call to show slider/preview when Create New VPC is active
+    if (createNewVpcCheckbox && this.currentConfig.create_new_vpc === false) {
+      createNewVpcCheckbox.checked = false;
+    }
+    if (privateLinkCheckbox && this.currentConfig.enable_private_link === true &&
+        (this.currentProvider !== 'aws' || pricingTierSelect?.value === 'ENTERPRISE')) {
+      privateLinkCheckbox.checked = true;
+    }
+    checkPrivateLinkRequirements();
+    updateMetastoreUI();
+    updateAzureResourceGroupUI();
+    updateNetworkConfigUI();
+
+    // Trigger initial calculations to show the size selector and preview when needed.
     setTimeout(calculateSubnets, 500);
     
     // Setup form submission
@@ -3371,40 +2725,102 @@ class App {
       config.provider = this.currentProvider;
       config.create_new_vpc = document.getElementById('create_new_vpc')?.checked !== false;
       config.enable_private_link = document.getElementById('enable_private_link')?.checked || false;
-      
-      // AWS-specific: Handle PrivateLink subnet mode
-      if (this.currentProvider === 'aws' && config.enable_private_link) {
-        config.privatelink_subnet_mode = document.querySelector('input[name="privatelink_subnet_mode"]:checked')?.value || 'terraform_managed';
-        if (config.privatelink_subnet_mode === 'user_managed') {
-          config.existing_privatelink_subnet_id = document.getElementById('existing_privatelink_subnet_id')?.value?.trim() || '';
+      if (this.currentProvider === 'gcp') {
+        config.create_new_vpc = true;
+        config.pricing_tier = config.enable_private_link ? 'PREMIUM' : '';
+        config.subnet_cidr = document.getElementById('subnet_cidr')?.value?.trim() || '';
+        config.psc_subnet_cidr = config.enable_private_link
+          ? (document.getElementById('psc_subnet_cidr')?.value?.trim() || '')
+          : '';
+        const [workspaceAttachment = '', relayAttachment = ''] = GCP_PSC_SERVICE_ATTACHMENTS[config.region] || [];
+        config.workspace_service_attachment = config.enable_private_link ? workspaceAttachment : '';
+        config.relay_service_attachment = config.enable_private_link ? relayAttachment : '';
+        config.metastore_id = '';
+        config.public_access_enabled = true;
+        config.create_private_dns = true;
+      }
+      if (this.currentProvider === 'azure') {
+        config.pricing_tier = 'PREMIUM';
+        const azureNatGatewayZone = document.getElementById('azure_nat_gateway_zone')?.value ?? '1';
+        config.azure_nat_gateway_zone = ['', '1', '2', '3'].includes(azureNatGatewayZone)
+          ? azureNatGatewayZone
+          : '1';
+        const azurePrivateLinkNatGatewayZone = document.getElementById('azure_private_link_nat_gateway_zone')?.value ?? '';
+        config.azure_private_link_nat_gateway_zone = ['', '1', '2', '3'].includes(azurePrivateLinkNatGatewayZone)
+          ? azurePrivateLinkNatGatewayZone
+          : '';
+      }
+      if (this.currentProvider === 'aws') {
+        config.nat_gateway_mode = document.getElementById('nat_gateway_mode')?.value || 'single';
+        config.enable_nat_gateway = !config.create_new_vpc || config.nat_gateway_mode !== 'none';
+      } else if (this.currentProvider === 'azure' && config.enable_private_link) {
+        config.azure_private_link_nat_gateway_mode = document.getElementById('nat_gateway_mode')?.value || 'single';
+        config.nat_gateway_mode = config.azure_private_link_nat_gateway_mode;
+        config.enable_nat_gateway = config.nat_gateway_mode !== 'none';
+      } else if (this.currentProvider === 'gcp' && config.enable_private_link) {
+        config.nat_gateway_mode = document.getElementById('nat_gateway_mode')?.value || 'single';
+        config.enable_nat_gateway = config.nat_gateway_mode !== 'none';
+      } else {
+        config.nat_gateway_mode = 'single';
+        config.enable_nat_gateway = true;
+      }
+
+      if (this.currentProvider === 'aws') {
+        config.metastore_mode = document.querySelector('input[name="metastore_mode"]:checked')?.value || 'create';
+        config.metastore_id = config.metastore_mode === 'existing'
+          ? (document.getElementById('metastore_id')?.value?.trim() || '')
+          : '';
+        config.metastore_name = config.metastore_mode === 'existing'
+          ? ''
+          : (document.getElementById('metastore_name')?.value?.trim() || `${config.project_prefix}-metastore`);
+      }
+
+      if (this.currentProvider === 'azure') {
+        config.azure_resource_group_mode = document.getElementById('azure_resource_group_mode')?.value || 'new';
+        if (config.enable_private_link) {
+          config.create_new_vpc = true;
+          config.metastore_mode = 'none';
+          config.metastore_id = '';
+          config.metastore_name = '';
         } else {
-          config.existing_privatelink_subnet_id = '';
+          config.metastore_mode = document.querySelector('input[name="metastore_mode"]:checked')?.value || 'create';
+          config.metastore_id = config.metastore_mode === 'existing'
+            ? (document.getElementById('metastore_id')?.value?.trim() || '')
+            : '';
+          config.metastore_name = config.metastore_mode === 'existing'
+            ? ''
+            : (document.getElementById('metastore_name')?.value?.trim() || `${config.project_prefix}-metastore`);
         }
       }
       
-      // AWS-specific: Handle subnet mode
+      // AWS existing-VPC mode uses only pre-existing network resources.
       if (this.currentProvider === 'aws' && !config.create_new_vpc) {
-        config.subnet_mode = document.querySelector('input[name="subnet_mode"]:checked')?.value || 'create';
-        config.create_new_subnets = config.subnet_mode === 'create';
-        
-        // If using existing subnets, collect the IDs
-        if (config.subnet_mode === 'existing') {
-          const subnetInputs = document.querySelectorAll('.existing-subnet-input');
-          config.existing_subnet_ids = Array.from(subnetInputs)
-            .map(input => input.value.trim())
-            .filter(val => val !== '');
-          config.existing_security_group_id = document.getElementById('existing_security_group_id')?.value?.trim() || '';
-        }
-        
-        // Get existing VPC ID
+        config.subnet_mode = 'existing';
+        config.create_new_subnets = false;
+        const subnetInputs = document.querySelectorAll('.existing-subnet-input');
+        config.existing_subnet_ids = Array.from(subnetInputs)
+          .map(input => input.value.trim())
+          .filter(val => val !== '');
+        config.existing_security_group_id = document.getElementById('existing_security_group_id')?.value?.trim() || '';
         config.existing_vpc_id = document.getElementById('existing_vpc_id')?.value?.trim() || '';
+        config.backend_rest_aws_vpce_id = config.enable_private_link
+          ? (document.getElementById('backend_rest_aws_vpce_id')?.value?.trim() || '')
+          : '';
+        config.backend_relay_aws_vpce_id = config.enable_private_link
+          ? (document.getElementById('backend_relay_aws_vpce_id')?.value?.trim() || '')
+          : '';
+      } else if (this.currentProvider === 'aws') {
+        config.create_new_subnets = true;
+        config.existing_subnet_ids = [];
+        config.existing_security_group_id = '';
+        config.existing_vpc_id = '';
       }
 
       // Azure-specific: Handle existing VNet
       if (this.currentProvider === 'azure' && !config.create_new_vpc) {
         config.existing_vpc_id = document.getElementById('existing_vpc_id')?.value?.trim() || '';
-        config.existing_public_subnet_name = document.getElementById('existing_public_subnet_name')?.value?.trim() || '';
-        config.existing_private_subnet_name = document.getElementById('existing_private_subnet_name')?.value?.trim() || '';
+      } else if (this.currentProvider === 'azure') {
+        config.existing_vpc_id = '';
       }
 
       // GCP-specific: Handle existing VPC
@@ -3419,9 +2835,8 @@ class App {
       this.clearAllFieldValidations();
       
       // Determine if we need subnet configuration (VPC CIDR, AZs, etc.)
-      // Azure/GCP with existing VNet use pre-configured subnets — no CIDR/AZ needed
-      const needsSubnetConfig = config.create_new_vpc ||
-        (this.currentProvider === 'aws' && config.create_new_subnets);
+      const needsSubnetConfig = this.currentProvider !== 'gcp' &&
+        (this.currentProvider === 'azure' || config.create_new_vpc);
       
       // Get availability zones from multiple select
       const zones = this.getSelectedAvailabilityZones();
@@ -3513,18 +2928,31 @@ class App {
         const networkCalc = new NetworkCalculator(this.currentProvider);
         try {
           if (config.vpc_cidr && zones.length > 0) {
-            // Determine if we should create service subnet
-            // Only create if PrivateLink is enabled AND user chose "New Subnet" (terraform_managed)
-            const createServiceSubnet = config.enable_private_link && 
-              (config.privatelink_subnet_mode === 'terraform_managed' || !config.privatelink_subnet_mode);
-            
+            const createServiceSubnet = this.currentProvider !== 'aws' && config.enable_private_link;
+            const subnetSizeLimits = networkCalc.calculateSubnetSizeLimits(
+              config.vpc_cidr,
+              zones.length,
+              config.enable_private_link,
+              createServiceSubnet,
+              config.enable_nat_gateway
+            );
+            const requestedSubnetSize = parseInt(config.custom_subnet_size, 10);
+            const customSubnetSize = subnetSizeLimits.valid &&
+              !Number.isNaN(requestedSubnetSize) &&
+              requestedSubnetSize >= subnetSizeLimits.min &&
+              requestedSubnetSize <= subnetSizeLimits.max
+              ? requestedSubnetSize
+              : subnetSizeLimits.default;
+            config.custom_subnet_size = customSubnetSize;
+
             const subnets = networkCalc.allocateSubnets(
               config.vpc_cidr,
               zones,
               config.pricing_tier,
               config.enable_private_link,
-              null, // customSubnetSize
-              createServiceSubnet
+              customSubnetSize,
+              createServiceSubnet,
+              config.enable_nat_gateway
             );
             
             // Validate subnet allocation
@@ -3596,7 +3024,6 @@ class App {
       this.currentConfig = config;
       Utils.setStorage('config', config);
       Utils.setStorage('step', 2);
-      this.updateNavbar();
       window.location.hash = '/summary';
     });
     
@@ -3615,6 +3042,21 @@ class App {
           config.provider = this.currentProvider;
           config.create_new_vpc = document.getElementById('create_new_vpc')?.checked !== false;
           config.enable_private_link = document.getElementById('enable_private_link')?.checked || false;
+          if (this.currentProvider === 'aws') {
+            config.nat_gateway_mode = document.getElementById('nat_gateway_mode')?.value || 'single';
+            config.enable_nat_gateway = !config.create_new_vpc || config.nat_gateway_mode !== 'none';
+          } else if (this.currentProvider === 'azure' && config.enable_private_link) {
+            config.azure_private_link_nat_gateway_mode = document.getElementById('nat_gateway_mode')?.value || 'single';
+            config.nat_gateway_mode = config.azure_private_link_nat_gateway_mode;
+            config.enable_nat_gateway = config.nat_gateway_mode !== 'none';
+          } else if (this.currentProvider === 'gcp' && config.enable_private_link) {
+            config.pricing_tier = 'PREMIUM';
+            config.nat_gateway_mode = document.getElementById('nat_gateway_mode')?.value || 'single';
+            config.enable_nat_gateway = config.nat_gateway_mode !== 'none';
+          } else {
+            config.nat_gateway_mode = 'single';
+            config.enable_nat_gateway = true;
+          }
           
           // Get availability zones from multiple select
           config.availability_zones = this.getSelectedAvailabilityZones();
@@ -3643,6 +3085,36 @@ class App {
     }
     
     const config = this.currentConfig;
+    const configuredSummaryNatGatewayMode = config.provider === 'azure' && config.enable_private_link
+      ? (config.azure_private_link_nat_gateway_mode || config.nat_gateway_mode)
+      : config.nat_gateway_mode;
+    const natGatewayMode = ['single', 'per_az', 'none'].includes(configuredSummaryNatGatewayMode)
+      ? configuredSummaryNatGatewayMode
+      : config.enable_nat_gateway === false ? 'none' : 'single';
+    const natGatewayLabel = natGatewayMode === 'per_az'
+      ? 'One per availability zone'
+      : natGatewayMode === 'none' ? 'None' : 'Single';
+    const configuredAzureNatGatewayZone = Object.prototype.hasOwnProperty.call(config, 'azure_nat_gateway_zone')
+      ? String(config.azure_nat_gateway_zone)
+      : '1';
+    const azureNatGatewayZone = ['1', '2', '3'].includes(configuredAzureNatGatewayZone)
+      ? configuredAzureNatGatewayZone
+      : '';
+    const azureNatGatewayLabel = azureNatGatewayZone
+      ? `Availability Zone ${azureNatGatewayZone}`
+      : 'Regional / non-zonal';
+    const configuredAzurePrivateLinkNatGatewayZone = Object.prototype.hasOwnProperty.call(
+      config,
+      'azure_private_link_nat_gateway_zone'
+    ) ? String(config.azure_private_link_nat_gateway_zone) : '';
+    const azurePrivateLinkNatGatewayZone = ['1', '2', '3'].includes(configuredAzurePrivateLinkNatGatewayZone)
+      ? configuredAzurePrivateLinkNatGatewayZone
+      : '';
+    const azurePrivateLinkNatGatewayLabel = natGatewayMode === 'none'
+      ? 'None'
+      : `Single — ${azurePrivateLinkNatGatewayZone
+        ? `Availability Zone ${azurePrivateLinkNatGatewayZone}`
+        : 'Regional / non-zonal'}`;
     const providerIcon = config.provider === 'aws' ? 
       '<i class="bi bi-amazon text-warning me-2" style="font-size: 2rem;"></i>' :
       config.provider === 'azure' ?
@@ -3669,7 +3141,7 @@ class App {
       })() : null;
     
     const content = `
-      <div class="container my-5">
+      <div class="container my-5 configuration-summary-page">
         <div class="row">
           <div class="col-xl-10 mx-auto">
             <div class="text-center mb-5">
@@ -3699,29 +3171,63 @@ class App {
                         <td>${providerName}</td>
                       </tr>
                       <tr>
-                        <td class="fw-semibold">Project Prefix:</td>
+                        <td class="fw-semibold">${config.provider === 'gcp' ? 'Workspace Name:' : 'Project Prefix:'}</td>
                         <td><code>${config.project_prefix}</code></td>
                       </tr>
                       <tr>
                         <td class="fw-semibold">Region:</td>
                         <td><code>${config.region}</code></td>
                       </tr>
+                      ${config.provider !== 'gcp' ? `
                       <tr>
                         <td class="fw-semibold">Pricing Tier:</td>
                         <td>
                           <span class="badge bg-${pricingBadgeClass}">${config.pricing_tier}</span>
                         </td>
                       </tr>
-                      ${config.provider === 'azure' && config.resource_group_name ? `
+                      ` : ''}
+                      ${config.provider === 'aws' || (config.provider === 'azure' && !config.enable_private_link) ? `
+                      <tr>
+                        <td class="fw-semibold">Metastore:</td>
+                        <td>${config.metastore_mode === 'existing'
+                          ? `Attach <code>${config.metastore_id}</code>`
+                          : `Create <code>${config.metastore_name}</code>`}</td>
+                      </tr>
+                      ` : ''}
+                      ${config.provider === 'azure' && !config.enable_private_link && config.resource_group_name ? `
                         <tr>
-                          <td class="fw-semibold">Resource Group:</td>
+                          <td class="fw-semibold">Workspace Resource Group:</td>
                           <td><code>${config.resource_group_name}</code></td>
+                        </tr>
+                        <tr>
+                          <td class="fw-semibold">Catalog:</td>
+                          <td><code>${config.azure_catalog_name}</code></td>
+                        </tr>
+                      ` : ''}
+                      ${config.provider === 'azure' && config.enable_private_link ? `
+                        <tr>
+                          <td class="fw-semibold">Data Plane Resource Group:</td>
+                          <td>${config.azure_resource_group_mode === 'existing'
+                            ? `Use <code>${config.azure_existing_resource_group_name}</code>`
+                            : `Create <code>rg-${config.project_prefix}-dp</code>`}</td>
                         </tr>
                       ` : ''}
                       ${config.provider === 'gcp' && config.project_id ? `
                         <tr>
                           <td class="fw-semibold">GCP Project ID:</td>
                           <td><code>${config.project_id}</code></td>
+                        </tr>
+                        <tr>
+                          <td class="fw-semibold">Google Service Account:</td>
+                          <td><code class="text-break">${config.google_service_account_email}</code></td>
+                        </tr>
+                        <tr>
+                          <td class="fw-semibold">Databricks Account ID:</td>
+                          <td><code class="text-break">${config.databricks_account_id}</code></td>
+                        </tr>
+                        <tr>
+                          <td class="fw-semibold">Workspace Admin:</td>
+                          <td><code class="text-break">${config.databricks_admin_user}</code></td>
                         </tr>
                       ` : ''}
                     </table>
@@ -3753,47 +3259,51 @@ class App {
                         <td><code class="text-break">${config.existing_vpc_id}</code></td>
                       </tr>
                       ` : ''}
-                      ${config.provider === 'aws' && !config.create_new_vpc ? `
+                      ${config.provider === 'aws' && config.create_new_vpc ? `
                       <tr>
-                        <td class="fw-semibold">Subnet Mode:</td>
-                        <td>
-                          <span class="badge bg-${config.create_new_subnets ? 'primary' : 'secondary'}">
-                            ${config.create_new_subnets ? 'Create New Subnets' : 'Use Existing Subnets'}
-                          </span>
-                        </td>
+                        <td class="fw-semibold">NAT Gateway:</td>
+                        <td><span class="badge bg-${natGatewayMode === 'none' ? 'secondary' : 'success'}">${natGatewayLabel}</span></td>
                       </tr>
                       ` : ''}
-                      ${config.provider === 'azure' && !config.create_new_vpc ? `
+                      ${config.provider === 'azure' && !config.enable_private_link ? `
                       <tr>
-                        <td class="fw-semibold">Public Subnet:</td>
-                        <td><code>${config.existing_public_subnet_name || 'N/A'}</code></td>
-                      </tr>
-                      <tr>
-                        <td class="fw-semibold">Private Subnet:</td>
-                        <td><code>${config.existing_private_subnet_name || 'N/A'}</code></td>
+                        <td class="fw-semibold">NAT Gateway:</td>
+                        <td><span class="badge bg-success">${azureNatGatewayLabel}</span></td>
                       </tr>
                       ` : ''}
-                      ${config.provider === 'gcp' && !config.create_new_vpc ? `
+                      ${config.provider === 'azure' && config.enable_private_link ? `
                       <tr>
-                        <td class="fw-semibold">Subnet Name:</td>
-                        <td><code>${config.existing_subnet_name || 'N/A'}</code></td>
-                      </tr>
-                      <tr>
-                        <td class="fw-semibold">Pod IP Range:</td>
-                        <td><code>${config.existing_pod_range_name || 'N/A'}</code></td>
-                      </tr>
-                      <tr>
-                        <td class="fw-semibold">Service IP Range:</td>
-                        <td><code>${config.existing_service_range_name || 'N/A'}</code></td>
+                        <td class="fw-semibold">NAT Gateway:</td>
+                        <td><span class="badge bg-${natGatewayMode === 'none' ? 'secondary' : 'success'}">${azurePrivateLinkNatGatewayLabel}</span></td>
                       </tr>
                       ` : ''}
-                      ${config.vpc_cidr && (config.create_new_vpc || config.create_new_subnets) ? `
+                      ${config.provider === 'gcp' ? `
+                      <tr>
+                        <td class="fw-semibold">Cloud NAT:</td>
+                        <td><span class="badge bg-${config.enable_nat_gateway ? 'success' : 'secondary'}">${config.enable_nat_gateway ? 'Created' : 'Not created'}</span></td>
+                      </tr>
+                      <tr>
+                        <td class="fw-semibold">Subnet CIDR:</td>
+                        <td><code>${config.subnet_cidr}</code></td>
+                      </tr>
+                      ${config.enable_private_link ? `
+                      <tr>
+                        <td class="fw-semibold">Back-end PSC:</td>
+                        <td><span class="badge bg-primary">Enabled</span></td>
+                      </tr>
+                      <tr>
+                        <td class="fw-semibold">PSC Endpoint Subnet:</td>
+                        <td><code>${config.psc_subnet_cidr}</code></td>
+                      </tr>
+                      ` : ''}
+                      ` : ''}
+                      ${config.provider !== 'gcp' && config.vpc_cidr && (config.provider === 'azure' || config.create_new_vpc || config.create_new_subnets) ? `
                       <tr>
                         <td class="fw-semibold">${config.provider === 'azure' ? 'VNet CIDR:' : 'VPC CIDR:'}</td>
                         <td><code>${config.vpc_cidr}</code></td>
                       </tr>
                       ` : ''}
-                      ${(config.availability_zones && config.availability_zones.length > 0) ? `
+                      ${config.provider !== 'azure' && config.provider !== 'gcp' && (config.availability_zones && config.availability_zones.length > 0) ? `
                       <tr>
                         <td class="fw-semibold">Availability Zones:</td>
                         <td>
@@ -3817,6 +3327,16 @@ class App {
                       <tr>
                         <td class="fw-semibold">Security Group ID:</td>
                         <td><code class="text-break">${config.existing_security_group_id}</code></td>
+                      </tr>
+                      ` : ''}
+                      ${config.backend_rest_aws_vpce_id ? `
+                      <tr>
+                        <td class="fw-semibold">REST API VPC Endpoint:</td>
+                        <td><code class="text-break">${config.backend_rest_aws_vpce_id}</code></td>
+                      </tr>
+                      <tr>
+                        <td class="fw-semibold">SCC Relay VPC Endpoint:</td>
+                        <td><code class="text-break">${config.backend_relay_aws_vpce_id}</code></td>
                       </tr>
                       ` : ''}
                       ${(config.create_new_vpc || config.create_new_subnets) && config.calculated_subnets && config.calculated_subnets.length > 0 ? `
@@ -3884,11 +3404,11 @@ class App {
                     ${config.calculated_subnets.map(subnet => {
                       const typeColor = subnet.subnet_type === 'private' ? 'primary' :
                         subnet.subnet_type === 'public' ? 'success' :
-                        subnet.subnet_type === 'service' ? 'warning' :
+                        (subnet.subnet_type === 'service' || subnet.subnet_type === 'intra') ? 'warning' :
                         subnet.subnet_type === 'host' ? 'info' : 'secondary';
                       return `
                         <div class="col-md-6 col-lg-4">
-                          <div class="card border-start border-4 border-${typeColor}">
+                          <div class="card subnet-allocation-card border-start border-4 border-${typeColor}">
                             <div class="card-body p-3">
                               <div class="d-flex justify-content-between align-items-start mb-2">
                                 <h6 class="card-title mb-0 text-capitalize">${subnet.name}</h6>
@@ -3912,12 +3432,6 @@ class App {
             <form id="summary-form">
               <div class="card mb-4">
                 <div class="card-body">
-                  <div class="form-check mb-3">
-                    <input class="form-check-input" type="checkbox" id="confirm" required>
-                    <label class="form-check-label fw-semibold" for="confirm">
-                      I confirm the configuration is correct
-                    </label>
-                  </div>
                   <div class="form-check">
                     <input class="form-check-input" type="checkbox" id="include_docs" checked>
                     <label class="form-check-label" for="include_docs">
@@ -3933,9 +3447,9 @@ class App {
                   <i class="bi bi-arrow-left me-2"></i>
                   Back to Configuration
                 </a>
-                <button type="submit" class="btn btn-primary btn-lg px-5" id="generate-btn" disabled>
-                  <i class="bi bi-download me-2"></i>
-                  Generate & Download Project
+                <button type="submit" class="btn btn-primary btn-lg px-5" id="generate-btn">
+                  <i class="bi bi-gear me-2"></i>
+                  Generate Project
                 </button>
               </div>
             </form>
@@ -3946,10 +3460,6 @@ class App {
     
     this.render(content);
     Utils.updateProgress(3);
-    
-    document.getElementById('confirm').addEventListener('change', (e) => {
-      document.getElementById('generate-btn').disabled = !e.target.checked;
-    });
     
     document.getElementById('summary-form').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -3973,8 +3483,8 @@ class App {
         // Store blob and filename for manual download
         this.downloadBlob = zipBlob;
         this.downloadFilename = filename;
+        window.PlatformAnalytics?.track('project_generated', this.currentProvider);
         
-        Utils.downloadFile(zipBlob, filename);
         Utils.setStorage('step', 3);
         Utils.hideLoading();
         window.location.hash = '/download';
@@ -3993,75 +3503,55 @@ class App {
       '<i class="bi bi-microsoft text-info me-1"></i> Azure' :
       '<i class="bi bi-google text-success me-1"></i> Google Cloud';
     
-    // Check vault status
-    const vaultExists = Utils.hasCredentialsVault();
-    const vaultUnlocked = Utils.isVaultUnlocked();
-    const vaultLockedWithCredentials = vaultExists && !vaultUnlocked;
-    
-    // Get stored credentials for the current provider (async)
-    let credentials = {};
-    if (vaultUnlocked) {
-      credentials = await Utils.getProviderCredentials(config.provider) || {};
-    }
-    
-    // Check if credentials are available
-    const hasCredentials = credentials.accountId || credentials.clientId || credentials.clientSecret;
-    
-    // Build export command with actual or placeholder values
-    // For clipboard (original values)
-    const accountIdValue = credentials.accountId || '<account-id>';
-    const clientIdValue = credentials.clientId || '<client-id>';
-    const clientSecretValue = credentials.clientSecret || '<client-secret>';
-    
-    // For display (masked values)
-    const accountIdDisplay = credentials.accountId ? Utils.maskSensitiveValue(credentials.accountId) : '&lt;account-id&gt;';
-    const clientIdDisplay = credentials.clientId ? Utils.maskSensitiveValue(credentials.clientId) : '&lt;client-id&gt;';
-    const clientSecretDisplay = credentials.clientSecret ? Utils.maskSensitiveValue(credentials.clientSecret) : '&lt;client-secret&gt;';
-    
-    // Build the actual export command for clipboard
-    const exportCmd = config.provider === 'azure'
-      ? `export DATABRICKS_CLIENT_ID="${clientIdValue}"
-export DATABRICKS_CLIENT_SECRET="${clientSecretValue}"`
-      : `export TF_VAR_databricks_account_id="${accountIdValue}"
-export DATABRICKS_CLIENT_ID="${clientIdValue}"
-export DATABRICKS_CLIENT_SECRET="${clientSecretValue}"`;
-    
-    // Build the masked display version
-    const exportCmdDisplay = config.provider === 'azure'
-      ? `export DATABRICKS_CLIENT_ID="${clientIdDisplay}"
-export DATABRICKS_CLIENT_SECRET="${clientSecretDisplay}"`
-      : `export TF_VAR_databricks_account_id="${accountIdDisplay}"
-export DATABRICKS_CLIENT_ID="${clientIdDisplay}"
-export DATABRICKS_CLIENT_SECRET="${clientSecretDisplay}"`;
-    
-    // Obfuscate the real command for data attribute (security measure)
-    const exportCmdObfuscated = Utils.obfuscateHtmlContent(exportCmd);
-    
-    // Vault unlock banner (shown when vault is locked but exists)
-    const vaultUnlockBanner = vaultLockedWithCredentials ? `
-      <div class="alert alert-warning mb-4" id="vault-unlock-banner">
-        <div class="d-flex align-items-center justify-content-between">
-          <div>
-            <i class="bi bi-lock-fill me-2"></i>
-            <strong>Credentials Vault Locked</strong>
-            <span class="ms-2 text-muted">Unlock to use your saved credentials in the commands below.</span>
-          </div>
-          <button type="button" class="btn btn-warning btn-sm" id="btn-unlock-vault-download">
-            <i class="bi bi-unlock me-1"></i>Unlock Vault
-          </button>
-        </div>
-      </div>
-    ` : '';
-    
-    // Credentials status indicator
-    const credentialsStatus = hasCredentials 
-      ? '<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Using saved credentials</span>'
-      : vaultLockedWithCredentials
-        ? '<span class="badge bg-warning text-dark"><i class="bi bi-lock me-1"></i>Vault locked - unlock to use credentials</span>'
-        : '<span class="badge bg-secondary"><i class="bi bi-info-circle me-1"></i>Replace placeholders with your credentials</span>';
+    const exportCmdDisplay = config.provider === 'gcp'
+      ? `gcloud config set project ${config.project_id}
+gcloud config set auth/impersonate_service_account ${config.google_service_account_email}
+export GOOGLE_OAUTH_ACCESS_TOKEN="$(gcloud auth print-access-token)"`
+      : config.provider === 'azure'
+        ? 'export TF_VAR_databricks_account_id="&lt;account-id&gt;"'
+        : `export TF_VAR_databricks_account_id="&lt;account-id&gt;"
+export DATABRICKS_CLIENT_ID="&lt;client-id&gt;"
+export DATABRICKS_CLIENT_SECRET="&lt;client-secret&gt;"`;
+
+    const cloudAuthCommand = config.provider === 'aws'
+      ? 'aws configure'
+      : config.provider === 'azure'
+        ? `az login\naz account set --subscription "${config.azure_subscription_id}"`
+        : `gcloud auth login\ngcloud config set project ${config.project_id}`;
+    const cloudAuthHelp = config.provider === 'aws'
+      ? `<ul class="mb-2 ps-3">
+          <li>Configure an AWS identity that can create the selected VPC/EC2, endpoint, NAT gateway, IAM, and S3 resources.</li>
+          <li><a href="https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html" target="_blank" rel="noopener noreferrer">AWS CLI configuration guide</a></li>
+        </ul>`
+      : config.provider === 'azure'
+        ? `<ul class="mb-2 ps-3">
+            <li>Sign in and select the subscription shown below.</li>
+            <li>The identity needs Contributor plus permission to create role assignments, such as Owner or Role Based Access Control Administrator.</li>
+            <li><a href="https://learn.microsoft.com/en-us/cli/azure/authenticate-azure-cli-interactively" target="_blank" rel="noopener noreferrer">Azure CLI authentication guide</a></li>
+          </ul>`
+        : `<ul class="mb-2 ps-3">
+            <li>Sign in with an identity that can impersonate the configured service account.</li>
+            <li>The caller needs <code>roles/iam.serviceAccountTokenCreator</code>; the service account needs project network creation permissions.</li>
+            <li><a href="https://cloud.google.com/docs/authentication/use-service-account-impersonation" target="_blank" rel="noopener noreferrer">Google Cloud service-account impersonation guide</a></li>
+          </ul>`;
+    const databricksAuthHelp = config.provider === 'aws'
+      ? `<ul class="mb-2 ps-3">
+          <li>Create a Databricks service principal and assign it the Account Admin role. <a href="https://docs.databricks.com/aws/en/admin/users-groups/manage-service-principals" target="_blank" rel="noopener noreferrer">Service principal guide</a></li>
+          <li>Create an OAuth secret by following the <a href="https://docs.databricks.com/aws/en/dev-tools/auth/oauth-m2m" target="_blank" rel="noopener noreferrer">OAuth machine-to-machine guide</a>.</li>
+          <li>The client ID and secret below belong to the Databricks service principal, not to AWS.</li>
+        </ul>`
+      : config.provider === 'azure'
+        ? `<ul class="mb-2 ps-3">
+            <li>The signed-in Azure identity must also have Databricks Account Admin access for account-level resources.</li>
+            <li>Export your Databricks account ID as shown below.</li>
+          </ul>`
+        : `<ul class="mb-2 ps-3">
+            <li>Add the configured Google service account to the Databricks account and assign it the Account Admin role.</li>
+            <li>Impersonate it and export the short-lived access token shown below.</li>
+          </ul>`;
     
     const content = `
-      <div class="container my-5">
+      <div class="container my-5 download-page">
         <div class="row">
           <div class="col-xl-8 mx-auto">
             <div class="text-center mb-5">
@@ -4093,7 +3583,7 @@ export DATABRICKS_CLIENT_SECRET="${clientSecretDisplay}"`;
                         <td>${providerIcon}</td>
                       </tr>
                       <tr>
-                        <td class="fw-semibold">Project Prefix:</td>
+                        <td class="fw-semibold">${config.provider === 'gcp' ? 'Workspace Name:' : 'Project Prefix:'}</td>
                         <td><code>${config.project_prefix || 'databricks'}</code></td>
                       </tr>
                       <tr>
@@ -4130,18 +3620,10 @@ export DATABRICKS_CLIENT_SECRET="${clientSecretDisplay}"`;
                 </h5>
               </div>
               <div class="card-body text-center">
-                <button type="button" class="btn btn-download btn-lg mb-3" id="download-project-btn">
+                <button type="button" class="btn btn-download btn-lg" id="download-project-btn">
                   <i class="bi bi-download me-2"></i>
                   <span class="download-filename">${config.project_prefix || 'databricks'}-${config.provider}-terraform.zip</span>
                 </button>
-                <p class="text-muted mb-4">
-                  Complete Terraform project with all configuration files, 
-                  modules, documentation, and deployment instructions.
-                </p>
-                <div class="text-muted small">
-                  <i class="bi bi-info-circle me-1"></i>
-                  The download should have started automatically. If not, click above to download.
-                </div>
               </div>
             </div>
 
@@ -4154,6 +3636,26 @@ export DATABRICKS_CLIENT_SECRET="${clientSecretDisplay}"`;
               </div>
               <div class="card-body">
                 <div class="row">
+                  ${config.provider === 'gcp' ? `
+                  <div class="col-md-6">
+                    <h6 class="fw-bold text-primary mb-3">Terraform Files</h6>
+                    <ul class="list-unstyled">
+                      <li class="mb-2"><i class="bi bi-diagram-3 text-success me-2"></i><strong>network.tf</strong> - VPC, subnet, router, and NAT</li>
+                      <li class="mb-2"><i class="bi bi-server text-warning me-2"></i><strong>databricks.tf</strong> - Workspace and admin setup</li>
+                      <li class="mb-2"><i class="bi bi-file-earmark-text text-info me-2"></i><strong>variables.tf</strong> - Input variable definitions</li>
+                      <li class="mb-2"><i class="bi bi-file-earmark-code text-primary me-2"></i><strong>providers.tf</strong> - Provider configuration</li>
+                      <li class="mb-2"><i class="bi bi-file-earmark-code text-secondary me-2"></i><strong>outputs.tf</strong> and <strong>versions.tf</strong></li>
+                    </ul>
+                  </div>
+                  <div class="col-md-6">
+                    <h6 class="fw-bold text-primary mb-3">Generated & Documentation</h6>
+                    <ul class="list-unstyled">
+                      <li class="mb-2"><i class="bi bi-file-earmark-text text-warning me-2"></i><strong>terraform.tfvars</strong> - Your configuration values</li>
+                      <li class="mb-2"><i class="bi bi-file-earmark-text text-primary me-2"></i><strong>README.md</strong> - Authentication and deployment guide</li>
+                      <li class="mb-2"><i class="bi bi-shield-check text-success me-2"></i><strong>License files</strong> - License and notice information</li>
+                    </ul>
+                  </div>
+                  ` : `
                   <div class="col-md-6">
                     <h6 class="fw-bold text-primary mb-3">Core Files</h6>
                     <ul class="list-unstyled">
@@ -4212,6 +3714,7 @@ export DATABRICKS_CLIENT_SECRET="${clientSecretDisplay}"`;
                       </li>
                     </ul>
                   </div>
+                  `}
                 </div>
               </div>
             </div>
@@ -4263,9 +3766,9 @@ export DATABRICKS_CLIENT_SECRET="${clientSecretDisplay}"`;
                     </div>
                     <div class="step-content">
                       <h6 class="fw-bold mb-2">Configure Credentials</h6>
-                      <p class="mb-2">Set up your cloud provider credentials according to the provider-specific instructions in the README.</p>
-                      <div class="command-block" data-command="${config.provider === 'aws' ? 'aws configure' : config.provider === 'azure' ? 'az login' : 'gcloud auth login'}">
-                        <code>${config.provider === 'aws' ? 'aws configure' : config.provider === 'azure' ? 'az login' : 'gcloud auth login'}</code>
+                      ${cloudAuthHelp}
+                      <div class="command-block" data-command="${cloudAuthCommand.replace(/"/g, '&quot;')}">
+                        <code>${cloudAuthCommand}</code>
                         <button class="command-copy-btn" type="button" aria-label="Copy command" title="Copy to clipboard">
                           <i class="bi bi-clipboard"></i>
                         </button>
@@ -4294,11 +3797,13 @@ export DATABRICKS_CLIENT_SECRET="${clientSecretDisplay}"`;
                       5
                     </div>
                     <div class="step-content">
-                      <h6 class="fw-bold mb-2">Prepare Deployment ${credentialsStatus}</h6>
-                      ${vaultUnlockBanner}
-                      <p class="mb-2">Export sensitive variables as environment variables to avoid storing them in <code>terraform.tfvars</code>. See the README for instructions on creating a Service Principal.</p>
-                      <div class="command-block sensitive-command ${hasCredentials ? 'has-credentials' : ''}" data-sensitive-cmd="${exportCmdObfuscated}">
-                        <code class="sensitive-display">${exportCmdDisplay}</code>
+                      <h6 class="fw-bold mb-2">Prepare Deployment</h6>
+                      ${databricksAuthHelp}
+                      <p class="mb-2">${config.provider === 'gcp'
+                        ? 'Impersonate the configured Google service account and export a short-lived access token. The non-secret identifiers are already in <code>terraform.tfvars</code>.'
+                        : 'Export sensitive variables as environment variables to avoid storing them in <code>terraform.tfvars</code>. See the README for provider-specific instructions.'}</p>
+                      <div class="command-block">
+                        <code>${exportCmdDisplay}</code>
                         <button class="command-copy-btn" type="button" aria-label="Copy command" title="Copy to clipboard">
                           <i class="bi bi-clipboard"></i>
                         </button>
@@ -4319,6 +3824,23 @@ export DATABRICKS_CLIENT_SECRET="${clientSecretDisplay}"`;
                           <i class="bi bi-clipboard"></i>
                         </button>
                       </div>
+                    </div>
+                  </div>
+
+                  <div class="step-item d-flex mb-4">
+                    <div class="step-number bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                      7
+                    </div>
+                    <div class="step-content">
+                      <h6 class="fw-bold mb-2">Extend with AI Platform Kit</h6>
+                      <p class="mb-2">Use AI Platform Kit for agentic development of additional Terraform and infrastructure resources.</p>
+                      <a href="https://github.com/databricks-solutions/ai-platform-kit"
+                         class="btn btn-outline-primary"
+                         target="_blank"
+                         rel="noopener noreferrer">
+                        Explore AI Platform Kit
+                        <i class="bi bi-box-arrow-up-right ms-2" aria-hidden="true"></i>
+                      </a>
                     </div>
                   </div>
                 </div>
@@ -4359,6 +3881,7 @@ export DATABRICKS_CLIENT_SECRET="${clientSecretDisplay}"`;
       // If blob is available, use it; otherwise regenerate the project
       if (this.downloadBlob && this.downloadFilename) {
         Utils.downloadFile(this.downloadBlob, this.downloadFilename);
+        window.PlatformAnalytics?.track('terraform_project_downloaded', this.currentProvider);
         Utils.showFlashMessage('Download started!', 'success');
       } else {
         // Regenerate the project if blob is not available (e.g., after page reload)
@@ -4374,6 +3897,7 @@ export DATABRICKS_CLIENT_SECRET="${clientSecretDisplay}"`;
           this.downloadFilename = filename;
           
           Utils.downloadFile(zipBlob, filename);
+          window.PlatformAnalytics?.track('terraform_project_downloaded', this.currentProvider);
           Utils.hideLoading();
           Utils.showFlashMessage('Download started!', 'success');
         } catch (err) {
@@ -4389,52 +3913,12 @@ export DATABRICKS_CLIENT_SECRET="${clientSecretDisplay}"`;
       downloadBtn.addEventListener('click', handleDownload);
     }
     
-    // Setup unlock vault button on download page
-    const unlockVaultDownloadBtn = document.getElementById('btn-unlock-vault-download');
-    if (unlockVaultDownloadBtn) {
-      unlockVaultDownloadBtn.addEventListener('click', async () => {
-        // Set flag to prevent opening credentials modal after unlock
-        this._unlockFromDownloadPage = true;
-        
-        // Show unlock modal
-        const unlockModal = new bootstrap.Modal(document.getElementById('masterPasswordUnlockModal'));
-        
-        // Handle unlock success - refresh download page
-        const modalEl = document.getElementById('masterPasswordUnlockModal');
-        const onModalHidden = async () => {
-          if (Utils.isVaultUnlocked()) {
-            // Re-render the download page with credentials
-            await this.renderDownload();
-          }
-          modalEl.removeEventListener('hidden.bs.modal', onModalHidden);
-        };
-        modalEl.addEventListener('hidden.bs.modal', onModalHidden);
-        
-        unlockModal.show();
-      });
-    }
-    
     // Setup copy functionality for command blocks
     document.querySelectorAll('.command-copy-btn').forEach(btn => {
       btn.addEventListener('click', async function() {
         const commandBlock = this.closest('.command-block');
-        let command;
-        
-        // Check if this is a sensitive command (with obfuscated data)
-        if (commandBlock.classList.contains('sensitive-command')) {
-          const obfuscatedCmd = commandBlock.getAttribute('data-sensitive-cmd');
-          if (obfuscatedCmd) {
-            // Deobfuscate to get the real command
-            command = Utils.deobfuscateValue(obfuscatedCmd);
-          }
-        }
-        
-        // Fallback to standard command retrieval
-        if (!command) {
-          command = commandBlock.getAttribute('data-command') || commandBlock.querySelector('code').textContent.trim();
-          // Decode HTML entities for clipboard (for escaped < and > in placeholders)
-          command = command.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&quot;/g, '"');
-        }
+        let command = commandBlock.getAttribute('data-command') || commandBlock.querySelector('code').textContent.trim();
+        command = command.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&quot;/g, '"');
         
         try {
           await navigator.clipboard.writeText(command);
@@ -4466,7 +3950,6 @@ export DATABRICKS_CLIENT_SECRET="${clientSecretDisplay}"`;
     this.currentProvider = null;
     this.currentStep = 0;
     Utils.updateProgress(0);
-    this.updateNavbar();
     Utils.showFlashMessage('Session reset. Starting fresh configuration.', 'info');
     window.location.hash = '/select-provider';
   }
@@ -4482,10 +3965,7 @@ export DATABRICKS_CLIENT_SECRET="${clientSecretDisplay}"`;
 }
 
 // Initialize app when DOM is ready
-let app;
 document.addEventListener('DOMContentLoaded', () => {
-  app = new App();
-  // Make app globally available for modal buttons
-  window.app = app;
+  window.PlatformAnalytics?.init();
+  new App();
 });
-

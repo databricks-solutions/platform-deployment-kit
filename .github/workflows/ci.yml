@@ -7,6 +7,8 @@ jobs:
   test:
     runs-on:
       group: databricks-solutions-protected-runner-group
+    env:
+      PLAYWRIGHT_SKIP_BUILD: '1'
       
     if: github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/')
     steps:
@@ -20,6 +22,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build deployable app and fetch upstream Terraform
+        run: npm run build
+
       - name: Run unit tests
         run: npm run test:unit
 
@@ -28,9 +33,6 @@ jobs:
       
       - name: Run basic tests
         run: npm test -- tests/e2e/basic.spec.js
-
-      - name: Run PWA tests
-        run: npm test -- tests/e2e/pwa.spec.js
 
       - name: Run CIDR calculation tests
         run: npm test -- tests/e2e/cidr-calculations.spec.js
@@ -60,10 +62,19 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Build deployable app and fetch upstream Terraform
+        run: |
+          npm ci
+          npm run build
       
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./deploy
-
+          publish_dir: ./dist

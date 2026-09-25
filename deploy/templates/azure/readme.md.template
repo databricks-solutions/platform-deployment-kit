@@ -1,194 +1,83 @@
 # Databricks Deployment on Azure
 
-This Terraform project deploys a Databricks workspace on Microsoft Azure.
+This ready-to-deploy Terraform project was generated from your selections.
 
 ## Configuration Summary
 
 | Setting | Value |
 |---------|-------|
-| **Provider** | Azure |
-| **Region** | {{region}} |
-| **Project Prefix** | {{project_prefix}} |
-| **Pricing Tier** | {{pricing_tier}} |
-| **VNet CIDR** | {{vpc_cidr}} |
-| **Private Link** | {{private_link_status}} |
+| Provider | Azure |
+| Region | `{{region}}` |
+| Project Prefix | `{{project_prefix}}` |
+| Pricing Tier | Premium |
+| VNet | {{#if enable_private_link}}Create dedicated VNet{{else}}{{#if create_new_vpc}}Create new{{else}}Use `{{existing_vpc_id}}`{{/if}}{{/if}} |
+| Back-end Private Link | {{private_link_status}} |
+{{#unless enable_private_link}}
+| Metastore | {{#if metastore_id}}Attach `{{metastore_id}}`{{else}}Create `{{metastore_name}}`{{/if}} |
+| Catalog | `{{azure_catalog_name}}` |
+{{/unless}}
+| NAT Gateway | {{#if enable_private_link}}{{azure_private_link_nat_gateway_summary}}{{else}}{{azure_nat_gateway_summary}}{{/if}} |
 
 ## Prerequisites
 
-- Azure subscription with appropriate permissions (Contributor or Owner role)
-- Databricks account with Account Console access
-- Terraform >= 1.0 installed
-- Azure CLI installed
+- Terraform and Azure CLI installed
+- Contributor permission at Azure subscription scope, plus permission to create role assignments (for example, Owner or Role Based Access Control Administrator)
+- Databricks account admin access
+- Your Databricks account ID
+{{#unless enable_private_link}}
+- `{{azure_admin_user}}` must already be a Databricks account user
+{{#unless create_new_vpc}}
+- The existing VNet must have room for the generated public and private subnet CIDRs; Terraform creates those subnets, their NSG, and a NAT gateway
+{{/unless}}
+{{/unless}}
 
-## Deployment Steps
+## Authenticate
 
-Follow these steps in order to deploy your Databricks workspace.
-
-### Step 1: Extract and Review
-
-Extract the ZIP file and review the generated configuration files:
-
-```bash
-unzip {{project_prefix}}-azure-terraform.zip -d {{project_prefix}}-azure-terraform
-```
-
-Review the files, especially `terraform.tfvars` to ensure all values are correct for your environment.
-
-### Step 2: Navigate to Directory
-
-Change to the extracted Terraform project directory:
-
-```bash
-cd {{project_prefix}}-azure-terraform
-```
-
-### Step 3: Configure Azure Credentials
-
-Login to Azure and set your subscription:
+Authenticate to Azure, select the subscription, and provide the Databricks account ID without storing credentials in `terraform.tfvars`. See the [Azure CLI sign-in documentation](https://learn.microsoft.com/en-us/cli/azure/authenticate-azure-cli-interactively).
 
 ```bash
 az login
-az account set --subscription "your-subscription-id"
+az account set --subscription "{{azure_subscription_id}}"
+export TF_VAR_databricks_account_id="<your-databricks-account-id>"
 ```
 
-Verify you're using the correct subscription:
+For CI/CD, Terraform also auto-detects service-principal credentials from `ARM_CLIENT_ID`, `ARM_CLIENT_SECRET`, and `ARM_TENANT_ID`. Do not commit credentials.
 
-```bash
-az account show
-```
+{{#if enable_private_link}}
+## Back-end Private Link Topology
 
-### Step 4: Initialize Terraform
+This Azure Back-end Private Link topology creates a dedicated VNet, {{#if enable_nat_gateway}}a NAT gateway, {{/if}}Back-end and DBFS private endpoints, private DNS zones, storage service endpoints with an endpoint policy, and an account-level NCC for serverless DBFS access. The workspace UI remains available over the public network; front-end Private Link is not configured. Metastore assignment is deliberately disabled.
 
-Initialize Terraform to download required providers and modules:
+{{#unless enable_nat_gateway}}
+The deployment does not create a NAT gateway, so classic cluster nodes have no general internet egress by default. Ensure all required traffic is covered by the built-in Microsoft.Storage and Microsoft.EventHub service endpoints or routed through your own firewall/network virtual appliance (NVA). If clusters need customer-managed storage through the storage service endpoint, add its full Azure resource ID to `service_endpoint_policy_storage_accounts` before applying.
+{{/unless}}
+{{else}}
+## Unity Catalog
+
+This VNet-injection deployment creates or attaches a metastore and provisions the selected UC storage account, storage credential, external location, and catalog. The storage account enforces TLS 1.2, infrastructure encryption, and disabled public blob access. Optional cluster creation is disabled.
+{{/if}}
+
+## Deploy
+
+All Terraform files are at the ZIP root:
 
 ```bash
 terraform init
+terraform validate
+terraform plan -var-file=terraform.tfvars
+terraform apply -var-file=terraform.tfvars
 ```
 
-### Step 5: Create Service Principal and Export Credentials
-
-> **⚠️ IMPORTANT: Always use a Service Principal instead of personal access tokens (PAT).**
-> Service Principals provide better security, auditability, and can be scoped to specific permissions.
-> Personal PATs are tied to individual users and should be avoided for automated deployments.
-
-#### Creating a Databricks Service Principal
-
-1. Go to [Databricks Account Console](https://accounts.cloud.databricks.com)
-2. Navigate to **User Management** → **Service Principals**
-3. Click **Add Service Principal**
-4. Enter a name (e.g., `terraform-deployer`) and click **Add**
-5. Select the newly created Service Principal
-6. Go to the **Secrets** tab and click **Generate secret**
-7. **Copy the Client ID and Secret immediately** (the secret is shown only once!)
-8. Go to the **Roles** tab and assign the **Account Admin** role
-
-> **Note for Azure:** Unlike AWS and GCP, Azure authentication does not require the Databricks Account ID
-> as an environment variable. The workspace is linked to your Azure subscription.
-
-#### Export Environment Variables
-
-Export the Service Principal credentials as environment variables:
-
-```bash
-export DATABRICKS_CLIENT_ID="<your-client-id>"
-export DATABRICKS_CLIENT_SECRET="<your-client-secret>"
-```
-
-**Never commit these values to version control!**
-
-### Step 6: Deploy Infrastructure
-
-Review the planned changes:
-
-```bash
-terraform plan
-```
-
-Apply the Terraform configuration to create your Databricks infrastructure:
-
-```bash
-terraform apply
-```
-
-Type `yes` when prompted to confirm the deployment.
-
-## Outputs
-
-After successful deployment, you will have access to:
-
-| Output | Description |
-|--------|-------------|
-| `workspace_url` | The URL to access your Databricks workspace |
-| `workspace_id` | The unique workspace identifier |
-| `resource_group_name` | The Azure resource group containing all resources |
-
-## Troubleshooting
-
-### Azure Authentication Error
-
-If you see authentication errors:
-
-```bash
-az login
-az account show
-```
-
-Make sure you're logged in and using the correct subscription.
-
-### Databricks Authentication Error
-
-If you see:
-```
-cannot configure default credentials
-```
-
-1. Verify all environment variables are set:
-   ```bash
-   echo $DATABRICKS_CLIENT_ID
-   echo $DATABRICKS_CLIENT_SECRET
-   ```
-
-2. Verify that your Service Principal has the **Account Admin** role assigned in Databricks Account Console
-
-3. Ensure the Service Principal secret hasn't expired
-
-### Resource Provider Not Registered
-
-If you see "resource provider not registered" errors:
-
-```bash
-az provider register --namespace Microsoft.Databricks
-az provider register --namespace Microsoft.Network
-az provider register --namespace Microsoft.Storage
-```
-
-Wait a few minutes for registration to complete.
-
-### Quota Exceeded
-
-If you see quota errors, you may need to request an increase for:
-- vCPU quota in your region
-- Network resources (VNets, subnets, public IPs)
-
-Contact Azure support or use the Azure Portal to request quota increases.
-
-## Important Notes
-
-- All resources are created within a single resource group for easy management
-- The VNet is configured with separate subnets for public and private clusters
-- NSG rules are automatically configured for Databricks requirements
-- All resources are tagged with the project prefix for easy identification
+Review the plan carefully before applying it.
 
 ## Cleanup
 
-To destroy all resources created by this project:
-
 ```bash
-terraform destroy
+terraform destroy -var-file=terraform.tfvars
 ```
 
-Type `yes` when prompted. **Warning:** This will permanently delete all resources including data stored in the workspace.
+Destroying infrastructure can permanently remove workspace resources and data.
 
 ---
 
-**Generated:** {{generated_date}}
+Generated: {{generated_date}}

@@ -1,69 +1,30 @@
-# ============================================================================
-# Terraform Variables File (terraform.tfvars)
-# ============================================================================
-#
-# PURPOSE:
-#   This file provides default values for all variables.
-#
-# ============================================================================
+# Generated variables for the Databricks GCP deployment.
+# Authentication tokens remain outside this file.
 
-# ----------------------------------------------------------------------------
-# BASIC CONFIGURATION
-# ----------------------------------------------------------------------------
+google_service_account_email = {{{google_service_account_email_hcl}}}
+google_project_name          = {{{google_project_name_hcl}}}
+google_region                = {{{google_region_hcl}}}
 
-project_id     = "{{project_id}}"
-region         = "{{region}}"
-project_prefix = "{{project_prefix}}"
+databricks_account_id     = {{{databricks_account_id_hcl}}}
+databricks_workspace_name = {{{databricks_workspace_name_hcl}}}
+databricks_admin_user     = {{{databricks_admin_user_hcl}}}
 
-# ----------------------------------------------------------------------------
-# VPC CONFIGURATION
-# ----------------------------------------------------------------------------
+subnet_cidr = {{{subnet_cidr_hcl}}}
+{{#if enable_private_link}}
+psc_subnet_cidr = {{{psc_subnet_cidr_hcl}}}
 
-vpc_cidr       = "{{vpc_cidr}}"
-create_new_vpc = {{create_new_vpc}}
-{{#unless create_new_vpc}}
-# Existing VPC Configuration
-existing_vpc_name            = "{{existing_vpc_name}}"
-existing_subnet_name         = "{{existing_subnet_name}}"
-existing_pod_range_name      = "{{existing_pod_range_name}}"
-existing_service_range_name  = "{{existing_service_range_name}}"
-{{/unless}}
+create_nat_gateway = {{{enable_nat_gateway}}}
 
-# Subnet CIDRs
-{{#each calculated_subnets}}
-{{name_replace}}_subnet_cidr = "{{cidr}}"
-{{/each}}
+# Unity Catalog assignment is intentionally left unset.
+metastore_id = ""
 
-# GKE Pod and Service CIDRs
-pods_cidr     = "10.1.0.0/16"
-services_cidr = "10.2.0.0/20"
+workspace_service_attachment = {{{workspace_service_attachment_hcl}}}
+relay_service_attachment     = {{{relay_service_attachment_hcl}}}
 
-# ----------------------------------------------------------------------------
-# DATABRICKS CONFIGURATION
-# ----------------------------------------------------------------------------
+# This is a Back-end PSC deployment; workspace user access remains public.
+public_access_enabled = true
 
-# IMPORTANT: Uncomment and set your Databricks account ID (REQUIRED)
-# Find it at: Databricks Account Console > Settings > Account ID
-# You can also use environment variable: export TF_VAR_databricks_account_id="your-id"
-# databricks_account_id = ""
-
-pricing_tier   = "{{pricing_tier}}"
-workspace_name = "{{project_prefix}}"
-
-# ----------------------------------------------------------------------------
-# SECURITY CONFIGURATION
-# ----------------------------------------------------------------------------
-
-enable_private_service_connect = {{enable_private_link}}
-
-# ----------------------------------------------------------------------------
-# LABELS
-# ----------------------------------------------------------------------------
-
-common_labels = {
-  project     = "{{project_prefix}}"
-  environment = "dev"
-  managed-by  = "terraform"
-  provider    = "gcp"
-  created-by  = "oneclick-databricks-deployer"
-}
+create_private_dns = true
+private_zone_name  = "databricks-psc"
+dns_name           = "gcp.databricks.com."
+{{/if}}

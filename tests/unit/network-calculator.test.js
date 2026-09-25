@@ -60,13 +60,13 @@ describe('NetworkCalculator', () => {
       const calc = new NetworkCalculator('aws');
       const result = calc.calculateSubnetSizeLimits('10.0.0.0/16', 2, false);
       expect(result.valid).toBe(true);
-      expect(result.totalSubnets).toBe(4);
+      expect(result.totalSubnets).toBe(5);
     });
 
-    it('adds service subnet when privateLink enabled', () => {
+    it('uses workspace subnets for PrivateLink endpoints', () => {
       const calc = new NetworkCalculator('aws');
       const result = calc.calculateSubnetSizeLimits('10.0.0.0/16', 2, true);
-      expect(result.totalSubnets).toBe(5);
+      expect(result.totalSubnets).toBe(4);
     });
 
     it('GCP uses 2 or 3 subnets regardless of AZ count', () => {
@@ -94,13 +94,13 @@ describe('NetworkCalculator', () => {
       const sizes = calc.getDefaultSubnetSizes(16);
       expect(sizes.private).toBeDefined();
       expect(sizes.public).toBeDefined();
-      expect(sizes.service).toBeUndefined();
+      expect(sizes.intra).toBe(27);
     });
 
-    it('AWS ENTERPRISE adds service subnet', () => {
+    it('AWS ENTERPRISE still uses the standard intra subnet', () => {
       const calc = new NetworkCalculator('aws');
       const sizes = calc.getDefaultSubnetSizes(16, 'ENTERPRISE');
-      expect(sizes.service).toBe(28);
+      expect(sizes.intra).toBe(27);
     });
 
     it('Azure PREMIUM adds service subnet', () => {
@@ -128,21 +128,22 @@ describe('NetworkCalculator', () => {
       expect(() => calc.allocateSubnets('invalid', ['us-east-1a', 'us-east-1b'])).toThrow();
     });
 
-    it('allocates AWS subnets: 2 per AZ (private + public)', () => {
+    it('allocates AWS private/public subnets plus a standard intra subnet', () => {
       const calc = new NetworkCalculator('aws');
       const subnets = calc.allocateSubnets('10.0.0.0/16', ['us-east-1a', 'us-east-1b']);
-      expect(subnets).toHaveLength(4);
+      expect(subnets).toHaveLength(5);
       expect(subnets[0].subnet_type).toBe('private');
       expect(subnets[1].subnet_type).toBe('public');
       expect(subnets[2].subnet_type).toBe('private');
       expect(subnets[3].subnet_type).toBe('public');
+      expect(subnets[4].subnet_type).toBe('intra');
+      expect(subnets[4].size).toBe(27);
     });
 
-    it('allocates AWS service subnet with enterprise + privateLink', () => {
+    it('does not allocate a legacy service subnet with PrivateLink', () => {
       const calc = new NetworkCalculator('aws');
       const subnets = calc.allocateSubnets('10.0.0.0/16', ['us-east-1a', 'us-east-1b'], 'ENTERPRISE', true);
-      expect(subnets).toHaveLength(5);
-      expect(subnets[4].subnet_type).toBe('service');
+      expect(subnets).toHaveLength(4);
     });
 
     it('allocates GCP subnets: host + pods', () => {
@@ -217,7 +218,7 @@ describe('NetworkCalculator', () => {
       expect(summary.used_ips).toBeGreaterThan(0);
       expect(summary.available_ips).toBeLessThan(65536);
       expect(summary.utilization_percent).toBeGreaterThan(0);
-      expect(summary.subnet_count).toBe(2);
+      expect(summary.subnet_count).toBe(3);
     });
   });
 

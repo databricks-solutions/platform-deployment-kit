@@ -25,6 +25,30 @@ class TerraformGenerator {
     
     const zip = new JSZip();
     const provider = config.provider.toLowerCase();
+
+    if (provider === 'aws' || provider === 'azure' || provider === 'gcp') {
+      const enablePrivateLink = Boolean(config.enable_private_link);
+      const externalFiles = await this.loader.loadExternalTerraformFiles(provider, enablePrivateLink);
+      const metadata = this.loader.getExternalTerraformMetadata?.(provider, enablePrivateLink) || {};
+      const variables = this.engine.prepareVariables({
+        ...config,
+        provider,
+        terraform_source_commit: metadata.commit || '',
+        terraform_source_ref: metadata.ref || 'main',
+        terraform_source_url: metadata.sourceUrl || ''
+      });
+
+      for (const file of externalFiles) {
+        if (!file?.name || file.name.includes('/') || file.name.includes('\\') ||
+            file.name === 'terraform.tfvars' || file.name === 'README.md') {
+          throw new Error(`Unsafe or conflicting vendored Terraform filename: ${file?.name || '(missing)'}`);
+        }
+        zip.file(file.name, file.content);
+      }
+      zip.file('terraform.tfvars', await this.renderTemplate(provider, 'tfvars', variables));
+      zip.file('README.md', await this.renderTemplate(provider, 'readme', variables));
+      return await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+    }
     
     // Prepare variables for template rendering
     const variables = this.engine.prepareVariables({ ...config, provider });

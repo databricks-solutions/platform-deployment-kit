@@ -1,182 +1,91 @@
 # Databricks Deployment on AWS
 
-This Terraform project deploys a Databricks workspace on Amazon Web Services.
+This ready-to-deploy Terraform project was generated from your selections.
 
 ## Configuration Summary
 
 | Setting | Value |
 |---------|-------|
-| **Provider** | AWS |
-| **Region** | {{region}} |
-| **Project Prefix** | {{project_prefix}} |
-| **Pricing Tier** | {{pricing_tier}} |
-| **VPC CIDR** | {{vpc_cidr}} |
-| **Private Link** | {{private_link_status}} |
+| Provider | AWS |
+| Region | `{{region}}` |
+| Project Prefix | `{{project_prefix}}` |
+| Pricing Tier | `{{#if enable_private_link}}ENTERPRISE{{else}}{{pricing_tier}}{{/if}}` |
+| VPC | {{#if create_new_vpc}}Create new{{else}}Use `{{aws_vpc_id}}`{{/if}} |
+{{#if create_new_vpc}}
+| NAT Gateway | {{nat_gateway_summary}} |
+{{/if}}
+| Back-end PrivateLink | {{private_link_status}} |
+| Metastore | {{#if metastore_id}}Attach `{{metastore_id}}`{{else}}Create `{{metastore_name}}`{{/if}} |
 
 ## Prerequisites
 
-- AWS account with appropriate permissions (Administrator or specific Databricks permissions)
-- Databricks account with Account Console access
-- Terraform >= 1.0 installed
-- AWS CLI installed and configured
+- Terraform installed
+- AWS credentials with permission to create the selected EC2/VPC, endpoint, NAT gateway, IAM, and S3 resources
+- A Databricks service principal with the Account Admin role ([create and manage service principals](https://docs.databricks.com/aws/en/admin/users-groups/manage-service-principals))
+- Your Databricks account ID
+{{#unless create_new_vpc}}
+- Existing VPC, at least two private subnets in different Availability Zones, and a workspace security group
+{{/unless}}
+{{#if enable_private_link}}
+{{#unless create_new_vpc}}
+- Existing Databricks REST API and SCC relay VPC endpoints in that VPC
+{{/unless}}
+{{/if}}
 
-## Deployment Steps
+## Authenticate
 
-Follow these steps in order to deploy your Databricks workspace.
+Configure AWS credentials with `aws configure` or your normal AWS CLI/profile process. See [AWS CLI configuration](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html). These AWS credentials are separate from the Databricks credentials below.
 
-### Step 1: Extract and Review
-
-Extract the ZIP file and review the generated configuration files:
-
-```bash
-unzip {{project_prefix}}-aws-terraform.zip -d {{project_prefix}}-aws-terraform
-```
-
-Review the files, especially `terraform.tfvars` to ensure all values are correct for your environment.
-
-### Step 2: Navigate to Directory
-
-Change to the extracted Terraform project directory:
+Create an OAuth secret for the Databricks service principal by following the [OAuth machine-to-machine authentication guide](https://docs.databricks.com/aws/en/dev-tools/auth/oauth-m2m), then export its client ID and secret without placing them in `terraform.tfvars`:
 
 ```bash
-cd {{project_prefix}}-aws-terraform
+export TF_VAR_databricks_account_id="<your-databricks-account-id>"
+export DATABRICKS_CLIENT_ID="<service-principal-client-id>"
+export DATABRICKS_CLIENT_SECRET="<service-principal-secret>"
 ```
 
-### Step 3: Configure AWS Credentials
+Do not commit these values.
 
-Set up your AWS credentials. You can use AWS CLI:
+## Metastore
 
-```bash
-aws configure
-```
+This deployment requires a Unity Catalog metastore assignment for the workspace. It creates or attaches the selected metastore. Optional catalog and cluster creation are disabled.
 
-Or set environment variables:
+{{#if enable_private_link}}
+## Back-end PrivateLink Networking
 
-```bash
-export AWS_ACCESS_KEY_ID="your-access-key"
-export AWS_SECRET_ACCESS_KEY="your-secret-key"
-export AWS_DEFAULT_REGION="{{region}}"
-```
+{{#if create_new_vpc}}
+{{#if is_fully_private}}
+The fully private network topology creates no NAT gateway or internet gateway. Back-end PrivateLink and the S3, STS, and Kinesis endpoints provide the required private paths for control-plane and AWS service communication.
+{{else}}
+The standard network topology creates the VPC, {{#if (eq nat_gateway_mode "per_az")}}one NAT gateway per availability zone{{else}}one shared NAT gateway{{/if}}, an internet gateway, workspace subnets, and the required endpoints.
+{{/if}}
+{{else}}
+The custom topology uses the existing VPC, subnet, security group, REST VPC endpoint, and SCC relay VPC endpoint IDs in `terraform.tfvars`. Terraform does not create or modify those existing network resources.
+{{/if}}
+{{/if}}
 
-### Step 4: Initialize Terraform
+## Deploy
 
-Initialize Terraform to download required providers and modules:
+All Terraform files are at the ZIP root:
 
 ```bash
 terraform init
+terraform fmt -check
+terraform validate
+terraform plan -var-file=terraform.tfvars
+terraform apply -var-file=terraform.tfvars
 ```
 
-### Step 5: Create Service Principal and Export Credentials
-
-> **⚠️ IMPORTANT: Always use a Service Principal instead of personal access tokens (PAT).**
-> Service Principals provide better security, auditability, and can be scoped to specific permissions.
-> Personal PATs are tied to individual users and should be avoided for automated deployments.
-
-#### Creating a Databricks Service Principal
-
-1. Go to [Databricks Account Console](https://accounts.cloud.databricks.com)
-2. Navigate to **User Management** → **Service Principals**
-3. Click **Add Service Principal**
-4. Enter a name (e.g., `terraform-deployer`) and click **Add**
-5. Select the newly created Service Principal
-6. Go to the **Secrets** tab and click **Generate secret**
-7. **Copy the Client ID and Secret immediately** (the secret is shown only once!)
-8. Go to the **Roles** tab and assign the **Account Admin** role
-
-> **Finding your Account ID:** Account Console → Settings → Account ID (copy the UUID)
-
-#### Export Environment Variables
-
-Export the Service Principal credentials as environment variables:
-
-```bash
-export TF_VAR_databricks_account_id="<your-account-id>"
-export DATABRICKS_CLIENT_ID="<your-client-id>"
-export DATABRICKS_CLIENT_SECRET="<your-client-secret>"
-```
-
-**Never commit these values to version control!**
-
-### Step 6: Deploy Infrastructure
-
-Review the planned changes:
-
-```bash
-terraform plan
-```
-
-Apply the Terraform configuration to create your Databricks infrastructure:
-
-```bash
-terraform apply
-```
-
-Type `yes` when prompted to confirm the deployment.
-
-## Outputs
-
-After successful deployment, you will have access to:
-
-| Output | Description |
-|--------|-------------|
-| `workspace_url` | The URL to access your Databricks workspace |
-| `workspace_id` | The unique workspace identifier |
-| `databricks_role_arn` | The ARN of the cross-account IAM role |
-
-## Troubleshooting
-
-### Availability Zone Error
-
-If you see an error like:
-```
-Value (us-west-1a) for parameter availabilityZone is invalid
-```
-
-Some availability zones may not be available in your AWS account. Edit the `availability_zones` variable in `terraform.tfvars` to use only available zones for your region.
-
-### Databricks Authentication Error
-
-If you see:
-```
-cannot configure default credentials
-```
-
-1. Verify all environment variables are set:
-   ```bash
-   echo $TF_VAR_databricks_account_id
-   echo $DATABRICKS_CLIENT_ID
-   echo $DATABRICKS_CLIENT_SECRET
-   ```
-
-2. Verify that your Service Principal has the **Account Admin** role assigned
-
-3. Ensure the Service Principal secret hasn't expired
-
-### AWS Permission Errors
-
-Ensure your AWS credentials have permissions to create:
-- VPCs, Subnets, Route Tables, Internet Gateways
-- S3 Buckets
-- IAM Roles and Policies
-- Security Groups
-
-## Important Notes
-
-- The IAM cross-account role is automatically configured with self-assume capability
-- This is required for Databricks cross-account functionality
-- The S3 bucket is created with encryption enabled (versioning disabled by default)
-- All resources are tagged with the project prefix for easy identification
+Review the plan carefully before applying it.
 
 ## Cleanup
 
-To destroy all resources created by this project:
-
 ```bash
-terraform destroy
+terraform destroy -var-file=terraform.tfvars
 ```
 
-Type `yes` when prompted. **Warning:** This will permanently delete all resources including data stored in the workspace.
+Destroying infrastructure can permanently remove workspace resources and data.
 
 ---
 
-**Generated:** {{generated_date}}
+Generated: {{generated_date}}

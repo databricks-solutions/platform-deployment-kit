@@ -1,5 +1,9 @@
 // @ts-check
 const { defineConfig, devices } = require('@playwright/test');
+const serverPort = process.env.PLAYWRIGHT_PORT || '8000';
+const serverCommand = process.env.PLAYWRIGHT_SKIP_BUILD === '1'
+  ? `python3 -m http.server ${serverPort} -d dist`
+  : `npm run build && python3 -m http.server ${serverPort} -d dist`;
 
 /**
  * Read environment variables from file.
@@ -25,7 +29,7 @@ module.exports = defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://localhost:8000',
+    baseURL: `http://localhost:${serverPort}`,
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
     /* Screenshot on failure */
@@ -74,11 +78,10 @@ module.exports = defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'python3 -m http.server 8000',
-    url: 'http://localhost:8000',
+    command: serverCommand,
+    url: `http://localhost:${serverPort}`,
     reuseExistingServer: !process.env.CI,
-    cwd: './deploy',
+    cwd: '.',
     timeout: 120 * 1000,
   },
 });
-

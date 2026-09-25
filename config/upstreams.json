@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "repository": "https://github.com/databricks-solutions/technical-services-solutions.git",
+  "ref": "main",
+  "licenseFiles": [
+    "LICENSE.md",
+    "NOTICE.md"
+  ],
+  "variants": {
+    "aws-standard": {
+      "label": "AWS BYOVPC with Unity Catalog",
+      "provider": "aws",
+      "privateLink": false,
+      "path": "workspace-setup/terraform-examples/aws/aws-byovpc-uc"
+    },
+    "aws-privatelink": {
+      "label": "AWS BYOVPC with Classic PrivateLink",
+      "provider": "aws",
+      "privateLink": true,
+      "path": "workspace-setup/terraform-examples/aws/aws-byovpc-classic-privatelink"
+    },
+    "azure-standard": {
+      "label": "Azure VNet Injection with Unity Catalog",
+      "provider": "azure",
+      "privateLink": false,
+      "path": "workspace-setup/terraform-examples/azure/azure-vnet-injection-uc"
+    },
+    "azure-privatelink": {
+      "label": "Azure Classic Private Link",
+      "provider": "azure",
+      "privateLink": true,
+      "path": "workspace-setup/terraform-examples/azure/azure-privatelink-classic"
+    },
+    "gcp-standard": {
+      "label": "GCP BYOVPC Standalone",
+      "provider": "gcp",
+      "privateLink": false,
+      "path": "workspace-setup/terraform-examples/gcp/gcp-byovpc-standalone",
+      "terraformSubdirectory": "."
+    },
+    "gcp-privatelink": {
+      "label": "GCP BYOVPC with Back-end Private Service Connect",
+      "provider": "gcp",
+      "privateLink": true,
+      "path": "workspace-setup/terraform-examples/gcp/gcp-byovpc-classic-psc"
+    }
+  }
+}

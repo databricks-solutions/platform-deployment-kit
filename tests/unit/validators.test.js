@@ -207,7 +207,6 @@ describe('Validators.validatePricingTier', () => {
   });
 
   test('valid AWS tiers', () => {
-    expect(Validators.validatePricingTier('STANDARD', 'aws')).toEqual({ valid: true, message: '' });
     expect(Validators.validatePricingTier('PREMIUM', 'aws')).toEqual({ valid: true, message: '' });
     expect(Validators.validatePricingTier('ENTERPRISE', 'aws')).toEqual({ valid: true, message: '' });
   });
@@ -215,7 +214,7 @@ describe('Validators.validatePricingTier', () => {
   test('invalid AWS tier returns error with valid options', () => {
     const result = Validators.validatePricingTier('BASIC', 'aws');
     expect(result.valid).toBe(false);
-    expect(result.message).toMatch(/STANDARD, PREMIUM, ENTERPRISE/);
+    expect(result.message).toMatch(/PREMIUM, ENTERPRISE/);
   });
 
   test('valid Azure tiers', () => {
@@ -628,7 +627,7 @@ describe('Validators.validateConfiguration', () => {
     provider: 'aws',
     project_prefix: 'myproject',
     region: 'us-east-1',
-    pricing_tier: 'STANDARD',
+    pricing_tier: 'PREMIUM',
     create_new_vpc: true,
     vpc_cidr: '10.0.0.0/16',
     availability_zones: ['us-east-1a', 'us-east-1b'],
@@ -762,7 +761,7 @@ describe('Validators.validateConfiguration', () => {
     expect(result.errors.existing_vpc_id).toBeDefined();
   });
 
-  test('GCP existing VPC fields are validated', () => {
+  test('GCP ignores legacy existing VPC fields for the new-VPC-only topology', () => {
     const config = {
       provider: 'gcp',
       project_prefix: 'myproject',
@@ -776,8 +775,7 @@ describe('Validators.validateConfiguration', () => {
       existing_service_range_name: 'svc-range',
     };
     const result = Validators.validateConfiguration(config);
-    expect(result.valid).toBe(false);
-    expect(result.errors.existing_vpc_id).toBeDefined();
+    expect(result.errors.existing_vpc_id).toBeUndefined();
   });
 
   test('AWS PrivateLink without ENTERPRISE returns feature error', () => {

@@ -2,16 +2,10 @@
   "provider": "aws",
   "variables": {
     "required": ["databricks_account_id"],
-    "optional": ["enable_private_link", "enable_nat_gateway", "cross_account_role_arn"]
+    "optional": ["enable_private_link", "nat_gateway_mode", "metastore_name", "metastore_id"]
   },
   "template_files": [
-    "provider.tf.template",
-    "variables.tf.template",
     "tfvars.tf.template",
-    "main.tf.template",
-    "outputs.tf.template",
-    "versions.tf.template",
     "readme.md.template"
   ]
 }
-

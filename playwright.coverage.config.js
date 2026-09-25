@@ -1,5 +1,9 @@
 // @ts-check
 const { defineConfig, devices } = require('@playwright/test');
+const serverPort = process.env.PLAYWRIGHT_PORT || '8000';
+const serverCommand = process.env.PLAYWRIGHT_SKIP_BUILD === '1'
+  ? `python3 -m http.server ${serverPort} -d dist`
+  : `npm run build && python3 -m http.server ${serverPort} -d dist`;
 
 /**
  * Playwright configuration for code coverage runs.
@@ -39,7 +43,7 @@ module.exports = defineConfig({
   globalTeardown: './tests/helpers/coverage-global-teardown.js',
 
   use: {
-    baseURL: 'http://localhost:8000',
+    baseURL: `http://localhost:${serverPort}`,
     trace: 'off',
     screenshot: 'only-on-failure',
     video: 'off',
@@ -59,10 +63,10 @@ module.exports = defineConfig({
   ],
 
   webServer: {
-    command: 'python3 -m http.server 8000',
-    url: 'http://localhost:8000',
+    command: serverCommand,
+    url: `http://localhost:${serverPort}`,
     reuseExistingServer: !process.env.CI,
-    cwd: './deploy',
+    cwd: '.',
     timeout: 120 * 1000,
   },
 });

@@ -1,89 +1,51 @@
-# ============================================================================
-# Terraform Variables File (terraform.tfvars)
-# ============================================================================
-#
-# PURPOSE:
-#   This file provides default values for all variables.
-#
-# ============================================================================
+# Generated variables for the Databricks AWS deployment.
+# Databricks account ID remains outside this file:
+# export TF_VAR_databricks_account_id="<your-account-id>"
 
-# ----------------------------------------------------------------------------
-# BASIC CONFIGURATION
-# ----------------------------------------------------------------------------
+# Databricks and AWS
+prefix          = "{{project_prefix}}"
+resource_prefix = "{{project_prefix}}"
+region          = "{{region}}"
+tags = {{{common_tags}}}
 
-aws_region     = "{{region}}"
-project_prefix = "{{project_prefix}}"
+# Unity Catalog metastore required by the workspace deployment
+metastore_id   = "{{metastore_id}}"
+metastore_name = "{{metastore_name}}"
 
-# ----------------------------------------------------------------------------
-# VPC CONFIGURATION
-# ----------------------------------------------------------------------------
-
-vpc_cidr       = "{{vpc_cidr}}"
-create_new_vpc = {{create_new_vpc}}
-{{#unless create_new_vpc}}
-existing_vpc_id = "{{existing_vpc_id}}"
-{{/unless}}
-
-# Subnet Configuration
-create_new_subnets = {{create_new_subnets}}
-{{#if existing_subnet_ids}}
-existing_subnet_ids = {{{existing_subnet_ids}}}
-{{/if}}
-{{#if existing_security_group_ids}}
-existing_security_group_ids = {{{existing_security_group_ids}}}
-{{/if}}
-
-{{#if availability_zones}}
-availability_zones = {{{availability_zones}}}
-{{/if}}
-
-{{#if calculated_subnets}}
-# Subnet CIDRs (only used when creating new subnets)
-{{#each calculated_subnets}}
-{{name_replace}}_subnet_cidr = "{{cidr}}"
-{{/each}}
-{{/if}}
-
-# ----------------------------------------------------------------------------
-# DATABRICKS CONFIGURATION
-# ----------------------------------------------------------------------------
-
-# IMPORTANT: Uncomment and set your Databricks account ID (REQUIRED)
-# Find it at: Databricks Account Console > Settings > Account ID
-# You can also use environment variable: export TF_VAR_databricks_account_id="your-id"
-# databricks_account_id = ""
-
-pricing_tier   = "{{pricing_tier}}"
-workspace_name = "{{project_prefix}}"
-
-# ----------------------------------------------------------------------------
-# SECURITY CONFIGURATION
-# ----------------------------------------------------------------------------
-
-enable_private_link = {{enable_private_link}}
 {{#if enable_private_link}}
-privatelink_subnet_mode        = "{{privatelink_subnet_mode}}"
-existing_privatelink_subnet_id = "{{existing_privatelink_subnet_id}}"
+# Classic Back-end PrivateLink always creates an Enterprise workspace.
+network_configuration     = "{{aws_network_configuration}}"
+nat_gateway_mode          = "{{aws_nat_gateway_mode}}"
+{{#if is_fully_private}}
+endpoint_subnet_cidr      = "{{endpoint_subnet_cidr}}"
 {{/if}}
-{{#if cross_account_role_arn}}
-cross_account_role_arn = "{{cross_account_role_arn}}"
+vpc_id                    = "{{aws_vpc_id}}"
+vpc_cidr_range            = "{{vpc_cidr}}"
+availability_zones        = {{{aws_availability_zones}}}
+subnet_ids                = {{{aws_subnet_ids}}}
+private_subnets_cidr      = {{{byovpc_private_subnets_cidr}}}
+public_subnets_cidr       = {{{byovpc_public_subnets_cidr}}}
+security_group_ids        = {{{aws_security_group_ids}}}
+backend_rest_aws_vpce_id  = "{{backend_rest_aws_vpce_id}}"
+backend_relay_aws_vpce_id = "{{backend_relay_aws_vpce_id}}"
+sg_egress_ports           = [443, 2443, 5432, 6666, 8443, 8444, 8445, 8446, 8447, 8448, 8449, 8450, 8451]
+additional_egress_ips     = []
+{{else}}
+pricing_tier            = "{{pricing_tier}}"
+nat_gateway_mode        = "{{aws_nat_gateway_mode}}"
+vpc_id                  = "{{aws_vpc_id}}"
+vpc_cidr_range          = "{{vpc_cidr}}"
+availability_zones      = {{{aws_availability_zones}}}
+subnet_ids              = {{{aws_subnet_ids}}}
+private_subnets_cidr    = {{{byovpc_private_subnets_cidr}}}
+public_subnets_cidr     = {{{byovpc_public_subnets_cidr}}}
+intra_subnet_cidr       = {{{byovpc_intra_subnet_cidr}}}
+security_group_ids      = {{{aws_security_group_ids}}}
+new_security_group_name = ""
+sg_egress_ports         = [443, 3306, 2443, 5432, 8443, 8444, 8445, 8446, 8447, 8448, 8449, 8450, 8451]
+
+# Required input, unused while new_catalog is false.
+aws_account_id = ""
+new_catalog    = false
+new_cluster    = false
 {{/if}}
-
-# ----------------------------------------------------------------------------
-# ADVANCED CONFIGURATION
-# ----------------------------------------------------------------------------
-
-enable_nat_gateway   = {{enable_nat_gateway}}
-enable_vpc_endpoints = true
-
-# ----------------------------------------------------------------------------
-# TAGS
-# ----------------------------------------------------------------------------
-
-common_tags = {
-  Project     = "{{project_prefix}}"
-  Environment = "dev"
-  ManagedBy   = "terraform"
-  Provider    = "aws"
-  CreatedBy   = "oneclick-databricks-deployer"
-}

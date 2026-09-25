@@ -4,36 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="description" content="One-Click Deployer - Simplify Databricks infrastructure deployment across AWS, Azure, and GCP. Generate production-ready Terraform configurations instantly.">
+    <meta name="description" content="Platform Kit - Simplify Databricks infrastructure deployment across AWS, Azure, and GCP. Generate production-ready Terraform configurations instantly.">
     <meta name="keywords" content="Databricks, Terraform, AWS, Azure, GCP, Infrastructure as Code, Deployment">
-    <meta name="author" content="One-Click Deployer">
+    <meta name="author" content="Platform Kit">
     <meta name="color-scheme" content="dark light">
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
-    <meta property="og:title" content="One-Click Deployer - Databricks Infrastructure Generator">
+    <meta property="og:title" content="Platform Kit - Databricks Infrastructure Generator">
     <meta property="og:description" content="Simplify Databricks infrastructure deployment across multi-cloud environments">
     
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:title" content="One-Click Deployer - Databricks Infrastructure Generator">
+    <meta property="twitter:title" content="Platform Kit - Databricks Infrastructure Generator">
     <meta property="twitter:description" content="Simplify Databricks infrastructure deployment across multi-cloud environments">
     
-    <title>One-Click Deployer - Databricks Infrastructure Generator</title>
+    <title>Platform Kit - Databricks Infrastructure Generator</title>
     
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="./manifest.json?v=2.0.0">
-    <meta name="theme-color" content="#0a0e1a" id="theme-color-meta">
-    <!-- iOS Safari meta tags -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="One-Click Deployer">
+    <meta name="theme-color" content="#0B2026" id="theme-color-meta">
     
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="./icons/favicon.svg">
-    <link rel="icon" type="image/png" sizes="32x32" href="./icons/icon-128x128.png">
-    <link rel="apple-touch-icon" href="./icons/icon-192x192.png">
     
     <!-- Theme detection script - must run before body renders to prevent flash -->
     <script>
@@ -41,7 +32,7 @@
             const savedTheme = localStorage.getItem('theme');
             const theme = savedTheme || 'dark';
             document.documentElement.setAttribute('data-theme', theme);
-            document.getElementById('theme-color-meta')?.setAttribute('content', theme === 'dark' ? '#0a0e1a' : '#f8fafc');
+            document.getElementById('theme-color-meta')?.setAttribute('content', theme === 'dark' ? '#0B2026' : '#F9F7F4');
         })();
     </script>
     
@@ -57,9 +48,9 @@
     <header role="banner">
         <nav class="navbar navbar-expand-lg sticky-top" aria-label="Main navigation">
             <div class="container">
-                <a class="navbar-brand" href="#/" data-navigate aria-label="One-Click Deployer Home">
+                <a class="navbar-brand" href="#/" data-navigate aria-label="Platform Kit Home">
                     <i class="bi bi-cloud-arrow-up-fill" aria-hidden="true"></i>
-                    One-Click Deployer
+                    Platform Kit
                 </a>
                 
                 <div class="d-flex align-items-center gap-2 d-lg-none">
@@ -75,21 +66,10 @@
                 
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav ms-auto align-items-center gap-1">
-                        <li class="nav-item" id="configure-provider-nav">
-                            <a class="nav-link" href="#" id="configure-provider-link" data-bs-toggle="modal" data-bs-target="#configureProviderModal">
-                                <i class="bi bi-gear me-1" aria-hidden="true"></i>Configure Provider
-                            </a>
-                        </li>
                         <li class="nav-item">
                             <a class="nav-link" href="#/reset" data-navigate>
                                 <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>Start Over
                             </a>
-                        </li>
-                        <!-- PWA Install Button -->
-                        <li class="nav-item" id="pwa-install-nav-item" style="display: none;">
-                            <button class="btn btn-sm" id="pwa-install-btn-nav" type="button" title="Install application on your device" aria-label="Install One-Click Deployer">
-                                <i class="bi bi-download" aria-hidden="true"></i>
-                            </button>
                         </li>
                         <!-- Theme Toggle - Desktop -->
                         <li class="nav-item d-none d-lg-block">
@@ -149,7 +129,7 @@
         <div class="container">
             <div class="row">
                 <div class="col-12 text-center">
-                    <h6 class="text-gradient">One-Click Deployer</h6>
+                    <h6 class="text-gradient">Platform Kit</h6>
                     <p>
                         Simplifying Databricks infrastructure deployment across multi-cloud environments.
                     </p>
@@ -170,325 +150,19 @@
         </div>
     </div>
 
-    <!-- Install PWA Banner (top of page) -->
-    <div id="install-banner" class="bg-primary text-white py-2" style="display: none; z-index: 1050;" role="banner" aria-label="Install app banner">
-        <div class="container">
-            <div class="d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center">
-                    <i class="bi bi-download me-2" aria-hidden="true"></i>
-                    <span>Install this app for a better experience and offline access</span>
-                </div>
-                <div>
-                    <button id="install-btn-banner" class="btn btn-light btn-sm me-2" aria-label="Install One-Click Deployer">Install Now</button>
-                    <button id="dismiss-install-banner" class="btn btn-outline-light btn-sm" aria-label="Dismiss install banner">Not Now</button>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Offline Indicator -->
-    <div id="offline-indicator" class="bg-warning text-dark py-2 text-center" style="display: none; z-index: 1051;">
-        <div class="container">
-            <i class="bi bi-wifi-off me-2"></i>
-            <strong>Offline Mode:</strong> You are using a cached version. Some features may be limited.
-        </div>
-    </div>
-
-    <!-- Master Password Setup Modal -->
-    <div class="modal fade" id="masterPasswordSetupModal" tabindex="-1" aria-labelledby="masterPasswordSetupModalLabel" aria-hidden="true" data-bs-backdrop="static">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="masterPasswordSetupModalLabel">
-                        <i class="bi bi-shield-lock-fill me-2"></i>Setup Credentials Vault
-                    </h5>
-                </div>
-                <div class="modal-body">
-                    <div class="alert alert-warning mb-4">
-                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                        <strong>Important:</strong> Your master password cannot be recovered if lost. Make sure to remember it.
-                    </div>
-                    <p class="text-muted mb-4">
-                        Create a master password to securely encrypt and store your provider credentials. 
-                        Your credentials will be encrypted using AES-256-GCM and stored permanently in your browser.
-                    </p>
-                    <form id="master-password-setup-form">
-                        <div class="mb-3">
-                            <label for="master-password-new" class="form-label">Master Password</label>
-                            <div class="input-group">
-                                <input type="password" class="form-control" id="master-password-new" 
-                                       placeholder="Enter master password (min. 8 characters)" 
-                                       minlength="8" required autocomplete="new-password">
-                                <button class="btn btn-outline-secondary" type="button" id="toggle-master-password-new">
-                                    <i class="bi bi-eye"></i>
-                                </button>
-                            </div>
-                            <div class="form-text">Minimum 8 characters. Use a strong, unique password.</div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="master-password-confirm" class="form-label">Confirm Master Password</label>
-                            <div class="input-group">
-                                <input type="password" class="form-control" id="master-password-confirm" 
-                                       placeholder="Confirm master password" 
-                                       minlength="8" required autocomplete="new-password">
-                                <button class="btn btn-outline-secondary" type="button" id="toggle-master-password-confirm">
-                                    <i class="bi bi-eye"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="password-strength-indicator mb-3" id="password-strength">
-                            <div class="progress" style="height: 4px;">
-                                <div class="progress-bar" role="progressbar" style="width: 0%"></div>
-                            </div>
-                            <small class="text-muted">Password strength: <span id="strength-text">Enter password</span></small>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="btn-setup-master-password" disabled>
-                        <i class="bi bi-shield-check me-1"></i>Create Vault
-                    </button>
-                </div>
+    <!-- Contextual configuration help -->
+    <aside class="offcanvas offcanvas-end context-help-drawer" tabindex="-1" id="contextHelpDrawer"
+           aria-labelledby="contextHelpTitle">
+        <div class="offcanvas-header">
+            <div>
+                <div class="context-help-eyebrow" id="contextHelpProvider">Configuration guidance</div>
+                <h2 class="offcanvas-title" id="contextHelpTitle">Configuration help</h2>
             </div>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close help"></button>
         </div>
-    </div>
-
-    <!-- Master Password Unlock Modal -->
-    <div class="modal fade" id="masterPasswordUnlockModal" tabindex="-1" aria-labelledby="masterPasswordUnlockModalLabel" aria-hidden="true" data-bs-backdrop="static">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="masterPasswordUnlockModalLabel">
-                        <i class="bi bi-unlock-fill me-2"></i>Unlock Credentials Vault
-                    </h5>
-                </div>
-                <div class="modal-body">
-                    <p class="text-muted mb-4">
-                        Enter your master password to access your stored credentials.
-                    </p>
-                    <form id="master-password-unlock-form">
-                        <div class="mb-3">
-                            <label for="master-password-unlock" class="form-label">Master Password</label>
-                            <div class="input-group">
-                                <input type="password" class="form-control" id="master-password-unlock" 
-                                       placeholder="Enter your master password" 
-                                       required autocomplete="current-password">
-                                <button class="btn btn-outline-secondary" type="button" id="toggle-master-password-unlock">
-                                    <i class="bi bi-eye"></i>
-                                </button>
-                            </div>
-                            <div class="invalid-feedback" id="unlock-error-message">Invalid password</div>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer justify-content-between">
-                    <button type="button" class="btn btn-link text-danger btn-sm" id="btn-delete-vault">
-                        <i class="bi bi-trash me-1"></i>Delete Vault
-                    </button>
-                    <div>
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="button" class="btn btn-primary" id="btn-unlock-vault">
-                            <i class="bi bi-unlock me-1"></i>Unlock
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Change Master Password Modal -->
-    <div class="modal fade" id="changeMasterPasswordModal" tabindex="-1" aria-labelledby="changeMasterPasswordModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="changeMasterPasswordModalLabel">
-                        <i class="bi bi-key-fill me-2"></i>Change Master Password
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="change-master-password-form">
-                        <div class="mb-3">
-                            <label for="current-master-password" class="form-label">Current Password</label>
-                            <input type="password" class="form-control" id="current-master-password" 
-                                   placeholder="Enter current password" required autocomplete="current-password">
-                        </div>
-                        <div class="mb-3">
-                            <label for="new-master-password" class="form-label">New Password</label>
-                            <input type="password" class="form-control" id="new-master-password" 
-                                   placeholder="Enter new password (min. 8 characters)" 
-                                   minlength="8" required autocomplete="new-password">
-                        </div>
-                        <div class="mb-3">
-                            <label for="confirm-new-master-password" class="form-label">Confirm New Password</label>
-                            <input type="password" class="form-control" id="confirm-new-master-password" 
-                                   placeholder="Confirm new password" 
-                                   minlength="8" required autocomplete="new-password">
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="btn-change-master-password">
-                        <i class="bi bi-check-lg me-1"></i>Change Password
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Configure Provider Modal -->
-    <div class="modal fade" id="configureProviderModal" tabindex="-1" aria-labelledby="configureProviderModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="configureProviderModalLabel">
-                        <i class="bi bi-shield-lock me-2"></i>Configure Provider Credentials
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <!-- Vault Status Banner -->
-                    <div class="vault-status-banner mb-4" id="vault-status-banner">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div>
-                                <i class="bi bi-shield-fill-check text-success me-2" id="vault-status-icon"></i>
-                                <span id="vault-status-text">Vault unlocked</span>
-                            </div>
-                            <div class="btn-group btn-group-sm">
-                                <button type="button" class="btn btn-outline-secondary" id="btn-lock-vault" title="Lock vault">
-                                    <i class="bi bi-lock me-1"></i>Lock
-                                </button>
-                                <button type="button" class="btn btn-outline-secondary" id="btn-change-password-link" title="Change master password">
-                                    <i class="bi bi-key"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="alert alert-info mb-4">
-                        <i class="bi bi-info-circle me-2"></i>
-                        <strong>Security Notice:</strong> Credentials are encrypted with AES-256-GCM and stored permanently in your browser. They are never sent to any server.
-                    </div>
-                    
-                    <!-- Provider Tabs -->
-                    <ul class="nav nav-tabs" id="providerCredentialsTabs" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="aws-creds-tab" data-bs-toggle="tab" data-bs-target="#aws-creds-panel" type="button" role="tab" aria-controls="aws-creds-panel" aria-selected="true">
-                                <i class="bi bi-amazon text-warning me-1"></i>AWS
-                                <span class="credential-status-indicator" id="aws-creds-status"></span>
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="azure-creds-tab" data-bs-toggle="tab" data-bs-target="#azure-creds-panel" type="button" role="tab" aria-controls="azure-creds-panel" aria-selected="false">
-                                <i class="bi bi-microsoft text-info me-1"></i>Azure
-                                <span class="credential-status-indicator" id="azure-creds-status"></span>
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="gcp-creds-tab" data-bs-toggle="tab" data-bs-target="#gcp-creds-panel" type="button" role="tab" aria-controls="gcp-creds-panel" aria-selected="false">
-                                <i class="bi bi-google text-success me-1"></i>GCP
-                                <span class="credential-status-indicator" id="gcp-creds-status"></span>
-                            </button>
-                        </li>
-                    </ul>
-                    
-                    <!-- Tab Content -->
-                    <div class="tab-content pt-4" id="providerCredentialsTabContent">
-                        <!-- AWS Panel -->
-                        <div class="tab-pane fade show active" id="aws-creds-panel" role="tabpanel" aria-labelledby="aws-creds-tab">
-                            <form id="aws-credentials-form" class="credentials-form">
-                                <div class="mb-3">
-                                    <label for="aws-account-id" class="form-label">Databricks Account ID</label>
-                                    <input type="text" class="form-control credential-input" id="aws-account-id" placeholder="Enter your Databricks Account ID" autocomplete="off">
-                                    <div class="form-text">Your Databricks account identifier (found in Account Console)</div>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="aws-client-id" class="form-label">Client ID (Service Principal)</label>
-                                    <input type="text" class="form-control credential-input" id="aws-client-id" placeholder="Enter Client ID" autocomplete="off">
-                                    <div class="form-text">OAuth Client ID from your Service Principal</div>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="aws-client-secret" class="form-label">Client Secret</label>
-                                    <input type="text" class="form-control credential-input" id="aws-client-secret" placeholder="Enter Client Secret" autocomplete="off">
-                                    <div class="form-text">OAuth Client Secret from your Service Principal</div>
-                                </div>
-                                <div class="d-flex gap-2">
-                                    <button type="button" class="btn btn-primary btn-save-credentials" id="aws-save-btn" onclick="window.app.saveProviderCredentials('aws')">
-                                        <i class="bi bi-save me-1"></i>Save Credentials
-                                    </button>
-                                    <button type="button" class="btn btn-outline-danger btn-clear-credentials" id="aws-clear-btn" onclick="window.app.clearProviderCredentials('aws')">
-                                        <i class="bi bi-trash me-1"></i>Clear
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                        
-                        <!-- Azure Panel -->
-                        <div class="tab-pane fade" id="azure-creds-panel" role="tabpanel" aria-labelledby="azure-creds-tab">
-                            <form id="azure-credentials-form" class="credentials-form">
-                                <div class="mb-3 text-muted">
-                                    <i class="bi bi-info-circle me-1"></i>
-                                    <small>Azure does not require a Databricks Account ID for authentication.</small>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="azure-client-id" class="form-label">Client ID (Service Principal)</label>
-                                    <input type="text" class="form-control credential-input" id="azure-client-id" placeholder="Enter Client ID" autocomplete="off">
-                                    <div class="form-text">OAuth Client ID from your Service Principal</div>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="azure-client-secret" class="form-label">Client Secret</label>
-                                    <input type="text" class="form-control credential-input" id="azure-client-secret" placeholder="Enter Client Secret" autocomplete="off">
-                                    <div class="form-text">OAuth Client Secret from your Service Principal</div>
-                                </div>
-                                <div class="d-flex gap-2">
-                                    <button type="button" class="btn btn-primary btn-save-credentials" id="azure-save-btn" onclick="window.app.saveProviderCredentials('azure')">
-                                        <i class="bi bi-save me-1"></i>Save Credentials
-                                    </button>
-                                    <button type="button" class="btn btn-outline-danger btn-clear-credentials" id="azure-clear-btn" onclick="window.app.clearProviderCredentials('azure')">
-                                        <i class="bi bi-trash me-1"></i>Clear
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                        
-                        <!-- GCP Panel -->
-                        <div class="tab-pane fade" id="gcp-creds-panel" role="tabpanel" aria-labelledby="gcp-creds-tab">
-                            <form id="gcp-credentials-form" class="credentials-form">
-                                <div class="mb-3">
-                                    <label for="gcp-account-id" class="form-label">Databricks Account ID</label>
-                                    <input type="text" class="form-control credential-input" id="gcp-account-id" placeholder="Enter your Databricks Account ID" autocomplete="off">
-                                    <div class="form-text">Your Databricks account identifier (found in Account Console)</div>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="gcp-client-id" class="form-label">Client ID (Service Principal)</label>
-                                    <input type="text" class="form-control credential-input" id="gcp-client-id" placeholder="Enter Client ID" autocomplete="off">
-                                    <div class="form-text">OAuth Client ID from your Service Principal</div>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="gcp-client-secret" class="form-label">Client Secret</label>
-                                    <input type="text" class="form-control credential-input" id="gcp-client-secret" placeholder="Enter Client Secret" autocomplete="off">
-                                    <div class="form-text">OAuth Client Secret from your Service Principal</div>
-                                </div>
-                                <div class="d-flex gap-2">
-                                    <button type="button" class="btn btn-primary btn-save-credentials" id="gcp-save-btn" onclick="window.app.saveProviderCredentials('gcp')">
-                                        <i class="bi bi-save me-1"></i>Save Credentials
-                                    </button>
-                                    <button type="button" class="btn btn-outline-danger btn-clear-credentials" id="gcp-clear-btn" onclick="window.app.clearProviderCredentials('gcp')">
-                                        <i class="bi bi-trash me-1"></i>Clear
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
+        <div class="offcanvas-body" id="contextHelpBody"></div>
+    </aside>
 
     <!-- Bootstrap 5 JS -->
     <script src="./libs/bootstrap/js/bootstrap.bundle.min.js?v=1.0.0"></script>
@@ -500,13 +174,15 @@
     
     <!-- App JavaScript -->
     <script src="./js/network-calculator.js?v=1.0.0"></script>
-    <script src="./js/validators.js?v=1.0.0"></script>
+    <script src="./js/validators.js?v=1.0.3"></script>
     <script src="./js/utils.js?v=2.1.0"></script>
     <script src="./libs/handlebars/handlebars.min.js?v=4.7.8"></script>
-    <script src="./js/template-loader.js?v=1.0.0"></script>
-    <script src="./js/template-engine.js?v=2.0.0"></script>
-    <script src="./js/terraform-generator.js?v=1.0.0"></script>
-    <script src="./js/app.js?v=2.1.2"></script>
+    <script src="./js/template-loader.js?v=1.1.0"></script>
+    <script src="./js/template-engine.js?v=2.1.0"></script>
+    <script src="./js/terraform-generator.js?v=1.1.0"></script>
+    <script src="./js/help-content.js?v=1.0.0"></script>
+    <script src="./js/analytics.js?v=1.1.0"></script>
+    <script src="./js/app.js?v=2.2.1"></script>
 
     <!-- Deploy version display (reads version.json generated at deploy time) -->
     <script>
@@ -516,7 +192,7 @@
         }).catch(() => {});
     </script>
 
-    <!-- Theme Toggle & Service Worker Registration & PWA Install Logic -->
+    <!-- Theme toggle and legacy installable-release cleanup -->
     <script>
         // Theme Toggle Functionality
         const ThemeManager = {
@@ -539,7 +215,7 @@
                 // Update theme-color meta tag
                 const themeColorMeta = document.getElementById('theme-color-meta');
                 if (themeColorMeta) {
-                    themeColorMeta.setAttribute('content', theme === 'dark' ? '#0a0e1a' : '#f8fafc');
+                    themeColorMeta.setAttribute('content', theme === 'dark' ? '#0B2026' : '#F9F7F4');
                 }
 
                 // Remove transition class after animation
@@ -581,384 +257,26 @@
         // Initialize theme manager
         ThemeManager.init();
 
-        // Service Worker Registration
+        // Retire registrations and caches created by earlier installable releases.
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=2.1.0')
-                    .then((registration) => {
-                        console.log('SW registered:', registration);
-                        
-                        // Check for updates
-                        registration.addEventListener('updatefound', () => {
-                            const newWorker = registration.installing;
-                            newWorker.addEventListener('statechange', () => {
-                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    // New service worker available
-                                    console.log('New service worker available');
-                                }
-                            });
-                        });
-                    })
-                    .catch((error) => {
-                        console.log('SW registration failed:', error);
-                    });
+            window.addEventListener('load', async () => {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                await Promise.all(registrations.map(registration => registration.unregister()));
+
+                if ('caches' in window) {
+                    const cacheNames = await caches.keys();
+                    await Promise.all(
+                        cacheNames
+                            .filter(name => name.startsWith('databricks-deployer-'))
+                            .map(name => caches.delete(name))
+                    );
+                }
+
+                localStorage.removeItem('pwa-installed');
+                localStorage.removeItem('pwa-install-dismissed');
             });
         }
-
-        // PWA Install Prompt Management
-        let deferredPrompt = null;
-        let installBannerDismissed = false;
-
-        // Check if already installed - Enhanced detection
-        function isPWAInstalled() {
-            // Check for standalone display mode (most reliable)
-            if (window.matchMedia('(display-mode: standalone)').matches) {
-                console.log('PWA detected: standalone display mode');
-                return true;
-            }
-            
-            // Check for iOS standalone mode
-            if (window.navigator.standalone === true) {
-                console.log('PWA detected: iOS standalone mode');
-                return true;
-            }
-            
-            // Check for Android app referrer
-            if (document.referrer.includes('android-app://')) {
-                console.log('PWA detected: Android app referrer');
-                return true;
-            }
-            
-            // Check if launched from home screen (iOS)
-            if (window.matchMedia('(display-mode: fullscreen)').matches) {
-                console.log('PWA detected: fullscreen display mode');
-                return true;
-            }
-            
-            // Check localStorage flag (set after successful installation)
-            if (localStorage.getItem('pwa-installed') === 'true') {
-                console.log('PWA detected: localStorage flag');
-                return true;
-            }
-            
-            console.log('PWA not detected - running in browser');
-            return false;
-        }
-
-        // Update install button visibility
-        function updateInstallButtonVisibility() {
-            const installNavItem = document.getElementById('pwa-install-nav-item');
-            const installBtnNav = document.getElementById('pwa-install-btn-nav');
-            const installBanner = document.getElementById('install-banner');
-            
-            console.log('Updating install button visibility - isPWAInstalled:', isPWAInstalled(), 'deferredPrompt:', !!deferredPrompt);
-            
-            if (isPWAInstalled()) {
-                // Hide install button if already installed
-                if (installNavItem) {
-                    installNavItem.style.display = 'none';
-                }
-                if (installBanner) {
-                    installBanner.style.display = 'none';
-                }
-            } else if (deferredPrompt) {
-                // Show install button if prompt is available
-                if (installNavItem) {
-                    installNavItem.style.display = 'block';
-                }
-            } else {
-                // Check if browser supports installation but prompt not yet available
-                // Show button for manual instructions
-                const isInstallable = 'BeforeInstallPromptEvent' in window || 
-                                     /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-                                     /Android/.test(navigator.userAgent);
-                
-                if (isInstallable && installNavItem) {
-                    installNavItem.style.display = 'block';
-                } else if (installNavItem) {
-                    installNavItem.style.display = 'none';
-                }
-            }
-        }
-
-        // Show install banner
-        function showInstallBanner() {
-            if (isPWAInstalled()) {
-                return; // Already installed
-            }
-
-            // Check if user dismissed before
-            const dismissed = localStorage.getItem('pwa-install-dismissed');
-            if (dismissed) {
-                const dismissedTime = parseInt(dismissed, 10);
-                const daysSinceDismissed = (Date.now() - dismissedTime) / (1000 * 60 * 60 * 24);
-                
-                // Show again after 7 days
-                if (daysSinceDismissed < 7) {
-                    return;
-                }
-            }
-
-            const banner = document.getElementById('install-banner');
-            if (banner && deferredPrompt) {
-                banner.style.display = 'block';
-                
-                // Auto-hide after 10 seconds if not interacted
-                setTimeout(() => {
-                    if (banner.style.display === 'block') {
-                        banner.style.animation = 'slideUp 0.3s ease-out';
-                        setTimeout(() => {
-                            banner.style.display = 'none';
-                        }, 300);
-                    }
-                }, 10000);
-            }
-        }
-
-        // Handle beforeinstallprompt event
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            
-            // Update install button visibility
-            updateInstallButtonVisibility();
-            
-            // Show banner after a short delay (better UX)
-            setTimeout(() => {
-                if (!isPWAInstalled()) {
-                    showInstallBanner();
-                }
-            }, 2000);
-        });
-
-        // Install function - reusable and globally available
-        async function installPWA() {
-            if (deferredPrompt) {
-                try {
-                    // Show the install prompt
-                    deferredPrompt.prompt();
-                    
-                    // Wait for user response
-                    const { outcome } = await deferredPrompt.userChoice;
-                    console.log(`User response: ${outcome}`);
-                    
-                    if (outcome === 'accepted') {
-                        // Track successful installation
-                        console.log('PWA installed successfully');
-                        localStorage.setItem('pwa-installed', 'true');
-                        
-                        // Show success message
-                        if (typeof Utils !== 'undefined') {
-                            Utils.showFlashMessage('App installed successfully!', 'success');
-                        }
-                        
-                        // Update UI
-                        updateInstallButtonVisibility();
-                    }
-                    
-                    // Clear the deferred prompt
-                    deferredPrompt = null;
-                    
-                    // Hide banner
-                    const banner = document.getElementById('install-banner');
-                    if (banner) {
-                        banner.style.display = 'none';
-                    }
-                } catch (error) {
-                    console.error('Error during installation:', error);
-                    if (typeof Utils !== 'undefined') {
-                        Utils.showFlashMessage('Installation failed. Please try again.', 'error');
-                    }
-                }
-            } else {
-                // Fallback: manual installation instructions
-                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-                const isAndroid = /Android/.test(navigator.userAgent);
-                
-                let instructions = '';
-                if (isIOS) {
-                    instructions = 'To install this app on iOS:\n\n1. Tap the Share button\n2. Select "Add to Home Screen"\n3. Tap "Add"';
-                } else if (isAndroid) {
-                    instructions = 'To install this app on Android:\n\n1. Tap the menu (⋮)\n2. Select "Add to Home Screen" or "Install App"\n3. Tap "Install"';
-                } else {
-                    instructions = 'To install this app:\n\nChrome Desktop: Click the install icon in the address bar\nChrome Mobile: Menu → "Add to Home Screen"';
-                }
-                
-                alert(instructions);
-            }
-        }
-
-        // Install button handlers - Banner
-        document.getElementById('install-btn-banner')?.addEventListener('click', async () => {
-            await installPWA();
-        });
-
-        // Install button handler - Navbar
-        document.getElementById('pwa-install-btn-nav')?.addEventListener('click', async () => {
-            await installPWA();
-        });
-
-        // Dismiss banner
-        document.getElementById('dismiss-install-banner')?.addEventListener('click', () => {
-            document.getElementById('install-banner').style.display = 'none';
-            localStorage.setItem('pwa-install-dismissed', Date.now().toString());
-        });
-
-        // Offline/Online detection
-        function updateOnlineStatus() {
-            const indicator = document.getElementById('offline-indicator');
-            if (indicator) {
-                if (navigator.onLine) {
-                    indicator.style.display = 'none';
-                } else {
-                    indicator.style.display = 'block';
-                }
-            }
-        }
-
-        window.addEventListener('online', () => {
-            updateOnlineStatus();
-            Utils.showFlashMessage('Connection restored!', 'success');
-        });
-
-        window.addEventListener('offline', () => {
-            updateOnlineStatus();
-            Utils.showFlashMessage('Offline mode activated. The app continues to work\!', 'info');
-        });
-
-        // Initial status check
-        updateOnlineStatus();
-
-        // Check if app was launched from installed PWA
-        console.log('=== PWA Status Check ===');
-        console.log('Display mode:', window.matchMedia('(display-mode: standalone)').matches ? 'standalone' : 'browser');
-        console.log('User agent:', navigator.userAgent);
-        console.log('Is installed:', isPWAInstalled());
-        
-        if (isPWAInstalled()) {
-            console.log('✓ Running as installed PWA');
-            // Hide install banner if already installed
-            const banner = document.getElementById('install-banner');
-            if (banner) {
-                banner.style.display = 'none';
-            }
-            
-            // Hide install button
-            updateInstallButtonVisibility();
-        } else {
-            console.log('✗ Running in browser - showing install options');
-            // Initial check for install button visibility
-            updateInstallButtonVisibility();
-            
-            // Show install button immediately for mobile devices
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            if (isMobile) {
-                const installNavItem = document.getElementById('pwa-install-nav-item');
-                if (installNavItem) {
-                    installNavItem.style.display = 'block';
-                    console.log('Mobile device detected - showing install button');
-                }
-            }
-        }
-
-        // Make deferredPrompt and installPWA globally available
-        window.deferredPrompt = null;
-        window.installPWA = installPWA;
-        Object.defineProperty(window, 'deferredPrompt', {
-            get: () => deferredPrompt,
-            set: (value) => {
-                deferredPrompt = value;
-                updateInstallButtonVisibility();
-            }
-        });
-
-        // Periodic check for install prompt (every 30 seconds)
-        setInterval(() => {
-            if (window.deferredPrompt && !isPWAInstalled()) {
-                const dismissed = localStorage.getItem('pwa-install-dismissed');
-                if (!dismissed) {
-                    const banner = document.getElementById('install-banner');
-                    if (banner && banner.style.display === 'none') {
-                        // Only show if user has been on page for a while
-                        banner.style.display = 'block';
-                    }
-                }
-                // Update button visibility
-                updateInstallButtonVisibility();
-            }
-        }, 30000);
-
-        // Listen for app installed event (fired after successful installation)
-        window.addEventListener('appinstalled', () => {
-            console.log('PWA was installed');
-            localStorage.setItem('pwa-installed', 'true');
-            deferredPrompt = null;
-            updateInstallButtonVisibility();
-            
-            if (typeof Utils !== 'undefined') {
-                Utils.showFlashMessage('App installed successfully! Thank you for installing.', 'success');
-            }
-        });
     </script>
 
-    <style>
-        @keyframes slideUp {
-            from {
-                transform: translateY(0);
-                opacity: 1;
-            }
-            to {
-                transform: translateY(-100%);
-                opacity: 0;
-            }
-        }
-
-        #install-banner {
-            animation: slideDown 0.3s ease-out;
-        }
-
-        @keyframes slideDown {
-            from {
-                transform: translateY(-100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
-        /* Ensure banners don't push content down unexpectedly */
-        #install-banner[style*="block"] ~ nav {
-            position: sticky;
-            top: 0;
-        }
-
-        #offline-indicator[style*="block"] ~ nav {
-            position: sticky;
-            top: 0;
-        }
-
-        @media (max-width: 768px) {
-            #install-banner .d-flex {
-                flex-direction: column;
-                gap: 0.5rem;
-            }
-            
-            #install-banner .d-flex > div:first-child {
-                text-align: center;
-            }
-            
-            #install-banner .d-flex > div:last-child {
-                width: 100%;
-            }
-            
-            #install-banner .btn {
-                width: 100%;
-                margin-bottom: 0.25rem;
-            }
-        }
-    </style>
 </body>
 </html>
-
