@@ -22,6 +22,8 @@ const SOURCE_FILES = [
   'js/template-engine.js',
   'js/template-loader.js',
   'js/terraform-generator.js',
+  'js/analytics.js',
+  'js/help-content.js',
 ];
 
 // Ensure output directory exists

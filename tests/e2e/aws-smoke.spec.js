@@ -118,4 +118,35 @@ test.describe('AWS critical journeys', () => {
     await expect(page.locator('[name="project_prefix"]')).toHaveValue('aws-persist');
     await expect(page.locator('[name="region"]')).toHaveValue('us-east-1');
   });
+
+  test('regenerates the project on download after a page reload', async ({ page }) => {
+    await FormHelpers.fillBasicConfig(page, {
+      project_prefix: 'aws-reload',
+      region: 'us-east-1',
+      pricing_tier: 'PREMIUM'
+    });
+    await FormHelpers.fillNetworkConfig(page, {
+      create_new_vpc: true,
+      vpc_cidr: '10.64.0.0/20',
+      availability_zones: ['us-east-1a', 'us-east-1b']
+    });
+    await FormHelpers.submitConfigForm(page);
+    await FormHelpers.confirmAndGenerate(page);
+    await expect(page).toHaveURL(/.*#\/download/);
+
+    // Reload drops the in-memory ZIP blob but keeps the config in localStorage,
+    // so the download button must go through the regenerate path in app.js.
+    await page.reload();
+    await expect(page.locator('#download-project-btn')).toBeVisible();
+
+    const downloadPromise = page.waitForEvent('download', { timeout: 15000 });
+    await page.locator('#download-project-btn').click();
+    const download = await downloadPromise;
+    const archive = await JSZip.loadAsync(await fs.promises.readFile(await download.path()));
+
+    expect(download.suggestedFilename()).toBe('aws-reload-aws-terraform.zip');
+    expect(Object.keys(archive.files)).toEqual(expect.arrayContaining([
+      'terraform.tfvars', 'README.md'
+    ]));
+  });
 });

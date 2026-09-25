@@ -239,3 +239,42 @@ describe('NetworkCalculator', () => {
     });
   });
 });
+
+// Coverage gaps: GCP service-subnet and custom-size allocation branches, plus the
+// node-count helpers returned by calculateSubnetSizeLimits (previously untested in
+// both the unit and e2e layers).
+describe('NetworkCalculator GCP service / custom subnet allocation', () => {
+  it('allocates a managed service subnet for a PREMIUM GCP project', () => {
+    const calc = new NetworkCalculator('gcp');
+    // args: vpc, azs, pricingTier, enablePrivateLink, customSubnetSize, createServiceSubnet
+    const subnets = calc.allocateSubnets('10.0.0.0/16', ['us-central1-a'], 'PREMIUM', false, null, true);
+    const byType = subnets.map(s => s.subnet_type);
+    expect(byType).toEqual(['host', 'pods', 'service']);
+    const service = subnets.find(s => s.subnet_type === 'service');
+    expect(service.size).toBe(calc.SERVICE_SUBNET_SIZE); // /28
+  });
+
+  it('honours a custom subnet size for GCP (host = size+1, pods = size)', () => {
+    const calc = new NetworkCalculator('gcp');
+    const subnets = calc.allocateSubnets('10.0.0.0/16', ['us-central1-a'], 'PREMIUM', false, 24, true);
+    const host = subnets.find(s => s.subnet_type === 'host');
+    const pods = subnets.find(s => s.subnet_type === 'pods');
+    expect(host.size).toBe(25);
+    expect(pods.size).toBe(24);
+    expect(subnets.some(s => s.subnet_type === 'service')).toBe(true);
+  });
+});
+
+describe('calculateSubnetSizeLimits returned helpers', () => {
+  it('getIPsForSize and getMaxNodes compute IPs and node capacity per prefix', () => {
+    const calc = new NetworkCalculator('aws');
+    const limits = calc.calculateSubnetSizeLimits('10.0.0.0/16', 2, false, null, true);
+    expect(limits.valid).toBe(true);
+    expect(typeof limits.getMaxNodes).toBe('function');
+    // /26 = 64 IPs; usable = 64 - 5 = 59; nodes = floor(59 / 2) = 29
+    expect(limits.getIPsForSize(26)).toBe(64);
+    expect(limits.getMaxNodes(26)).toBe(29);
+    // /28 = 16 IPs; usable = 11; nodes = 5
+    expect(limits.getMaxNodes(28)).toBe(5);
+  });
+});
