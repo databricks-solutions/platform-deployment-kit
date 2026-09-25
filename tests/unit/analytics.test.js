@@ -4,22 +4,9 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const Analytics = require('../../deploy/js/analytics.js');
 
-function createEnvironment(consent = null) {
-  const values = new Map();
-  if (consent) values.set(Analytics.constants.CONSENT_KEY, consent);
-
-  const elements = {
-    'analytics-consent': {
-      hidden: true,
-      querySelector: vi.fn(() => ({ focus: vi.fn() }))
-    },
-    'analytics-accept': { addEventListener: vi.fn() },
-    'analytics-decline': { addEventListener: vi.fn() },
-    'analytics-preferences': { addEventListener: vi.fn() }
-  };
+function createEnvironment() {
   const appendedScripts = [];
   const document = {
-    getElementById: vi.fn(id => elements[id] || null),
     createElement: vi.fn(() => ({})),
     head: { appendChild: vi.fn(script => appendedScripts.push(script)) }
   };
@@ -31,12 +18,8 @@ function createEnvironment(consent = null) {
     },
     addEventListener: vi.fn()
   };
-  const storage = {
-    getItem: vi.fn(key => values.get(key) ?? null),
-    setItem: vi.fn((key, value) => values.set(key, value))
-  };
 
-  return { window, document, storage, elements, appendedScripts };
+  return { window, document, appendedScripts };
 }
 
 describe('privacy-safe analytics', () => {
@@ -46,40 +29,27 @@ describe('privacy-safe analytics', () => {
     environment = createEnvironment();
   });
 
-  it('does not load Google Analytics before consent', () => {
+  it('loads the public Google Analytics script during initialization', () => {
     const analytics = new Analytics(environment);
-    analytics.init();
 
-    expect(environment.appendedScripts).toHaveLength(0);
-    expect(environment.elements['analytics-consent'].hidden).toBe(false);
-  });
-
-  it('does not load Google Analytics when consent is declined', () => {
-    const analytics = new Analytics(environment);
-    analytics.init();
-    analytics.setConsent('denied');
-
-    expect(environment.appendedScripts).toHaveLength(0);
-    expect(environment.storage.setItem).toHaveBeenCalledWith(
-      Analytics.constants.CONSENT_KEY,
-      'denied'
-    );
-  });
-
-  it('loads only the public measurement script after consent', () => {
-    const analytics = new Analytics(environment);
-    analytics.init();
-    analytics.setConsent('granted');
-
+    expect(analytics.init()).toBe(true);
     expect(environment.appendedScripts).toHaveLength(1);
     expect(environment.appendedScripts[0].src).toBe(
       'https://www.googletagmanager.com/gtag/js?id=G-5X6FQW3GP1'
     );
   });
 
+  it('initializes only once', () => {
+    const analytics = new Analytics(environment);
+    analytics.init();
+
+    expect(analytics.init()).toBe(false);
+    expect(environment.appendedScripts).toHaveLength(1);
+  });
+
   it('rejects unknown event names and arbitrary provider values', () => {
     const analytics = new Analytics(environment);
-    analytics.setConsent('granted');
+    analytics.init();
     const initialQueueLength = environment.window.dataLayer.length;
 
     expect(analytics.track('form_value', 'aws')).toBe(false);
@@ -89,7 +59,7 @@ describe('privacy-safe analytics', () => {
 
   it('emits only an allowlisted event and cloud provider', () => {
     const analytics = new Analytics(environment);
-    analytics.setConsent('granted');
+    analytics.init();
 
     expect(analytics.track('project_generated', 'gcp')).toBe(true);
     const args = Array.from(environment.window.dataLayer.at(-1));
@@ -103,7 +73,7 @@ describe('privacy-safe analytics', () => {
   it('maps unknown routes to a fixed safe page location', () => {
     environment.window.location.hash = '#/unknown?account_id=sensitive';
     const analytics = new Analytics(environment);
-    analytics.setConsent('granted');
+    analytics.init();
 
     const args = Array.from(environment.window.dataLayer.at(-1));
     expect(args[0]).toBe('event');

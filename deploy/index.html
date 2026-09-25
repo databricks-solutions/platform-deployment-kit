@@ -41,7 +41,7 @@
     <!-- Bootstrap Icons -->
     <link href="./libs/bootstrap-icons/font/bootstrap-icons.css?v=2.0.0" rel="stylesheet">
     <!-- Custom CSS -->
-    <link href="./css/main.css?v=2.1.3" rel="stylesheet">
+    <link href="./css/main.css?v=2.1.2" rel="stylesheet">
 </head>
 <body>
     <!-- Navigation -->
@@ -133,9 +133,6 @@
                     <p>
                         Simplifying Databricks infrastructure deployment across multi-cloud environments.
                     </p>
-                    <button type="button" class="footer-link-button" id="analytics-preferences">
-                        Analytics preferences
-                    </button>
                     <p class="deploy-version" id="deploy-version"></p>
                 </div>
             </div>
@@ -167,23 +164,6 @@
         <div class="offcanvas-body" id="contextHelpBody"></div>
     </aside>
 
-    <section class="analytics-consent" id="analytics-consent" role="dialog"
-             aria-labelledby="analytics-consent-title" aria-describedby="analytics-consent-description" hidden>
-        <div class="analytics-consent-content">
-            <div>
-                <h2 id="analytics-consent-title">Help improve Platform Kit</h2>
-                <p id="analytics-consent-description">
-                    Allow Google Analytics to measure page visits and project downloads.
-                    Configuration values and generated files are never sent.
-                </p>
-            </div>
-            <div class="analytics-consent-actions">
-                <button type="button" class="btn btn-outline-secondary" id="analytics-decline">Decline</button>
-                <button type="button" class="btn btn-primary" id="analytics-accept">Allow analytics</button>
-            </div>
-        </div>
-    </section>
-
     <!-- Bootstrap 5 JS -->
     <script src="./libs/bootstrap/js/bootstrap.bundle.min.js?v=1.0.0"></script>
     <!-- Choices.js for modern select component -->
@@ -201,7 +181,7 @@
     <script src="./js/template-engine.js?v=2.1.0"></script>
     <script src="./js/terraform-generator.js?v=1.1.0"></script>
     <script src="./js/help-content.js?v=1.0.0"></script>
-    <script src="./js/analytics.js?v=1.0.0"></script>
+    <script src="./js/analytics.js?v=1.1.0"></script>
     <script src="./js/app.js?v=2.2.1"></script>
 
     <!-- Deploy version display (reads version.json generated at deploy time) -->
