@@ -808,3 +808,75 @@ describe('Validators.validateConfiguration', () => {
     expect(result.errors.tags).toBeUndefined();
   });
 });
+
+// Cloud-specific ERROR branches inside validateConfiguration that the primitive
+// validator tests don't reach. These lock the integration of each rule.
+describe('Validators.validateConfiguration — cloud-specific error branches', () => {
+  const awsExisting = {
+    provider: 'aws', project_prefix: 'myproject', region: 'us-east-1', pricing_tier: 'PREMIUM',
+    create_new_vpc: false, existing_vpc_id: 'vpc-12345678',
+    existing_subnet_ids: ['subnet-12345678', 'subnet-abcdef12'], existing_security_group_id: 'sg-12345678',
+  };
+
+  test('AWS existing subnet with a malformed ID reports an invalid-format error', () => {
+    const config = { ...awsExisting, existing_subnet_ids: ['not-a-subnet', 'subnet-abcdef12'] };
+    const errors = Validators.validateConfiguration(config).errors;
+    expect(errors.existing_subnet_ids).toMatch(/Invalid format/);
+  });
+
+  test('AWS PrivateLink requires valid VPC endpoint IDs', () => {
+    const config = { ...awsExisting, enable_private_link: true, backend_rest_aws_vpce_id: 'bad', backend_relay_aws_vpce_id: 'bad' };
+    const errors = Validators.validateConfiguration(config).errors;
+    expect(errors.backend_rest_aws_vpce_id).toBeDefined();
+    expect(errors.backend_relay_aws_vpce_id).toBeDefined();
+  });
+
+  test('AWS existing metastore mode requires a metastore ID', () => {
+    const config = {
+      provider: 'aws', project_prefix: 'myproject', region: 'us-east-1', pricing_tier: 'PREMIUM',
+      create_new_vpc: true, vpc_cidr: '10.0.0.0/16', availability_zones: ['us-east-1a', 'us-east-1b'],
+      metastore_mode: 'existing', metastore_id: '',
+    };
+    const errors = Validators.validateConfiguration(config).errors;
+    expect(errors.metastore_id).toBeDefined();
+  });
+
+  test('Azure PrivateLink rejects an invalid resource-group mode', () => {
+    const config = {
+      provider: 'azure', project_prefix: 'myproject', region: 'eastus', pricing_tier: 'PREMIUM',
+      vpc_cidr: '10.0.0.0/16', availability_zones: ['1', '2'],
+      enable_private_link: true, create_new_vpc: true, azure_resource_group_mode: 'bogus',
+    };
+    const errors = Validators.validateConfiguration(config).errors;
+    expect(errors.azure_resource_group_mode).toBeDefined();
+  });
+
+  test('Azure existing VNet and workspace resource groups must differ', () => {
+    const config = {
+      provider: 'azure', project_prefix: 'myproject', region: 'eastus', pricing_tier: 'PREMIUM',
+      enable_private_link: false, create_new_vpc: false,
+      existing_vpc_id: '/subscriptions/00000000-0000-4000-8000-000000000000/resourceGroups/myrg/providers/Microsoft.Network/virtualNetworks/myvnet',
+      resource_group_name: 'myrg',
+    };
+    const errors = Validators.validateConfiguration(config).errors;
+    expect(errors.existing_vpc_id).toMatch(/different names/);
+  });
+
+  test('GCP requires a Databricks subnet CIDR', () => {
+    const config = {
+      provider: 'gcp', project_prefix: 'myproject', region: 'us-central1',
+      create_new_vpc: true, // subnet_cidr omitted
+    };
+    const errors = Validators.validateConfiguration(config).errors;
+    expect(errors.subnet_cidr).toBeDefined();
+  });
+
+  test('GCP PSC endpoint subnet must not overlap the Databricks subnet', () => {
+    const config = {
+      provider: 'gcp', project_prefix: 'myproject', region: 'us-central1',
+      subnet_cidr: '10.0.0.0/24', enable_private_link: true, psc_subnet_cidr: '10.0.0.0/26',
+    };
+    const errors = Validators.validateConfiguration(config).errors;
+    expect(errors.psc_subnet_cidr).toMatch(/overlap/);
+  });
+});

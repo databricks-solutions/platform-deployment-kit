@@ -98,4 +98,30 @@ test.describe('GCP critical journeys', () => {
     expect(tfvars).toContain('metastore_id = ""');
     expect(await archive.file('psc.tf').async('string')).toContain('google_compute_forwarding_rule');
   });
+
+  test('downloads the Back-end PSC project with a Cloud NAT', async ({ page }) => {
+    // Covers PSC (Private Link) combined with Cloud NAT mode "single".
+    await FormHelpers.fillGcpConfig(page, {
+      project_prefix: 'gcp-psc-nat',
+      region: 'us-east1',
+      project_id: 'gcp-psc-nat-project',
+      google_service_account_email: 'creator@gcp-psc-nat-project.iam.gserviceaccount.com',
+      databricks_account_id: '55555555-5555-4555-8555-555555555555',
+      databricks_admin_user: 'admin+pscnat@example.com',
+      subnet_cidr: '10.50.0.0/22'
+    });
+    await FormHelpers.fillNetworkConfig(page, { enable_private_link: true });
+    await page.locator('#psc_subnet_cidr').fill('10.50.4.0/28');
+    await page.locator('#nat_gateway_mode').selectOption('single');
+
+    await expect(page.locator('#gcp-private-link-network-fields')).toBeVisible();
+    await FormHelpers.submitConfigForm(page);
+    const { archive } = await downloadProject(page);
+    expect(Object.keys(archive.files)).toEqual(expect.arrayContaining([
+      'databricks.tf', 'dns.tf', 'network.tf', 'psc.tf', 'terraform.tfvars'
+    ]));
+    const tfvars = await archive.file('terraform.tfvars').async('string');
+    expect(tfvars).toContain('psc_subnet_cidr = "10.50.4.0/28"');
+    expect(tfvars).toContain('create_nat_gateway = true');
+  });
 });

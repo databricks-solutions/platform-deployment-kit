@@ -1,5 +1,11 @@
 name: CI/CD
 
+# GitHub Actions is currently disabled for this repo. ALL test, build, and deploy
+# logic lives in scripts/ (scripts/test-all.sh and scripts/deploy.sh). This
+# workflow is a THIN wrapper: it only provisions the environment (checkout, Node,
+# npm ci) and then calls those scripts. Do not add test/build/deploy logic here —
+# keep it in the scripts so local runs and CI stay identical.
+
 on:
   push:
 
@@ -7,74 +13,46 @@ jobs:
   test:
     runs-on:
       group: databricks-solutions-protected-runner-group
-    env:
-      PLAYWRIGHT_SKIP_BUILD: '1'
-      
+
     if: github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/')
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-      
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
       - name: Install dependencies
         run: npm ci
 
-      - name: Build deployable app and fetch upstream Terraform
-        run: npm run build
-
-      - name: Run unit tests
-        run: npm run test:unit
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps
-      
-      - name: Run basic tests
-        run: npm test -- tests/e2e/basic.spec.js
-
-      - name: Run CIDR calculation tests
-        run: npm test -- tests/e2e/cidr-calculations.spec.js
-
-      - name: Run AWS tests
-        run: npm test -- tests/e2e/aws.spec.js
-
-      - name: Run Azure tests
-        run: npm test -- tests/e2e/azure.spec.js
-
-      - name: Run GCP tests
-        run: npm test -- tests/e2e/gcp.spec.js
-
-      - name: Run validation and edge cases tests
-        run: npm test -- tests/e2e/validation-edge-cases.spec.js
-
-      - name: Run summary and download tests
-        run: npm test -- tests/e2e/summary-download.spec.js
-
-      - name: Run coverage tests
-        run: npm test -- tests/e2e/coverage.spec.js
+      - name: Run full test pipeline (build + audit + unit + e2e, all with coverage)
+        run: ./scripts/test-all.sh --ci --e2e-coverage
 
   deploy:
     runs-on:
       group: databricks-solutions-protected-runner-group
 
     if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write   # push the built site to the gh-pages branch
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version-file: '.nvmrc'
+          cache: 'npm'
 
-      - name: Build deployable app and fetch upstream Terraform
-        run: |
-          npm ci
-          npm run build
-      
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
+      - name: Install dependencies
+        run: npm ci
+
+      # Same gated deploy as `npm run deploy` locally: scripts/deploy.sh runs the
+      # full test pipeline (--strict-audit), builds dist/, and publishes it to the
+      # gh-pages branch. Nothing reaches the user-facing branch without passing.
+      - name: Test, build, and publish to gh-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./scripts/deploy.sh

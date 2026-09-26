@@ -46,7 +46,9 @@ class TerraformGenerator {
         zip.file(file.name, file.content);
       }
       zip.file('terraform.tfvars', await this.renderTemplate(provider, 'tfvars', variables));
-      zip.file('README.md', await this.renderTemplate(provider, 'readme', variables));
+      if (config.include_docs !== false) {
+        zip.file('README.md', await this.renderTemplate(provider, 'readme', variables));
+      }
       return await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
     }
     
@@ -60,8 +62,10 @@ class TerraformGenerator {
     zip.file('main.tf', await this.renderTemplate(provider, 'main', variables));
     zip.file('outputs.tf', await this.renderTemplate(provider, 'outputs', variables));
     zip.file('versions.tf', await this.renderTemplate(provider, 'versions', variables));
-    zip.file('README.md', await this.renderTemplate(provider, 'readme', variables));
-    
+    if (config.include_docs !== false) {
+      zip.file('README.md', await this.renderTemplate(provider, 'readme', variables));
+    }
+
     // Generate modules directory structure
     const modulesDir = zip.folder('modules');
     const networkDir = modulesDir.folder('network');

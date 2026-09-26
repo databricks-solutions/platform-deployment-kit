@@ -3463,7 +3463,13 @@ class App {
     
     document.getElementById('summary-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      
+
+      // Honour the "Include documentation" choice and persist it so the
+      // download-page regeneration path (after a reload) respects it too.
+      const includeDocs = document.getElementById('include_docs');
+      this.currentConfig.include_docs = includeDocs ? includeDocs.checked : true;
+      Utils.setStorage('config', this.currentConfig);
+
       // Update loading message
       const loadingMessage = document.getElementById('loading-message');
       if (loadingMessage) {
