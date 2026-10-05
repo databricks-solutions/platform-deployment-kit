@@ -1,0 +1,11 @@
+{
+  "provider": "aws",
+  "variables": {
+    "required": ["databricks_account_id"],
+    "optional": ["enable_private_link", "nat_gateway_mode", "metastore_name", "metastore_id"]
+  },
+  "template_files": [
+    "tfvars.tf.template",
+    "readme.md.template"
+  ]
+}

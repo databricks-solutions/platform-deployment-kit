@@ -1,0 +1,30 @@
+# Generated variables for the Databricks GCP deployment.
+# Authentication tokens remain outside this file.
+
+google_service_account_email = {{{google_service_account_email_hcl}}}
+google_project_name          = {{{google_project_name_hcl}}}
+google_region                = {{{google_region_hcl}}}
+
+databricks_account_id     = {{{databricks_account_id_hcl}}}
+databricks_workspace_name = {{{databricks_workspace_name_hcl}}}
+databricks_admin_user     = {{{databricks_admin_user_hcl}}}
+
+subnet_cidr = {{{subnet_cidr_hcl}}}
+{{#if enable_private_link}}
+psc_subnet_cidr = {{{psc_subnet_cidr_hcl}}}
+
+create_nat_gateway = {{{enable_nat_gateway}}}
+
+# Unity Catalog assignment is intentionally left unset.
+metastore_id = ""
+
+workspace_service_attachment = {{{workspace_service_attachment_hcl}}}
+relay_service_attachment     = {{{relay_service_attachment_hcl}}}
+
+# This is a Back-end PSC deployment; workspace user access remains public.
+public_access_enabled = true
+
+create_private_dns = true
+private_zone_name  = "databricks-psc"
+dns_name           = "gcp.databricks.com."
+{{/if}}

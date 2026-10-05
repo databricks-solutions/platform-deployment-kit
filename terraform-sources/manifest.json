@@ -1,0 +1,444 @@
+{
+  "schemaVersion": 1,
+  "repository": "https://github.com/databricks-solutions/technical-services-solutions",
+  "ref": "main",
+  "commit": "a39695e356ce512c86b157fffb7286dfc0130d48",
+  "resolvedAt": "2026-10-05T20:19:29.244Z",
+  "sourceUrl": "https://github.com/databricks-solutions/technical-services-solutions/tree/a39695e356ce512c86b157fffb7286dfc0130d48",
+  "commonFiles": [
+    {
+      "name": "LICENSE.md",
+      "upstreamPath": "LICENSE.md",
+      "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/common/LICENSE.md",
+      "sha256": "2226e340ee0e21b738c762ecb5c08260401667d65ea456c70150d2da28cfe856"
+    },
+    {
+      "name": "NOTICE.md",
+      "upstreamPath": "NOTICE.md",
+      "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/common/NOTICE.md",
+      "sha256": "63eaa38367d7f7a70eb3580ec9ed1fbccc8c520b21a663d9ff4815b33185dfc7"
+    }
+  ],
+  "variants": {
+    "aws-standard": {
+      "label": "AWS BYOVPC with Unity Catalog",
+      "provider": "aws",
+      "privateLink": false,
+      "upstreamPath": "workspace-setup/terraform-examples/aws/aws-byovpc-uc",
+      "sourceUrl": "https://github.com/databricks-solutions/technical-services-solutions/tree/a39695e356ce512c86b157fffb7286dfc0130d48/workspace-setup/terraform-examples/aws/aws-byovpc-uc",
+      "files": [
+        {
+          "name": "cluster.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/aws/aws-byovpc-uc/tf/cluster.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/aws-standard/cluster.tf",
+          "sha256": "10d0f3e4c0f889c1b875787cf5ebebce82cd750905a7ba5911c07c7abf6ffdf0"
+        },
+        {
+          "name": "credential.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/aws/aws-byovpc-uc/tf/credential.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/aws-standard/credential.tf",
+          "sha256": "ff6d743ac0ca4381853446fc279e6a3bbc948c3d1a5d9be5e9bfd7b730b52e88"
+        },
+        {
+          "name": "metastore.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/aws/aws-byovpc-uc/tf/metastore.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/aws-standard/metastore.tf",
+          "sha256": "0baae33251c39a2796b5ba4cedf50b7264db9508cc22fdedc544410eaa52876c"
+        },
+        {
+          "name": "network.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/aws/aws-byovpc-uc/tf/network.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/aws-standard/network.tf",
+          "sha256": "4046a1a92f66d1d86d758e3278c7f1872649d820c2fd0aa790266c8bff0aa758"
+        },
+        {
+          "name": "outputs.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/aws/aws-byovpc-uc/tf/outputs.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/aws-standard/outputs.tf",
+          "sha256": "5d3653122be584749970462414387fabe018e291d9416c0f26dc572a262811aa"
+        },
+        {
+          "name": "providers.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/aws/aws-byovpc-uc/tf/providers.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/aws-standard/providers.tf",
+          "sha256": "7f2f6c3884f0b69472fc7f64971fd4a7b8c2a6e6abf5bb0bd9e3813eb0f7b522"
+        },
+        {
+          "name": "root_s3_bucket.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/aws/aws-byovpc-uc/tf/root_s3_bucket.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/aws-standard/root_s3_bucket.tf",
+          "sha256": "a51be17e02aa68184e463f3dac9472b6efa674992ba07fef75515212c97ebaa9"
+        },
+        {
+          "name": "security_group.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/aws/aws-byovpc-uc/tf/security_group.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/aws-standard/security_group.tf",
+          "sha256": "59d8f02cf3d0cc9fafec85be76747d62890e90722383c93f1625b5076e77b558"
+        },
+        {
+          "name": "unity_catalog.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/aws/aws-byovpc-uc/tf/unity_catalog.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/aws-standard/unity_catalog.tf",
+          "sha256": "2d0fe9ffabe99bde41009b43f492fb72efddd11c31c186aed35356d589b2e5f9"
+        },
+        {
+          "name": "variables.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/aws/aws-byovpc-uc/tf/variables.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/aws-standard/variables.tf",
+          "sha256": "02dbf7a6733a7b5efdcc585df4f83bc17b980a2869a8eaceadf3c2ac818cff81"
+        },
+        {
+          "name": "versions.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/aws/aws-byovpc-uc/tf/versions.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/aws-standard/versions.tf",
+          "sha256": "48eb5eff7ef34dc5cec8d78643c3ddf5a11f038596565e49fa96f68801d1ff23"
+        },
+        {
+          "name": "workspace.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/aws/aws-byovpc-uc/tf/workspace.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/aws-standard/workspace.tf",
+          "sha256": "916314fd5357365feaec8076d19269fdae7adfeeb94706fc3b39cf1f2d1e22f1"
+        }
+      ]
+    },
+    "aws-privatelink": {
+      "label": "AWS BYOVPC with Classic PrivateLink",
+      "provider": "aws",
+      "privateLink": true,
+      "upstreamPath": "workspace-setup/terraform-examples/aws/aws-byovpc-classic-privatelink",
+      "sourceUrl": "https://github.com/databricks-solutions/technical-services-solutions/tree/a39695e356ce512c86b157fffb7286dfc0130d48/workspace-setup/terraform-examples/aws/aws-byovpc-classic-privatelink",
+      "files": [
+        {
+          "name": "credential.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/aws/aws-byovpc-classic-privatelink/tf/credential.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/aws-privatelink/credential.tf",
+          "sha256": "9022de115751332e02894899add97b1ae571b841a88a12240b13618b1ee0555e"
+        },
+        {
+          "name": "endpoints.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/aws/aws-byovpc-classic-privatelink/tf/endpoints.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/aws-privatelink/endpoints.tf",
+          "sha256": "7bec0bf00828de4ee52b1aca2fa0724bb497da05b5ff94251281c996cdda5bb9"
+        },
+        {
+          "name": "locals.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/aws/aws-byovpc-classic-privatelink/tf/locals.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/aws-privatelink/locals.tf",
+          "sha256": "ad5f9b7365a7d30a38f402c9add1b99f2f021fc1c566bb97ceddb8b62ce6d698"
+        },
+        {
+          "name": "metastore.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/aws/aws-byovpc-classic-privatelink/tf/metastore.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/aws-privatelink/metastore.tf",
+          "sha256": "46bc824aed41db02927f8d688109f4582f7a9076a4b65a544a2e586a50e7a203"
+        },
+        {
+          "name": "network.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/aws/aws-byovpc-classic-privatelink/tf/network.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/aws-privatelink/network.tf",
+          "sha256": "11b53f246f3ea9f509259f5bd68fdf1dd1385e08053e3b848dc9b1d10d2032c0"
+        },
+        {
+          "name": "outputs.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/aws/aws-byovpc-classic-privatelink/tf/outputs.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/aws-privatelink/outputs.tf",
+          "sha256": "1be8263b2d0cedc81ecdec53470fd2a5d41c29a5f09d235e4ff686b22986f395"
+        },
+        {
+          "name": "privatelink.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/aws/aws-byovpc-classic-privatelink/tf/privatelink.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/aws-privatelink/privatelink.tf",
+          "sha256": "58793b6cb56a72fa7b92220b08ed468bd39b8b6d24a664fe1afb74e844f2c12b"
+        },
+        {
+          "name": "providers.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/aws/aws-byovpc-classic-privatelink/tf/providers.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/aws-privatelink/providers.tf",
+          "sha256": "1c15b6925aa235e62d4cd008e36caa4104795d7e3cd419aebd0b8b182d571b80"
+        },
+        {
+          "name": "root_bucket.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/aws/aws-byovpc-classic-privatelink/tf/root_bucket.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/aws-privatelink/root_bucket.tf",
+          "sha256": "ae5d5e9022c2b4940f13952c4fa886feba27ebdac4baacc11728de1642dded4d"
+        },
+        {
+          "name": "variables.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/aws/aws-byovpc-classic-privatelink/tf/variables.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/aws-privatelink/variables.tf",
+          "sha256": "eb078f825b3dfe6161c6179700be08d34860755a125208fd9ef9cda765580cf5"
+        },
+        {
+          "name": "versions.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/aws/aws-byovpc-classic-privatelink/tf/versions.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/aws-privatelink/versions.tf",
+          "sha256": "48eb5eff7ef34dc5cec8d78643c3ddf5a11f038596565e49fa96f68801d1ff23"
+        },
+        {
+          "name": "workspace.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/aws/aws-byovpc-classic-privatelink/tf/workspace.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/aws-privatelink/workspace.tf",
+          "sha256": "6175b31ff2b85c63b105e328cc80a02eb18e494bf2b37265e6484e164fceeeab"
+        }
+      ]
+    },
+    "azure-standard": {
+      "label": "Azure VNet Injection with Unity Catalog",
+      "provider": "azure",
+      "privateLink": false,
+      "upstreamPath": "workspace-setup/terraform-examples/azure/azure-vnet-injection-uc",
+      "sourceUrl": "https://github.com/databricks-solutions/technical-services-solutions/tree/a39695e356ce512c86b157fffb7286dfc0130d48/workspace-setup/terraform-examples/azure/azure-vnet-injection-uc",
+      "files": [
+        {
+          "name": "azure.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/azure/azure-vnet-injection-uc/tf/azure.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/azure-standard/azure.tf",
+          "sha256": "01c115cb8e5a02e2e3fe617b6c19b484ca66cf8e46c48c00c804d5b364e213d6"
+        },
+        {
+          "name": "cluster.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/azure/azure-vnet-injection-uc/tf/cluster.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/azure-standard/cluster.tf",
+          "sha256": "e25976ff740f2d5923ae904c5a8530046c968c2106ed91c457d09df1367f1641"
+        },
+        {
+          "name": "databricks.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/azure/azure-vnet-injection-uc/tf/databricks.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/azure-standard/databricks.tf",
+          "sha256": "29d116ea182c5682a8ff7e97d461bcfe401a931afa7704583a04e4c3830aa5bf"
+        },
+        {
+          "name": "network.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/azure/azure-vnet-injection-uc/tf/network.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/azure-standard/network.tf",
+          "sha256": "8b54bb8d0705a7d518bc98663ad0e5de9753a3bd4a6c6c96b2f15267698df217"
+        },
+        {
+          "name": "outputs.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/azure/azure-vnet-injection-uc/tf/outputs.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/azure-standard/outputs.tf",
+          "sha256": "ae47bd6ff4e987ed2dc6d11fec187aa4af3f8460ea49c74a5d548d0b550f9b64"
+        },
+        {
+          "name": "providers.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/azure/azure-vnet-injection-uc/tf/providers.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/azure-standard/providers.tf",
+          "sha256": "e1f516a42506d2be6829fe88bea21717d8cc19128ef6ce4761d4c80eb254552f"
+        },
+        {
+          "name": "unity_catalog.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/azure/azure-vnet-injection-uc/tf/unity_catalog.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/azure-standard/unity_catalog.tf",
+          "sha256": "cbd4e6614d68972b474a144cfc2a4f4374b82fba20cb4078aac3fedbcd604d5a"
+        },
+        {
+          "name": "variables.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/azure/azure-vnet-injection-uc/tf/variables.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/azure-standard/variables.tf",
+          "sha256": "c1130dd8c596dd1ce65143c16f7d7f506aceb0ac24656c2cd0012e3021ce8e9d"
+        },
+        {
+          "name": "versions.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/azure/azure-vnet-injection-uc/tf/versions.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/azure-standard/versions.tf",
+          "sha256": "fe2e26ec7029f7be5c115432af8c404f70bb611c16fb2733a13abd2b65ddc7e0"
+        }
+      ]
+    },
+    "azure-privatelink": {
+      "label": "Azure Classic Private Link",
+      "provider": "azure",
+      "privateLink": true,
+      "upstreamPath": "workspace-setup/terraform-examples/azure/azure-privatelink-classic",
+      "sourceUrl": "https://github.com/databricks-solutions/technical-services-solutions/tree/a39695e356ce512c86b157fffb7286dfc0130d48/workspace-setup/terraform-examples/azure/azure-privatelink-classic",
+      "files": [
+        {
+          "name": ".terraform.lock.hcl",
+          "upstreamPath": "workspace-setup/terraform-examples/azure/azure-privatelink-classic/tf/.terraform.lock.hcl",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/azure-privatelink/.terraform.lock.hcl",
+          "sha256": "0a550021c5b1daec034965a484658a124d0820b1bc3d1c4071fcc33f432b7139"
+        },
+        {
+          "name": "azure.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/azure/azure-privatelink-classic/tf/azure.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/azure-privatelink/azure.tf",
+          "sha256": "0f3d113c5e7267f70dcfb20e06e9970bbab908318739d6eb49c95cb0e504c078"
+        },
+        {
+          "name": "databricks.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/azure/azure-privatelink-classic/tf/databricks.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/azure-privatelink/databricks.tf",
+          "sha256": "fb009e2d0ff26cbf716583dcc3a08d187bc4894cfe681976e9324616d9272f65"
+        },
+        {
+          "name": "dns_zones.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/azure/azure-privatelink-classic/tf/dns_zones.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/azure-privatelink/dns_zones.tf",
+          "sha256": "9b8ce2d8492ae422799bd188443c013d0fc1b1bee5e739391c9e58b5b82acd21"
+        },
+        {
+          "name": "main.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/azure/azure-privatelink-classic/tf/main.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/azure-privatelink/main.tf",
+          "sha256": "c5ced11dd9b565eb27d4ca4b15aec0fff8414e612cd86db39c418bf2972f9f64"
+        },
+        {
+          "name": "ncc.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/azure/azure-privatelink-classic/tf/ncc.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/azure-privatelink/ncc.tf",
+          "sha256": "31cdc2327cf31b4f485b65d8ca2c6a0771deb6c286e10994d8ee776ddb32d892"
+        },
+        {
+          "name": "network.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/azure/azure-privatelink-classic/tf/network.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/azure-privatelink/network.tf",
+          "sha256": "502dea0a919cddba465415b07602fefb599be053bb89ff3f60b0c4b0eebd651a"
+        },
+        {
+          "name": "outputs.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/azure/azure-privatelink-classic/tf/outputs.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/azure-privatelink/outputs.tf",
+          "sha256": "e112c79eb41b0e88e2516c740f8a7e49b5326f6fc4c36a85ca7e5fb0fd295160"
+        },
+        {
+          "name": "pe_backend.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/azure/azure-privatelink-classic/tf/pe_backend.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/azure-privatelink/pe_backend.tf",
+          "sha256": "4d03952d5764df943b10e955a7ea041c9a1656aae0ac0908cfe77283a44c93f3"
+        },
+        {
+          "name": "pe_dbfs.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/azure/azure-privatelink-classic/tf/pe_dbfs.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/azure-privatelink/pe_dbfs.tf",
+          "sha256": "fa79ef9ff273a13fdf068cb0fccbd5dfe4a6009053bf426b671011c63447de65"
+        },
+        {
+          "name": "providers.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/azure/azure-privatelink-classic/tf/providers.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/azure-privatelink/providers.tf",
+          "sha256": "14aad177ecb07088a793466d4a822c7057ee54a0974f8ff464d41160d604c316"
+        },
+        {
+          "name": "service_endpoint_policy.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/azure/azure-privatelink-classic/tf/service_endpoint_policy.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/azure-privatelink/service_endpoint_policy.tf",
+          "sha256": "577354a954b07e5ed64ea4e16b9b9b8c8fe71141ae95a7194a58dbc19bfcb3b4"
+        },
+        {
+          "name": "variables.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/azure/azure-privatelink-classic/tf/variables.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/azure-privatelink/variables.tf",
+          "sha256": "e6ab38eac57f079ec86399861577fdfbe72bff8ca2007cd6188761736bd3de29"
+        },
+        {
+          "name": "versions.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/azure/azure-privatelink-classic/tf/versions.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/azure-privatelink/versions.tf",
+          "sha256": "30a5c4ccd6f9914ee3059fe08a06ae16f7e8e328db373f17b0fdcf751c79561d"
+        }
+      ]
+    },
+    "gcp-standard": {
+      "label": "GCP BYOVPC Standalone",
+      "provider": "gcp",
+      "privateLink": false,
+      "upstreamPath": "workspace-setup/terraform-examples/gcp/gcp-byovpc-standalone",
+      "sourceUrl": "https://github.com/databricks-solutions/technical-services-solutions/tree/a39695e356ce512c86b157fffb7286dfc0130d48/workspace-setup/terraform-examples/gcp/gcp-byovpc-standalone",
+      "files": [
+        {
+          "name": "databricks.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/gcp/gcp-byovpc-standalone/databricks.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/gcp-standard/databricks.tf",
+          "sha256": "2eee0ffa1a7e5d2efe75c77765c0ae5565ac332c63ef633e8a6ef8e2c01e8de1"
+        },
+        {
+          "name": "network.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/gcp/gcp-byovpc-standalone/network.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/gcp-standard/network.tf",
+          "sha256": "0f92966a0fc44f6e28da400e7f41b8a354856fc3c3a959558ba23b5166f6c106"
+        },
+        {
+          "name": "outputs.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/gcp/gcp-byovpc-standalone/outputs.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/gcp-standard/outputs.tf",
+          "sha256": "ae0d3ae3d6e561c8c2b76a073e11391d199261ad61eab14859f28996cac5ba68"
+        },
+        {
+          "name": "providers.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/gcp/gcp-byovpc-standalone/providers.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/gcp-standard/providers.tf",
+          "sha256": "059ed9605e746d9e5bf7d85619c4b095d7579a54dd34c4dcb137408ca79bb853"
+        },
+        {
+          "name": "variables.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/gcp/gcp-byovpc-standalone/variables.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/gcp-standard/variables.tf",
+          "sha256": "c2cb434c439fbd3aa031f0c8629d1255aa5b724980e6b79c039a0fe894841efc"
+        },
+        {
+          "name": "versions.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/gcp/gcp-byovpc-standalone/versions.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/gcp-standard/versions.tf",
+          "sha256": "8e33562e18f5904bfb65d49e0d4cbaa210e621766b70177c371f46c20ef7778e"
+        }
+      ]
+    },
+    "gcp-privatelink": {
+      "label": "GCP BYOVPC with Back-end Private Service Connect",
+      "provider": "gcp",
+      "privateLink": true,
+      "upstreamPath": "workspace-setup/terraform-examples/gcp/gcp-byovpc-classic-psc",
+      "sourceUrl": "https://github.com/databricks-solutions/technical-services-solutions/tree/a39695e356ce512c86b157fffb7286dfc0130d48/workspace-setup/terraform-examples/gcp/gcp-byovpc-classic-psc",
+      "files": [
+        {
+          "name": "databricks.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/gcp/gcp-byovpc-classic-psc/tf/databricks.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/gcp-privatelink/databricks.tf",
+          "sha256": "f9e9503cf985bf05ad9a831b09845a02c90fa96f7c96bb82c0786448c20131b5"
+        },
+        {
+          "name": "dns.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/gcp/gcp-byovpc-classic-psc/tf/dns.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/gcp-privatelink/dns.tf",
+          "sha256": "54f03b57c6c877f59abcfe3cdbc5ea5d139e4ae2e228527d7989c487dc76414d"
+        },
+        {
+          "name": "network.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/gcp/gcp-byovpc-classic-psc/tf/network.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/gcp-privatelink/network.tf",
+          "sha256": "90057c29134bcbef654ae9e1401a767446e1b90f099ef122112e5ed5533d69d4"
+        },
+        {
+          "name": "outputs.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/gcp/gcp-byovpc-classic-psc/tf/outputs.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/gcp-privatelink/outputs.tf",
+          "sha256": "da6d202679b9f356402a1ca94655c317e02316d51eed91114d8457ffa92821fc"
+        },
+        {
+          "name": "providers.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/gcp/gcp-byovpc-classic-psc/tf/providers.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/gcp-privatelink/providers.tf",
+          "sha256": "9a4af7fec2a51c41f44142cbc985cccdd0aaaa7b1df1ce1553bf7365bc477066"
+        },
+        {
+          "name": "psc.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/gcp/gcp-byovpc-classic-psc/tf/psc.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/gcp-privatelink/psc.tf",
+          "sha256": "157a17971a35ff193bf60f19a6de545d863bdf9c3714b1f8cef340ad63854ac8"
+        },
+        {
+          "name": "variables.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/gcp/gcp-byovpc-classic-psc/tf/variables.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/gcp-privatelink/variables.tf",
+          "sha256": "200e94c19817d69568a08122e8901e9eb78e44181fd62bf62d2f4057c60c5e63"
+        },
+        {
+          "name": "versions.tf",
+          "upstreamPath": "workspace-setup/terraform-examples/gcp/gcp-byovpc-classic-psc/tf/versions.tf",
+          "artifactPath": "a39695e356ce512c86b157fffb7286dfc0130d48/gcp-privatelink/versions.tf",
+          "sha256": "424df2f0c74986d9792c0fbb360bba65eea265cb5999245aca195c54837e3ede"
+        }
+      ]
+    }
+  }
+}

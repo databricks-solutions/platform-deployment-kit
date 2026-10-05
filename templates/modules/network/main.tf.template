@@ -1,0 +1,70 @@
+# ============================================================================
+# Network Module - Main Configuration
+# ============================================================================
+#
+# PURPOSE:
+#   This is a Terraform module that encapsulates network infrastructure configuration.
+#   Modules are reusable components that can be called from other Terraform
+#   configurations. This module handles all networking resources (VPC/VNet, subnets,
+#   security groups, etc.) in a provider-agnostic way.
+#
+# KEY CONCEPTS FOR BEGINNERS:
+#   - Modules: Reusable Terraform configurations that can be called like functions
+#   - Module structure: Similar to root modules (variables, resources, outputs)
+#   - Module benefits: Reusability, organization, abstraction
+#   - Module usage: Called from root module using module blocks
+#   - Provider abstraction: This module works across AWS, Azure, and GCP
+#
+# TERRAFORM DOCUMENTATION:
+#   - Modules: https://developer.hashicorp.com/terraform/language/modules
+#   - Module Composition: https://developer.hashicorp.com/terraform/language/modules/develop
+#   - Module Structure: https://developer.hashicorp.com/terraform/language/modules/develop/structure
+#
+# HOW MODULES WORK:
+#   1. This module defines inputs (variables) and outputs
+#   2. Root modules call this module: module "network" { source = "./modules/network" }
+#   3. Root modules pass values to module variables
+#   4. Module creates resources and returns outputs
+#   5. Root modules can use module outputs (e.g., VPC ID, subnet IDs)
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# NETWORK INFRASTRUCTURE CONFIGURATION
+# ----------------------------------------------------------------------------
+# This module would contain all networking resources:
+# - VPC/VNet creation and configuration
+# - Subnets (public and private) across availability zones
+# - Internet Gateway / NAT Gateway (for public internet access)
+# - Security Groups / Network Security Groups (for access control)
+# - Route Tables (for network routing)
+# - VPC Endpoints / Private Endpoints (for private service access)
+#
+# The actual implementation would vary based on the cloud provider:
+# - AWS: Uses aws_vpc, aws_subnet, aws_internet_gateway, aws_security_group
+# - Azure: Uses azurerm_virtual_network, azurerm_subnet, azurerm_network_security_group
+# - GCP: Uses google_compute_network, google_compute_subnetwork, google_compute_firewall
+#
+# Example structure (provider-specific):
+# # AWS example:
+# resource "aws_vpc" "this" {
+#   cidr_block = var.vpc_cidr
+#   # ... configuration
+# }
+#
+# # Azure example:
+# resource "azurerm_virtual_network" "this" {
+#   name                = "${var.project_prefix}-vnet"
+#   address_space       = [var.vpc_cidr]
+#   # ... configuration
+# }
+#
+# # GCP example:
+# resource "google_compute_network" "this" {
+#   name                    = "${var.project_prefix}-vpc"
+#   auto_create_subnetworks = false
+#   # ... configuration
+# }
+
+# Note: This is a module placeholder. The actual resources would be configured
+# based on the cloud provider (AWS, Azure, or GCP) and specific requirements.
+# The module abstracts provider differences behind a common interface.
