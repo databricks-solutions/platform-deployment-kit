@@ -3458,6 +3458,14 @@ body {
   color: #0b2026 !important;
 }
 
+/* Muted (grey) step marker for optional / supplementary steps */
+.download-page .step-number.step-number-muted {
+  background: var(--bg-elevated) !important;
+  color: var(--text-secondary) !important;
+  border: 1px solid var(--border-strong);
+  box-shadow: none;
+}
+
 .download-page .alert-info {
   background: var(--bg-elevated) !important;
   border: 1px solid var(--border-default);

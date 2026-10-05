@@ -3783,6 +3783,30 @@ export DATABRICKS_CLIENT_SECRET="&lt;client-secret&gt;"`;
                   </div>
 
                   <div class="step-item d-flex mb-4">
+                    <div class="step-number step-number-muted rounded-circle d-flex align-items-center justify-content-center me-3">
+                      <i class="bi bi-shield-check" aria-hidden="true"></i>
+                    </div>
+                    <div class="step-content">
+                      <h6 class="fw-bold mb-2">
+                        Verify Required Permissions
+                        <span class="badge bg-secondary text-uppercase ms-2">Optional</span>
+                      </h6>
+                      <p class="mb-3">
+                        <strong>This step is optional.</strong> Right after authenticating above, you can confirm that the
+                        cloud identity you just signed in with has every permission the deployment needs.
+                      </p>
+                      <a href="https://github.com/databricks-solutions/technical-services-solutions/tree/main/workspace-setup/terraform-checker"
+                         class="btn btn-outline-secondary"
+                         target="_blank"
+                         rel="noopener noreferrer">
+                        <i class="bi bi-shield-check me-2" aria-hidden="true"></i>
+                        Open the Terraform Permissions Checker
+                        <i class="bi bi-box-arrow-up-right ms-2" aria-hidden="true"></i>
+                      </a>
+                    </div>
+                  </div>
+
+                  <div class="step-item d-flex mb-4">
                     <div class="step-number bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
                       4
                     </div>
@@ -3834,14 +3858,17 @@ export DATABRICKS_CLIENT_SECRET="&lt;client-secret&gt;"`;
                   </div>
 
                   <div class="step-item d-flex mb-4">
-                    <div class="step-number bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
-                      7
+                    <div class="step-number step-number-muted rounded-circle d-flex align-items-center justify-content-center me-3">
+                      AI
                     </div>
                     <div class="step-content">
-                      <h6 class="fw-bold mb-2">Extend with AI Platform Kit</h6>
-                      <p class="mb-2">Use AI Platform Kit for agentic development of additional Terraform and infrastructure resources.</p>
+                      <h6 class="fw-bold mb-2">
+                        Extend with AI Platform Kit
+                        <span class="badge bg-secondary text-uppercase ms-2">Optional</span>
+                      </h6>
+                      <p class="mb-2"><strong>This step is optional.</strong> Use AI Platform Kit for agentic development of additional Terraform and infrastructure resources.</p>
                       <a href="https://github.com/databricks-solutions/ai-platform-kit"
-                         class="btn btn-outline-primary"
+                         class="btn btn-outline-secondary"
                          target="_blank"
                          rel="noopener noreferrer">
                         Explore AI Platform Kit
