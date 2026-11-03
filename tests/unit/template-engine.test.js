@@ -267,6 +267,40 @@ describe('TemplateEngine', () => {
       });
     });
 
+    describe('GCP existing VPC and metastore mappings', () => {
+      it('maps existing VPC names and attach metastore values', () => {
+        const vars = engine.prepareVariables({
+          provider: 'gcp',
+          project_id: 'svc-project',
+          project_prefix: 'gcp-ws',
+          region: 'us-central1',
+          create_new_vpc: false,
+          existing_vpc_id: 'shared-vpc',
+          existing_subnet_name: 'dbx-subnet',
+          vpc_network_project_id: 'host-project',
+          metastore_mode: 'existing',
+          metastore_id: 'meta-123',
+        });
+        expect(vars.vpc_name).toBe('shared-vpc');
+        expect(vars.subnet_name).toBe('dbx-subnet');
+        expect(vars.vpc_network_project_id).toBe('host-project');
+        expect(vars.metastore_id).toBe('meta-123');
+        expect(vars.metastore_name).toBe('');
+        expect(vars.vpc_name_hcl).toBe('"shared-vpc"');
+        expect(vars.metastore_id_hcl).toBe('"meta-123"');
+      });
+
+      it('defaults a new metastore name from the workspace prefix', () => {
+        const vars = engine.prepareVariables({
+          provider: 'gcp',
+          project_prefix: 'gcp-ws',
+          metastore_mode: 'create',
+        });
+        expect(vars.metastore_id).toBe('');
+        expect(vars.metastore_name).toBe('gcp-ws-metastore');
+      });
+    });
+
     describe('Non-AWS defaults', () => {
       it('defaults privatelink_subnet_mode to "terraform_managed" for non-AWS provider', () => {
         const vars = engine.prepareVariables({

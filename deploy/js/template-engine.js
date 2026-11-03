@@ -330,10 +330,18 @@ class TemplateEngine {
     // either the standalone BYOVPC topology or the Back-end PSC topology.
     if (config.provider === 'gcp') {
       const hclString = value => JSON.stringify(String(value || ''));
+      const useExistingMetastore = config.metastore_mode === 'existing';
       vars.google_service_account_email = config.google_service_account_email || '';
       vars.databricks_account_id = config.databricks_account_id || '';
       vars.databricks_admin_user = config.databricks_admin_user || '';
       vars.subnet_cidr = config.subnet_cidr || '';
+      vars.vpc_network_project_id = config.vpc_network_project_id || config.project_id || '';
+      vars.vpc_name = config.existing_vpc_id || config.existing_vpc_name || '';
+      vars.subnet_name = config.existing_subnet_name || '';
+      vars.metastore_id = useExistingMetastore ? (config.metastore_id || '') : '';
+      vars.metastore_name = useExistingMetastore
+        ? ''
+        : (config.metastore_name || `${config.project_prefix || 'databricks'}-metastore`);
       vars.google_service_account_email_hcl = hclString(vars.google_service_account_email);
       vars.google_project_name_hcl = hclString(config.project_id);
       vars.google_region_hcl = hclString(config.region);
@@ -344,6 +352,11 @@ class TemplateEngine {
       vars.psc_subnet_cidr_hcl = hclString(config.psc_subnet_cidr);
       vars.workspace_service_attachment_hcl = hclString(config.workspace_service_attachment);
       vars.relay_service_attachment_hcl = hclString(config.relay_service_attachment);
+      vars.vpc_network_project_id_hcl = hclString(vars.vpc_network_project_id);
+      vars.vpc_name_hcl = hclString(vars.vpc_name);
+      vars.subnet_name_hcl = hclString(vars.subnet_name);
+      vars.metastore_id_hcl = hclString(vars.metastore_id);
+      vars.metastore_name_hcl = hclString(vars.metastore_name);
       vars.gcp_nat_summary = vars.enable_nat_gateway ? 'Cloud NAT created' : 'No Cloud NAT';
       vars.terraform_source_commit = config.terraform_source_commit || '';
       vars.terraform_source_ref = config.terraform_source_ref || 'main';

@@ -9,14 +9,22 @@ databricks_account_id     = {{{databricks_account_id_hcl}}}
 databricks_workspace_name = {{{databricks_workspace_name_hcl}}}
 databricks_admin_user     = {{{databricks_admin_user_hcl}}}
 
+{{#if create_new_vpc}}
 subnet_cidr = {{{subnet_cidr_hcl}}}
 {{#if enable_private_link}}
 psc_subnet_cidr = {{{psc_subnet_cidr_hcl}}}
 
 create_nat_gateway = {{{enable_nat_gateway}}}
+{{/if}}
+{{else}}
+vpc_network_project_id = {{{vpc_network_project_id_hcl}}}
+vpc_name               = {{{vpc_name_hcl}}}
+subnet_name            = {{{subnet_name_hcl}}}
+{{/if}}
 
-# Unity Catalog assignment is intentionally left unset.
-metastore_id = ""
+metastore_id   = {{{metastore_id_hcl}}}
+metastore_name = {{{metastore_name_hcl}}}
+{{#if enable_private_link}}
 
 workspace_service_attachment = {{{workspace_service_attachment_hcl}}}
 relay_service_attachment     = {{{relay_service_attachment_hcl}}}

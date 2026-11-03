@@ -44,6 +44,22 @@ class HelpContent {
           { label: 'Create a Unity Catalog metastore on AWS', url: 'https://docs.databricks.com/aws/en/data-governance/unity-catalog/create-metastore' }
         ]
       },
+      gcp: {
+        title: 'Unity Catalog metastore',
+        overview: 'A metastore is the top-level Unity Catalog container for data and AI assets in a region. The workspace must be assigned to one metastore.',
+        whenToUse: [
+          'Create a new metastore when the account does not already have an appropriate regional metastore.',
+          'Attach an existing metastore when governance is already centralized in the selected region.'
+        ],
+        considerations: [
+          'An existing metastore must belong to the same Databricks account and be available for the workspace region.',
+          'Creating a metastore fails if a Unity Catalog metastore already exists for the region.',
+          'Creating a metastore requires the account-level permissions used by the generated Terraform project.'
+        ],
+        links: [
+          { label: 'Create a Unity Catalog metastore on GCP', url: 'https://docs.databricks.com/gcp/en/data-governance/unity-catalog/create-metastore' }
+        ]
+      },
       azure: {
         title: 'Unity Catalog metastore',
         overview: 'A metastore is the top-level Unity Catalog container for data and AI assets in a region. The standard Azure flow assigns the workspace to a new or existing metastore.',
@@ -74,6 +90,22 @@ class HelpContent {
         ],
         links: [
           { label: 'Customer-managed VPC requirements', url: 'https://docs.databricks.com/aws/en/security/network/classic/customer-managed-vpc' }
+        ]
+      },
+      gcp: {
+        title: 'New or existing VPC',
+        overview: 'Choose whether Terraform creates a dedicated VPC and subnet or attaches the workspace to a VPC and subnet you already manage.',
+        whenToUse: [
+          'Create a new VPC for an isolated deployment managed entirely by this Terraform project.',
+          'Use an existing VPC when networking is centrally managed, including Shared VPC host projects.'
+        ],
+        considerations: [
+          'Existing-VPC mode requires the VPC name, subnet name, and the GCP project that owns the VPC.',
+          'The existing subnet must be in the selected workspace region and should have Private Google Access enabled.',
+          'Back-end Private Service Connect requires a new dedicated VPC and disables this choice.'
+        ],
+        links: [
+          { label: 'Customer-managed VPC on GCP', url: 'https://docs.databricks.com/gcp/en/security/network/classic/customer-managed-vpc' }
         ]
       },
       azure: {

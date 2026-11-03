@@ -19,7 +19,7 @@ test.describe('GCP critical journeys', () => {
     await FormHelpers.selectProvider(page, 'gcp');
   });
 
-  test('shows the fixed standalone BYOVPC topology', async ({ page }) => {
+  test('shows the standalone BYOVPC topology with VPC and metastore choices', async ({ page }) => {
     for (const name of [
       'project_prefix', 'project_id', 'google_service_account_email',
       'databricks_account_id', 'databricks_admin_user', 'subnet_cidr'
@@ -28,9 +28,12 @@ test.describe('GCP critical journeys', () => {
     }
     await expect(page.locator('#gcp-standard-network-info')).toBeVisible();
     await expect(page.locator('[name="pricing_tier"]')).toHaveCount(0);
-    await expect(page.locator('#create_new_vpc')).toHaveCount(0);
+    await expect(page.locator('#create_new_vpc')).toBeVisible();
+    await expect(page.locator('#create_new_vpc')).toBeChecked();
     await expect(page.locator('#enable_private_link')).toBeVisible();
     await expect(page.locator('#nat-gateway-section')).toBeHidden();
+    await expect(page.locator('#unity-catalog-configuration')).toBeVisible();
+    await expect(page.locator('#gcp-existing-vpc-section')).toBeHidden();
   });
 
   test('summarizes and downloads the generated Terraform project', async ({ page }) => {
@@ -59,8 +62,52 @@ test.describe('GCP critical journeys', () => {
     expect(tfvars).toContain('google_project_name          = "gcp-download-project"');
     expect(tfvars).toContain('databricks_workspace_name = "gcp-download"');
     expect(tfvars).toContain('subnet_cidr = "10.30.0.0/20"');
+    expect(tfvars).toContain('metastore_id   = ""');
+    expect(tfvars).toContain('metastore_name = "gcp-download-metastore"');
     expect(tfvars).not.toContain('private_service_connect');
     expect(await archive.file('network.tf').async('string')).toContain('google_compute_router_nat');
+  });
+
+  test('downloads an existing-VPC project attached to a metastore', async ({ page }) => {
+    await FormHelpers.fillGcpConfig(page, {
+      project_prefix: 'gcp-existing',
+      region: 'us-east1',
+      project_id: 'gcp-service-project',
+      google_service_account_email: 'creator@gcp-service-project.iam.gserviceaccount.com',
+      databricks_account_id: '66666666-6666-4666-8666-666666666666',
+      databricks_admin_user: 'admin+existing@example.com'
+    });
+    await FormHelpers.fillNetworkConfig(page, {
+      create_new_vpc: false,
+      existing_vpc_id: 'shared-databricks-vpc',
+      existing_subnet_name: 'databricks-subnet',
+      vpc_network_project_id: 'gcp-host-project'
+    });
+    await page.locator('#metastore_mode_existing').check();
+    await expect(page.locator('#existing-metastore-section')).toBeVisible();
+    await page.locator('#metastore_id').fill('metastore-gcp-1234');
+    await expect(page.locator('#gcp-existing-vpc-section')).toBeVisible();
+    await expect(page.locator('#gcp-new-vpc-fields')).toBeHidden();
+    await FormHelpers.submitConfigForm(page);
+
+    await expect(page).toHaveURL(/.*#\/summary/);
+    await expect(page.getByText('Use Existing', { exact: true })).toBeVisible();
+    await expect(page.getByText('shared-databricks-vpc')).toBeVisible();
+    await expect(page.getByText('metastore-gcp-1234')).toBeVisible();
+
+    const { archive } = await downloadProject(page);
+    expect(Object.keys(archive.files)).toEqual(expect.arrayContaining([
+      'databricks.tf', 'network.tf', 'providers.tf', 'variables.tf',
+      'terraform.tfvars', 'README.md'
+    ]));
+    expect(Object.keys(archive.files)).not.toEqual(expect.arrayContaining(['psc.tf']));
+    const tfvars = await archive.file('terraform.tfvars').async('string');
+    expect(tfvars).toContain('vpc_name               = "shared-databricks-vpc"');
+    expect(tfvars).toContain('subnet_name            = "databricks-subnet"');
+    expect(tfvars).toContain('vpc_network_project_id = "gcp-host-project"');
+    expect(tfvars).toContain('metastore_id   = "metastore-gcp-1234"');
+    expect(tfvars).not.toContain('subnet_cidr');
+    expect(await archive.file('network.tf').async('string')).toContain('google_compute_network');
   });
 
   test('downloads the Back-end PSC project without Cloud NAT', async ({ page }) => {
@@ -95,7 +142,8 @@ test.describe('GCP critical journeys', () => {
     expect(tfvars).toContain('create_nat_gateway = false');
     expect(tfvars).toContain('projects/general-prod-useast1-01/regions/us-east1/serviceAttachments/plproxy-psc-endpoint-all-ports');
     expect(tfvars).toContain('projects/prod-gcp-us-east1/regions/us-east1/serviceAttachments/ngrok-psc-endpoint');
-    expect(tfvars).toContain('metastore_id = ""');
+    expect(tfvars).toContain('metastore_id   = ""');
+    expect(tfvars).toContain('metastore_name = "gcp-private-metastore"');
     expect(await archive.file('psc.tf').async('string')).toContain('google_compute_forwarding_rule');
   });
 

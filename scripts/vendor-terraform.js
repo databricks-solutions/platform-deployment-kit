@@ -36,7 +36,8 @@ function prepareRepository(config) {
   const sourceOverride = process.env.TERRAFORM_SOURCE_DIR;
   if (sourceOverride) {
     const sourceDir = path.resolve(sourceOverride);
-    const commit = runGit(['rev-parse', config.ref], sourceDir).trim();
+    const sourceRef = process.env.TERRAFORM_SOURCE_REF || 'HEAD';
+    const commit = runGit(['rev-parse', sourceRef], sourceDir).trim();
     return { sourceDir, commit, cleanup: false };
   }
 

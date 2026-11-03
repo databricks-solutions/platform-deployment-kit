@@ -133,8 +133,10 @@ class FormHelpers {
       'subnet_cidr'
     ]) {
       const field = page.locator(`[name="${fieldName}"]`);
-      await field.fill(values[fieldName] || '');
-      await field.blur();
+      if (await field.isVisible().catch(() => false)) {
+        await field.fill(values[fieldName] || '');
+        await field.blur();
+      }
     }
 
     if (values.psc_subnet_cidr) {
@@ -167,6 +169,18 @@ class FormHelpers {
       const existingVpcField = page.locator('#existing_vpc_id');
       if (await existingVpcField.isVisible()) {
         await existingVpcField.fill(config.existing_vpc_id);
+      }
+    }
+    if (config.existing_subnet_name !== undefined && !config.create_new_vpc) {
+      const existingSubnetField = page.locator('#existing_subnet_name');
+      if (await existingSubnetField.isVisible().catch(() => false)) {
+        await existingSubnetField.fill(config.existing_subnet_name);
+      }
+    }
+    if (config.vpc_network_project_id !== undefined && !config.create_new_vpc) {
+      const hostProjectField = page.locator('#vpc_network_project_id');
+      if (await hostProjectField.isVisible().catch(() => false)) {
+        await hostProjectField.fill(config.vpc_network_project_id);
       }
     }
     

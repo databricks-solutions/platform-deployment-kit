@@ -1,4 +1,4 @@
-# Databricks GCP BYOVPC{{#if enable_private_link}} with Back-end Private Service Connect{{else}} Standalone Deployment{{/if}}
+# Databricks GCP BYOVPC{{#if enable_private_link}} with Back-end Private Service Connect{{else}}{{#if create_new_vpc}} Standalone Deployment{{else}} Existing VPC Deployment{{/if}}{{/if}}
 
 This ready-to-deploy Terraform project was generated from your selections.
 
@@ -11,6 +11,7 @@ This ready-to-deploy Terraform project was generated from your selections.
 | Workspace | `{{project_prefix}}` |
 | Google service account | `{{google_service_account_email}}` |
 | Workspace admin | `{{databricks_admin_user}}` |
+{{#if create_new_vpc}}
 | Subnet CIDR | `{{subnet_cidr}}` |
 {{#if enable_private_link}}
 | PSC endpoint subnet CIDR | `{{psc_subnet_cidr}}` |
@@ -20,6 +21,16 @@ This ready-to-deploy Terraform project was generated from your selections.
 {{else}}
 | Network | New VPC, one regional subnet, Cloud Router, and Cloud NAT |
 {{/if}}
+{{else}}
+| Existing VPC | `{{vpc_name}}` |
+| Existing subnet | `{{subnet_name}}` |
+| VPC host project | `{{vpc_network_project_id}}` |
+{{/if}}
+{{#if metastore_id}}
+| Unity Catalog | Attach existing metastore `{{metastore_id}}` |
+{{else}}
+| Unity Catalog | Create metastore `{{metastore_name}}` |
+{{/if}}
 
 ## Prerequisites
 
@@ -27,7 +38,7 @@ This ready-to-deploy Terraform project was generated from your selections.
 - Google Cloud CLI (`gcloud`)
 - The Compute Engine API enabled in `{{project_id}}`{{#if enable_private_link}}, plus the Cloud DNS API{{/if}}
 - The caller granted `roles/iam.serviceAccountTokenCreator` on `{{google_service_account_email}}`
-- `{{google_service_account_email}}` with project permissions required to create the VPC, subnets,{{#if enable_private_link}} PSC endpoints, DNS,{{/if}} networking resources, and Databricks workspace
+- `{{google_service_account_email}}` with project permissions required to {{#if create_new_vpc}}create the VPC, subnets,{{#if enable_private_link}} PSC endpoints, DNS,{{/if}} networking resources, and Databricks workspace{{else}}create the Databricks workspace and read the existing VPC and subnet{{/if}}
 - The same service account added to the Databricks account and assigned the Account Admin role
 - `{{databricks_admin_user}}` already present as a Databricks account user
 
@@ -67,14 +78,14 @@ terraform output -raw workspace_url
 ## Resources created
 
 {{#if enable_private_link}}
-The deployment creates a VPC, node and PSC subnets with Private Google Access, two Back-end PSC endpoints, private DNS records, a Databricks MWS network and private access settings, a workspace, and workspace admin membership. {{#if enable_nat_gateway}}Cloud Router and Cloud NAT provide general outbound connectivity.{{else}}Cloud NAT is disabled, so workloads need an alternate route for general internet egress.{{/if}}
+The deployment creates a VPC, node and PSC subnets with Private Google Access, two Back-end PSC endpoints, private DNS records, a Databricks MWS network and private access settings, a workspace, Unity Catalog metastore assignment, and workspace admin membership. {{#if enable_nat_gateway}}Cloud Router and Cloud NAT provide general outbound connectivity.{{else}}Cloud NAT is disabled, so workloads need an alternate route for general internet egress.{{/if}}
 
-The generated configuration does not assign a Unity Catalog metastore. The PSC service attachments are selected for `{{region}}`; confirm current regional values in the [Databricks regional infrastructure documentation](https://docs.databricks.com/gcp/en/resources/ip-domain-region#psc) before deployment.
+The PSC service attachments are selected for `{{region}}`; confirm current regional values in the [Databricks regional infrastructure documentation](https://docs.databricks.com/gcp/en/resources/ip-domain-region#psc) before deployment.
+{{else}}{{#if create_new_vpc}}
+The deployment creates a VPC, a subnet with Private Google Access, Cloud Router, Cloud NAT, a Databricks MWS network, a workspace, a Unity Catalog metastore (or assignment to an existing metastore), and workspace admin membership. Databricks creates the workspace cloud-storage buckets.
 {{else}}
-The deployment creates a VPC, a subnet with Private Google Access, Cloud Router, Cloud NAT, a Databricks MWS network, a workspace, and workspace admin membership. Databricks creates the workspace cloud-storage buckets.
-
-This deployment does not configure Private Service Connect or Unity Catalog.
-{{/if}}
+The deployment creates a Databricks MWS network that references the existing VPC and subnet, a workspace, a Unity Catalog metastore (or assignment to an existing metastore), and workspace admin membership. The existing VPC and subnet are not modified.
+{{/if}}{{/if}}
 
 ## Destroy
 
@@ -82,7 +93,7 @@ This deployment does not configure Private Service Connect or Unity Catalog.
 terraform destroy
 ```
 
-If the VPC remains in use by Databricks-managed firewall rules, complete the Databricks workspace teardown before retrying.
+If the VPC remains in use by Databricks-managed firewall rules, complete the Databricks workspace teardown before retrying. An existing metastore attached by ID is not destroyed.
 
 ---
 
