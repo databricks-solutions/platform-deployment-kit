@@ -63,6 +63,10 @@ describe('TemplateLoader._externalVariantId', () => {
     expect(loader._externalVariantId('aws', true)).toBe('aws-privatelink');
     expect(loader._externalVariantId('AZURE', false)).toBe('azure-standard');
     expect(loader._externalVariantId('gcp', true)).toBe('gcp-privatelink');
+    expect(loader._externalVariantId('gcp', false)).toBe('gcp-standard');
+    expect(loader._externalVariantId('gcp', false, true)).toBe('gcp-standard');
+    expect(loader._externalVariantId('gcp', false, false)).toBe('gcp-existing');
+    expect(loader._externalVariantId('gcp', true, false)).toBe('gcp-privatelink');
   });
 
   test('rejects unsupported or missing providers', () => {

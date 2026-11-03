@@ -38,6 +38,13 @@
       "path": "workspace-setup/terraform-examples/gcp/gcp-byovpc-standalone",
       "terraformSubdirectory": "."
     },
+    "gcp-existing": {
+      "label": "GCP BYOVPC Shared / Existing VPC",
+      "provider": "gcp",
+      "privateLink": false,
+      "path": "workspace-setup/terraform-examples/gcp/gcp-byovpc-shared-vpc",
+      "terraformSubdirectory": "."
+    },
     "gcp-privatelink": {
       "label": "GCP BYOVPC with Back-end Private Service Connect",
       "provider": "gcp",

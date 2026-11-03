@@ -28,8 +28,9 @@ class TerraformGenerator {
 
     if (provider === 'aws' || provider === 'azure' || provider === 'gcp') {
       const enablePrivateLink = Boolean(config.enable_private_link);
-      const externalFiles = await this.loader.loadExternalTerraformFiles(provider, enablePrivateLink);
-      const metadata = this.loader.getExternalTerraformMetadata?.(provider, enablePrivateLink) || {};
+      const createNewVpc = config.create_new_vpc !== false && config.create_new_vpc !== 'false';
+      const externalFiles = await this.loader.loadExternalTerraformFiles(provider, enablePrivateLink, createNewVpc);
+      const metadata = this.loader.getExternalTerraformMetadata?.(provider, enablePrivateLink, createNewVpc) || {};
       const variables = this.engine.prepareVariables({
         ...config,
         provider,

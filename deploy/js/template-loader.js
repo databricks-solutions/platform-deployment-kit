@@ -17,9 +17,9 @@ class TemplateLoader {
    * @param {boolean} enablePrivateLink - Select the provider's Private Link variant
    * @returns {Promise<Array<{name: string, content: string}>>}
    */
-  async loadExternalTerraformFiles(provider, enablePrivateLink = false) {
+  async loadExternalTerraformFiles(provider, enablePrivateLink = false, createNewVpc = true) {
     const manifest = await this._loadExternalManifest();
-    const variantId = this._externalVariantId(provider, enablePrivateLink);
+    const variantId = this._externalVariantId(provider, enablePrivateLink, createNewVpc);
     const variant = manifest.variants?.[variantId];
     if (!variant) throw new Error(`Terraform source manifest does not contain ${variantId}`);
 
@@ -33,9 +33,9 @@ class TemplateLoader {
     }));
   }
 
-  getExternalTerraformMetadata(provider, enablePrivateLink = false) {
+  getExternalTerraformMetadata(provider, enablePrivateLink = false, createNewVpc = true) {
     if (!this.externalManifest) return null;
-    const variantId = this._externalVariantId(provider, enablePrivateLink);
+    const variantId = this._externalVariantId(provider, enablePrivateLink, createNewVpc);
     const variant = this.externalManifest.variants?.[variantId];
     if (!variant) return null;
     return {
@@ -45,10 +45,13 @@ class TemplateLoader {
     };
   }
 
-  _externalVariantId(provider, enablePrivateLink) {
+  _externalVariantId(provider, enablePrivateLink, createNewVpc = true) {
     const normalizedProvider = String(provider || '').toLowerCase();
     if (!['aws', 'azure', 'gcp'].includes(normalizedProvider)) {
       throw new Error(`External Terraform is not configured for provider ${provider || '(missing)'}`);
+    }
+    if (normalizedProvider === 'gcp' && !enablePrivateLink && createNewVpc === false) {
+      return 'gcp-existing';
     }
     return `${normalizedProvider}-${enablePrivateLink ? 'privatelink' : 'standard'}`;
   }
