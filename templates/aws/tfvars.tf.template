@@ -1,0 +1,51 @@
+# Generated variables for the Databricks AWS deployment.
+# Databricks account ID remains outside this file:
+# export TF_VAR_databricks_account_id="<your-account-id>"
+
+# Databricks and AWS
+prefix          = "{{project_prefix}}"
+resource_prefix = "{{project_prefix}}"
+region          = "{{region}}"
+tags = {{{common_tags}}}
+
+# Unity Catalog metastore required by the workspace deployment
+metastore_id   = "{{metastore_id}}"
+metastore_name = "{{metastore_name}}"
+
+{{#if enable_private_link}}
+# Classic Back-end PrivateLink always creates an Enterprise workspace.
+network_configuration     = "{{aws_network_configuration}}"
+nat_gateway_mode          = "{{aws_nat_gateway_mode}}"
+{{#if is_fully_private}}
+endpoint_subnet_cidr      = "{{endpoint_subnet_cidr}}"
+{{/if}}
+vpc_id                    = "{{aws_vpc_id}}"
+vpc_cidr_range            = "{{vpc_cidr}}"
+availability_zones        = {{{aws_availability_zones}}}
+subnet_ids                = {{{aws_subnet_ids}}}
+private_subnets_cidr      = {{{byovpc_private_subnets_cidr}}}
+public_subnets_cidr       = {{{byovpc_public_subnets_cidr}}}
+security_group_ids        = {{{aws_security_group_ids}}}
+backend_rest_aws_vpce_id  = "{{backend_rest_aws_vpce_id}}"
+backend_relay_aws_vpce_id = "{{backend_relay_aws_vpce_id}}"
+sg_egress_ports           = [443, 2443, 5432, 6666, 8443, 8444, 8445, 8446, 8447, 8448, 8449, 8450, 8451]
+additional_egress_ips     = []
+{{else}}
+pricing_tier            = "{{pricing_tier}}"
+nat_gateway_mode        = "{{aws_nat_gateway_mode}}"
+vpc_id                  = "{{aws_vpc_id}}"
+vpc_cidr_range          = "{{vpc_cidr}}"
+availability_zones      = {{{aws_availability_zones}}}
+subnet_ids              = {{{aws_subnet_ids}}}
+private_subnets_cidr    = {{{byovpc_private_subnets_cidr}}}
+public_subnets_cidr     = {{{byovpc_public_subnets_cidr}}}
+intra_subnet_cidr       = {{{byovpc_intra_subnet_cidr}}}
+security_group_ids      = {{{aws_security_group_ids}}}
+new_security_group_name = ""
+sg_egress_ports         = [443, 3306, 2443, 5432, 8443, 8444, 8445, 8446, 8447, 8448, 8449, 8450, 8451]
+
+# Required input, unused while new_catalog is false.
+aws_account_id = ""
+new_catalog    = false
+new_cluster    = false
+{{/if}}

@@ -1,0 +1,54 @@
+# ============================================================================
+# Databricks Module - Variables
+# ============================================================================
+#
+# PURPOSE:
+#   This file defines input variables for the Databricks module.
+#   These are the parameters that must be provided when calling this module.
+#   Unlike root module variables, module variables don't have defaults unless
+#   explicitly defined here.
+#
+# KEY CONCEPTS FOR BEGINNERS:
+#   - Module variables: Inputs that the calling module must provide
+#   - Required vs optional: Variables without defaults are required
+#   - Variable types: Same as root module variables (string, number, bool, etc.)
+#   - Module inputs: Passed from root module using module block
+#
+# TERRAFORM DOCUMENTATION:
+#   - Module Variables: https://developer.hashicorp.com/terraform/language/modules/develop/variables
+#   - Module Inputs: https://developer.hashicorp.com/terraform/language/modules/syntax#calling-a-child-module
+#
+# USAGE EXAMPLE:
+#   In the root module, you would call this module like:
+#   module "databricks" {
+#     source = "./modules/databricks"
+#     workspace_name = "my-workspace"
+#     # ... other variables
+#   }
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# REQUIRED VARIABLES
+# ----------------------------------------------------------------------------
+
+# Name of the Databricks workspace
+# This will appear in the Databricks UI and URLs
+# Example: "myproject-workspace"
+variable "workspace_name" {
+  description = "Name of the Databricks workspace (will appear in URLs and UI)"
+  type        = string
+  # No default - this must be provided by the calling module
+}
+
+# ----------------------------------------------------------------------------
+# NOTE: Additional Variables
+# ----------------------------------------------------------------------------
+# In a complete module implementation, you would also have variables for:
+# - account_id: Databricks account ID
+# - pricing_tier: STANDARD, PREMIUM, or ENTERPRISE
+# - network_id: VPC/VNet network configuration
+# - storage_configuration_id: Storage bucket configuration
+# - credentials_id: IAM role/service principal credentials
+# - region: Cloud provider region
+# - tags: Resource tags
+# - And other provider-specific configuration options

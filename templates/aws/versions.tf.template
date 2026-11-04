@@ -1,0 +1,42 @@
+# ============================================================================
+# Terraform Version Constraints
+# ============================================================================
+#
+# PURPOSE:
+#   This file specifies which versions of Terraform and providers are required.
+#   Version constraints ensure compatibility and prevent issues.
+#
+# TERRAFORM DOCUMENTATION:
+#   - Version Constraints: https://developer.hashicorp.com/terraform/language/expressions/version-constraints
+#   - Provider Requirements: https://developer.hashicorp.com/terraform/language/providers/requirements
+# ============================================================================
+
+terraform {
+  required_version = ">= 1.0"
+  
+  required_providers {
+    # AWS Provider - manages AWS resources (EC2, S3, VPC, IAM, etc.)
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+    
+    # Databricks Provider - manages Databricks resources (workspaces, clusters, etc.)
+    databricks = {
+      source  = "databricks/databricks"
+      version = "~> 1.26"
+    }
+    
+    # Null Provider - for running local-exec provisioners (self-assume role)
+    null = {
+      source  = "hashicorp/null"
+      version = "~> 3.0"
+    }
+    
+    # Time Provider - for adding delays between resource creation
+    time = {
+      source  = "hashicorp/time"
+      version = "~> 0.9"
+    }
+  }
+}
