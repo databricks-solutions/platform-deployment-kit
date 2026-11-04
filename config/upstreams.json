@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "repository": "https://github.com/databricks-solutions/technical-services-solutions.git",
-  "ref": "main",
+  "ref": "gcp/psc-existing-vpc",
   "licenseFiles": [
     "LICENSE.md",
     "NOTICE.md"
