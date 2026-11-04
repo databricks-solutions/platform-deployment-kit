@@ -78,6 +78,35 @@ test.describe('Azure critical journeys', () => {
     expect(tfvars).toContain('existing-vnet');
   });
 
+  test('allows existing VNet with Private Link enabled', async ({ page }) => {
+    await FormHelpers.fillAzureConfig(page, { project_prefix: 'azure-pl-byo' });
+    await enablePrivateLink(page);
+
+    // Uncheck "Create New VNet" — must now be interactive when PL is on.
+    await expect(page.locator('#create_new_vpc')).not.toBeDisabled();
+    await FormHelpers.fillNetworkConfig(page, {
+      create_new_vpc: false,
+      existing_vpc_id: EXISTING_VNET_ID,
+      vpc_cidr: '10.0.0.0/16'
+    });
+
+    await expect(page.locator('#existing-vpc-section')).toBeVisible();
+
+    await FormHelpers.submitConfigForm(page);
+    const { archive } = await downloadProject(page);
+    const tfvars = await archive.file('terraform.tfvars').async('string');
+    // Should include the BYO-VNet comment block with the existing VNet resource ID.
+    expect(tfvars).toContain('Bring-your-own-VNet');
+    expect(tfvars).toContain('existing-vnet');
+    expect(tfvars).toContain('cidr_dp');
+    // Private Link files must still be present.
+    expect(Object.keys(archive.files)).toEqual(expect.arrayContaining([
+      'dns_zones.tf', 'ncc.tf', 'pe_backend.tf'
+    ]));
+    const readme = await archive.file('README.md').async('string');
+    expect(readme).toContain('existing');
+  });
+
   test('generates Private Link with a NAT gateway', async ({ page }) => {
     await FormHelpers.fillAzureConfig(page, { project_prefix: 'azure-pl-nat' });
     await enablePrivateLink(page, 'existing');
