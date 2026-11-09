@@ -51,6 +51,7 @@ test.describe('GCP critical journeys', () => {
     await expect(page).toHaveURL(/.*#\/summary/);
     await expect(page.getByText('gcp-download-project', { exact: true })).toBeVisible();
     await expect(page.getByText('10.30.0.0/20', { exact: true })).toBeVisible();
+    await expect(page.getByText('Cloud NAT:', { exact: true })).toBeVisible();
 
     const { download, archive } = await downloadProject(page);
     expect(download.suggestedFilename()).toBe('gcp-download-gcp-terraform.zip');
@@ -218,6 +219,10 @@ test.describe('GCP critical journeys', () => {
     expect(tfvars).toContain('create_nat_gateway = true');
     expect(tfvars.split('\n').some(line => line.trim().startsWith('subnet_cidr ='))).toBe(false);
     expect(await archive.file('network.tf').async('string')).toMatch(/use_existing_vpc|var\.vpc_name/);
-    expect(await archive.file('README.md').async('string')).toContain('reuses the existing VPC');
+    const readme = await archive.file('README.md').async('string');
+    expect(readme).toContain('reuses the existing VPC');
+    expect(readme).toContain('gcloud services enable compute.googleapis.com dns.googleapis.com --project gcp-host-project');
+    expect(readme).toContain('No existing Cloud NAT gateway in `us-east1` on `shared-databricks-vpc`');
+    expect(readme).not.toMatch(/\{\{|\}\}/);
   });
 });

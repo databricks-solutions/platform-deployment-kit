@@ -165,7 +165,8 @@ class HelpContent {
         ],
         considerations: [
           'Back-end Private Service Connect secures control-plane communication but does not provide general internet access.',
-          'Private Google Access remains available without Cloud NAT for supported Google APIs and services.'
+          'Private Google Access remains available without Cloud NAT for supported Google APIs and services.',
+          'In an existing or Shared VPC, the generated Cloud NAT covers every subnet in the region. Choose no Cloud NAT if the VPC already has a Cloud NAT gateway or another egress path there.'
         ],
         links: [
           { label: 'Cloud NAT overview', url: 'https://cloud.google.com/nat/docs/overview' }

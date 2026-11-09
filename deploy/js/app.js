@@ -1036,7 +1036,7 @@ class App {
                     This deployment creates a new VPC, one regional subnet with Private Google Access,
                     a Cloud Router, and Cloud NAT for outbound connectivity.
                   </div>
-                      <div class="alert alert-info mb-4" id="gcp-private-link-network-info" style="display: none;">
+                  <div class="alert alert-info mb-4" id="gcp-private-link-network-info" style="display: none;">
                     <i class="bi bi-info-circle me-2"></i>
                     This deployment creates a new VPC with dedicated node and PSC subnets, two Back-end
                     Private Service Connect endpoints, and private DNS records.
@@ -1045,6 +1045,9 @@ class App {
                     <i class="bi bi-info-circle me-2"></i>
                     This deployment reuses your VPC and node subnet, then creates a dedicated PSC subnet,
                     two Back-end Private Service Connect endpoints, and private DNS records in that VPC.
+                    These network resources are created in the VPC host project. If the VPC already has
+                    Cloud NAT in this region, choose No Cloud NAT below: the generated Cloud NAT covers every
+                    subnet in the region and can conflict with an existing gateway.
                   </div>
                   <div id="gcp-new-vpc-fields">
                   <div class="mb-3">
@@ -3342,7 +3345,7 @@ class App {
                       </tr>
                       ` : ''}
                       ${config.provider === 'gcp' ? `
-                      ${config.enable_private_link ? `
+                      ${config.create_new_vpc || config.enable_private_link ? `
                       <tr>
                         <td class="fw-semibold">Cloud NAT:</td>
                         <td><span class="badge bg-${config.enable_nat_gateway ? 'success' : 'secondary'}">${config.enable_nat_gateway ? 'Created' : 'Not created'}</span></td>
