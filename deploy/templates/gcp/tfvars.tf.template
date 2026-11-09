@@ -11,15 +11,15 @@ databricks_admin_user     = {{{databricks_admin_user_hcl}}}
 
 {{#if create_new_vpc}}
 subnet_cidr = {{{subnet_cidr_hcl}}}
-{{#if enable_private_link}}
-psc_subnet_cidr = {{{psc_subnet_cidr_hcl}}}
-
-create_nat_gateway = {{{enable_nat_gateway}}}
-{{/if}}
 {{else}}
 vpc_network_project_id = {{{vpc_network_project_id_hcl}}}
 vpc_name               = {{{vpc_name_hcl}}}
 subnet_name            = {{{subnet_name_hcl}}}
+{{/if}}
+{{#if enable_private_link}}
+psc_subnet_cidr = {{{psc_subnet_cidr_hcl}}}
+
+create_nat_gateway = {{{enable_nat_gateway}}}
 {{/if}}
 
 metastore_id   = {{{metastore_id_hcl}}}

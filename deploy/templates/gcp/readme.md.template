@@ -13,19 +13,19 @@ This ready-to-deploy Terraform project was generated from your selections.
 | Workspace admin | `{{databricks_admin_user}}` |
 {{#if create_new_vpc}}
 | Subnet CIDR | `{{subnet_cidr}}` |
-{{#if enable_private_link}}
-| PSC endpoint subnet CIDR | `{{psc_subnet_cidr}}` |
-| Back-end Private Service Connect | Enabled |
-| Cloud NAT | {{gcp_nat_summary}} |
-| Front-end workspace access | Public |
-{{else}}
-| Network | New VPC, one regional subnet, Cloud Router, and Cloud NAT |
-{{/if}}
 {{else}}
 | Existing VPC | `{{vpc_name}}` |
 | Existing subnet | `{{subnet_name}}` |
 | VPC host project | `{{vpc_network_project_id}}` |
 {{/if}}
+{{#if enable_private_link}}
+| PSC endpoint subnet CIDR | `{{psc_subnet_cidr}}` |
+| Back-end Private Service Connect | Enabled |
+| Cloud NAT | {{gcp_nat_summary}} |
+| Front-end workspace access | Public |
+{{else}}{{#if create_new_vpc}}
+| Network | New VPC, one regional subnet, Cloud Router, and Cloud NAT |
+{{/if}}{{/if}}
 {{#if metastore_id}}
 | Unity Catalog | Attach existing metastore `{{metastore_id}}` |
 {{else}}
@@ -38,7 +38,17 @@ This ready-to-deploy Terraform project was generated from your selections.
 - Google Cloud CLI (`gcloud`)
 - The Compute Engine API enabled in `{{project_id}}`{{#if enable_private_link}}, plus the Cloud DNS API{{/if}}
 - The caller granted `roles/iam.serviceAccountTokenCreator` on `{{google_service_account_email}}`
-- `{{google_service_account_email}}` with project permissions required to {{#if create_new_vpc}}create the VPC, subnets,{{#if enable_private_link}} PSC endpoints, DNS,{{/if}} networking resources, and Databricks workspace{{else}}create the Databricks workspace and read the existing VPC and subnet{{/if}}
+- `{{google_service_account_email}}` with project permissions required to {{#if create_new_vpc}}create the VPC, subnets,{{#if enable_private_link}} PSC endpoints, DNS,{{/if}} networking resources, and Databricks workspace{{else}}{{#if enable_private_link}}create the PSC subnet, endpoints, private DNS zones,{{#if enable_nat_gateway}} Cloud Router, Cloud NAT,{{/if}} and read the existing VPC and subnet in `{{vpc_network_project_id}}`, plus create the Databricks workspace{{else}}create the Databricks workspace and read the existing VPC and subnet{{/if}}{{/if}}
+{{#unless create_new_vpc}}
+{{#if enable_private_link}}
+{{#unless (eq vpc_network_project_id project_id)}}
+- The Compute Engine and Cloud DNS APIs also enabled in the VPC host project `{{vpc_network_project_id}}`, where the PSC subnet, endpoints, and DNS zones are created
+{{/unless}}
+{{#if enable_nat_gateway}}
+- No existing Cloud NAT gateway in `{{region}}` on `{{vpc_name}}`. The generated Cloud NAT serves every subnet in the region and can conflict with an existing gateway; set `create_nat_gateway = false` in `terraform.tfvars` if one is already present
+{{/if}}
+{{/if}}
+{{/unless}}
 - The same service account added to the Databricks account and assigned the Account Admin role
 - `{{databricks_admin_user}}` already present as a Databricks account user
 
@@ -46,6 +56,13 @@ Enable the required GCP API:
 
 ```bash
 gcloud services enable compute.googleapis.com{{#if enable_private_link}} dns.googleapis.com{{/if}} --project {{project_id}}
+{{#unless create_new_vpc}}
+{{#if enable_private_link}}
+{{#unless (eq vpc_network_project_id project_id)}}
+gcloud services enable compute.googleapis.com dns.googleapis.com --project {{vpc_network_project_id}}
+{{/unless}}
+{{/if}}
+{{/unless}}
 ```
 
 ## Authenticate
@@ -78,7 +95,11 @@ terraform output -raw workspace_url
 ## Resources created
 
 {{#if enable_private_link}}
+{{#if create_new_vpc}}
 The deployment creates a VPC, node and PSC subnets with Private Google Access, two Back-end PSC endpoints, private DNS records, a Databricks MWS network and private access settings, a workspace, Unity Catalog metastore assignment, and workspace admin membership. {{#if enable_nat_gateway}}Cloud Router and Cloud NAT provide general outbound connectivity.{{else}}Cloud NAT is disabled, so workloads need an alternate route for general internet egress.{{/if}}
+{{else}}
+The deployment reuses the existing VPC and node subnet, then creates a dedicated PSC subnet, two Back-end PSC endpoints, private DNS records, a Databricks MWS network and private access settings, a workspace, Unity Catalog metastore assignment, and workspace admin membership. {{#if enable_nat_gateway}}Cloud Router and Cloud NAT provide general outbound connectivity.{{else}}Cloud NAT is disabled, so workloads need an alternate route for general internet egress.{{/if}}
+{{/if}}
 
 The PSC service attachments are selected for `{{region}}`; confirm current regional values in the [Databricks regional infrastructure documentation](https://docs.databricks.com/gcp/en/resources/ip-domain-region#psc) before deployment.
 {{else}}{{#if create_new_vpc}}

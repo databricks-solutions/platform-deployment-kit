@@ -102,7 +102,7 @@ class HelpContent {
         considerations: [
           'Existing-VPC mode requires the VPC name, subnet name, and the GCP project that owns the VPC.',
           'The existing subnet must be in the selected workspace region and should have Private Google Access enabled.',
-          'Back-end Private Service Connect requires a new dedicated VPC and disables this choice.'
+          'With Back-end Private Service Connect, Terraform still creates a dedicated PSC subnet, endpoints, and private DNS in the selected VPC.'
         ],
         links: [
           { label: 'Customer-managed VPC on GCP', url: 'https://docs.databricks.com/gcp/en/security/network/classic/customer-managed-vpc' }
@@ -165,7 +165,8 @@ class HelpContent {
         ],
         considerations: [
           'Back-end Private Service Connect secures control-plane communication but does not provide general internet access.',
-          'Private Google Access remains available without Cloud NAT for supported Google APIs and services.'
+          'Private Google Access remains available without Cloud NAT for supported Google APIs and services.',
+          'In an existing or Shared VPC, the generated Cloud NAT covers every subnet in the region. Choose no Cloud NAT if the VPC already has a Cloud NAT gateway or another egress path there.'
         ],
         links: [
           { label: 'Cloud NAT overview', url: 'https://cloud.google.com/nat/docs/overview' }
@@ -272,8 +273,9 @@ class HelpContent {
         overview: 'Back-end Private Service Connect routes classic compute-plane communication to the Databricks control plane through private endpoints.',
         considerations: [
           'The generated topology creates separate REST API and secure cluster connectivity relay endpoints in the selected region.',
+          'You can create a new VPC or reuse an existing VPC and node subnet; Terraform always creates a dedicated PSC subnet for the endpoint IPs.',
           'This does not configure front-end private access, so users continue to access the workspace through its public URL.',
-          'A Databricks Enterprise plan is required. Private Service Connect does not provide general internet egress.'
+          'A Databricks Premium plan is required. Private Service Connect does not provide general internet egress.'
         ],
         links: [
           { label: 'Private Service Connect for classic compute', url: 'https://docs.databricks.com/gcp/en/security/network/classic/private-service-connect' },

@@ -51,6 +51,7 @@ test.describe('GCP critical journeys', () => {
     await expect(page).toHaveURL(/.*#\/summary/);
     await expect(page.getByText('gcp-download-project', { exact: true })).toBeVisible();
     await expect(page.getByText('10.30.0.0/20', { exact: true })).toBeVisible();
+    await expect(page.getByText('Cloud NAT:', { exact: true })).toBeVisible();
 
     const { download, archive } = await downloadProject(page);
     expect(download.suggestedFilename()).toBe('gcp-download-gcp-terraform.zip');
@@ -171,5 +172,57 @@ test.describe('GCP critical journeys', () => {
     const tfvars = await archive.file('terraform.tfvars').async('string');
     expect(tfvars).toContain('psc_subnet_cidr = "10.50.4.0/28"');
     expect(tfvars).toContain('create_nat_gateway = true');
+  });
+
+  test('downloads Back-end PSC on an existing VPC', async ({ page }) => {
+    await FormHelpers.fillGcpConfig(page, {
+      project_prefix: 'gcp-existing-psc',
+      region: 'us-east1',
+      project_id: 'gcp-service-project',
+      google_service_account_email: 'creator@gcp-service-project.iam.gserviceaccount.com',
+      databricks_account_id: '77777777-7777-4777-8777-777777777777',
+      databricks_admin_user: 'admin+existing-psc@example.com'
+    });
+    await FormHelpers.fillNetworkConfig(page, {
+      create_new_vpc: false,
+      existing_vpc_id: 'shared-databricks-vpc',
+      existing_subnet_name: 'databricks-subnet',
+      vpc_network_project_id: 'gcp-host-project',
+      enable_private_link: true
+    });
+    await page.locator('#psc_subnet_cidr').fill('10.60.4.0/28');
+    await page.locator('#nat_gateway_mode').selectOption('single');
+
+    await expect(page.locator('#create_new_vpc')).toBeEnabled();
+    await expect(page.locator('#create_new_vpc')).not.toBeChecked();
+    await expect(page.locator('#gcp-existing-vpc-section')).toBeVisible();
+    await expect(page.locator('#gcp-existing-psc-network-info')).toBeVisible();
+    await expect(page.locator('#gcp-private-link-network-fields')).toBeVisible();
+    await expect(page.locator('#gcp-new-vpc-fields')).toBeHidden();
+    await FormHelpers.submitConfigForm(page);
+
+    await expect(page).toHaveURL(/.*#\/summary/);
+    await expect(page.getByText('Use Existing', { exact: true })).toBeVisible();
+    await expect(page.getByText('Back-end PSC:', { exact: true })).toBeVisible();
+    await expect(page.getByText('10.60.4.0/28', { exact: true })).toBeVisible();
+
+    const { archive } = await downloadProject(page);
+    expect(Object.keys(archive.files)).toEqual(expect.arrayContaining([
+      'databricks.tf', 'dns.tf', 'network.tf', 'psc.tf', 'providers.tf',
+      'variables.tf', 'terraform.tfvars', 'README.md'
+    ]));
+    const tfvars = await archive.file('terraform.tfvars').async('string');
+    expect(tfvars).toContain('vpc_name               = "shared-databricks-vpc"');
+    expect(tfvars).toContain('subnet_name            = "databricks-subnet"');
+    expect(tfvars).toContain('vpc_network_project_id = "gcp-host-project"');
+    expect(tfvars).toContain('psc_subnet_cidr = "10.60.4.0/28"');
+    expect(tfvars).toContain('create_nat_gateway = true');
+    expect(tfvars.split('\n').some(line => line.trim().startsWith('subnet_cidr ='))).toBe(false);
+    expect(await archive.file('network.tf').async('string')).toMatch(/use_existing_vpc|var\.vpc_name/);
+    const readme = await archive.file('README.md').async('string');
+    expect(readme).toContain('reuses the existing VPC');
+    expect(readme).toContain('gcloud services enable compute.googleapis.com dns.googleapis.com --project gcp-host-project');
+    expect(readme).toContain('No existing Cloud NAT gateway in `us-east1` on `shared-databricks-vpc`');
+    expect(readme).not.toMatch(/\{\{|\}\}/);
   });
 });

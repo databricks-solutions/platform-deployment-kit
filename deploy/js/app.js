@@ -1041,6 +1041,14 @@ class App {
                     This deployment creates a new VPC with dedicated node and PSC subnets, two Back-end
                     Private Service Connect endpoints, and private DNS records.
                   </div>
+                  <div class="alert alert-info mb-4" id="gcp-existing-psc-network-info" style="display: none;">
+                    <i class="bi bi-info-circle me-2"></i>
+                    This deployment reuses your VPC and node subnet, then creates a dedicated PSC subnet,
+                    two Back-end Private Service Connect endpoints, and private DNS records in that VPC.
+                    These network resources are created in the VPC host project. If the VPC already has
+                    Cloud NAT in this region, choose No Cloud NAT below: the generated Cloud NAT covers every
+                    subnet in the region and can conflict with an existing gateway.
+                  </div>
                   <div id="gcp-new-vpc-fields">
                   <div class="mb-3">
                     <div class="field-label-with-help">
@@ -1053,6 +1061,7 @@ class App {
                            value="${this.currentConfig.subnet_cidr || '10.10.0.0/20'}"
                            placeholder="e.g., 10.10.0.0/20" required>
                   </div>
+                  </div>
                   <div class="mb-3" id="gcp-private-link-network-fields" style="display: none;">
                     <label class="form-label fw-semibold" for="psc_subnet_cidr">
                       PSC Endpoint Subnet CIDR <span class="text-danger">*</span>
@@ -1062,14 +1071,14 @@ class App {
                            placeholder="e.g., 10.10.4.0/28">
                     <div class="form-text">A non-overlapping subnet for the REST API and SCC relay PSC endpoint IPs.</div>
                   </div>
-                  </div>
                   <div id="gcp-existing-vpc-section" class="mb-3" style="display: none;">
                     <div class="card border-secondary mb-3">
                       <div class="card-body">
                         <div class="alert alert-info">
                           <i class="bi bi-info-circle me-2"></i>
-                          Terraform uses an existing VPC and subnet. Set the host project to the same
+                          Terraform uses an existing VPC and node subnet. Set the host project to the same
                           value as GCP Project ID when the VPC is in this project, or to the Shared VPC host project.
+                          With Back-end PSC enabled, Terraform still creates a dedicated PSC subnet in that VPC.
                         </div>
                         <div class="row mb-3">
                           <div class="col-md-6">
@@ -1469,6 +1478,7 @@ class App {
     const azurePrivateLinkNatGatewayZoneSection = document.getElementById('azure-private-link-nat-gateway-zone-section');
     const gcpStandardNetworkInfo = document.getElementById('gcp-standard-network-info');
     const gcpPrivateLinkNetworkInfo = document.getElementById('gcp-private-link-network-info');
+    const gcpExistingPscNetworkInfo = document.getElementById('gcp-existing-psc-network-info');
     const gcpPrivateLinkNetworkFields = document.getElementById('gcp-private-link-network-fields');
     const gcpPscSubnetInput = document.getElementById('psc_subnet_cidr');
     const gcpNewVpcFields = document.getElementById('gcp-new-vpc-fields');
@@ -2487,6 +2497,7 @@ class App {
         } else {
           if (vpcCidrContainer) vpcCidrContainer.style.display = 'none';
           if (azContainer) azContainer.style.display = 'none';
+          if (natGatewaySection) natGatewaySection.style.display = gcpPrivateLink ? 'block' : 'none';
         }
       }
 
@@ -2511,29 +2522,24 @@ class App {
         if (gcpPrivateLinkNetworkInfo) {
           gcpPrivateLinkNetworkInfo.style.display = gcpCreateNewVpc && gcpPrivateLink ? 'block' : 'none';
         }
+        if (gcpExistingPscNetworkInfo) {
+          gcpExistingPscNetworkInfo.style.display = !gcpCreateNewVpc && gcpPrivateLink ? 'block' : 'none';
+        }
         if (gcpPrivateLinkNetworkFields) {
-          gcpPrivateLinkNetworkFields.style.display = gcpCreateNewVpc && gcpPrivateLink ? 'block' : 'none';
+          gcpPrivateLinkNetworkFields.style.display = gcpPrivateLink ? 'block' : 'none';
         }
         if (gcpSubnetCidrInput) {
           if (gcpCreateNewVpc) gcpSubnetCidrInput.setAttribute('required', '');
           else gcpSubnetCidrInput.removeAttribute('required');
         }
         if (gcpPscSubnetInput) {
-          if (gcpCreateNewVpc && gcpPrivateLink) gcpPscSubnetInput.setAttribute('required', '');
+          if (gcpPrivateLink) gcpPscSubnetInput.setAttribute('required', '');
           else gcpPscSubnetInput.removeAttribute('required');
         }
         for (const input of [gcpHostProjectInput, gcpExistingSubnetInput]) {
           if (!input) continue;
           if (!gcpCreateNewVpc) input.setAttribute('required', '');
           else input.removeAttribute('required');
-        }
-      } else {
-        if (gcpStandardNetworkInfo) gcpStandardNetworkInfo.style.display = gcpPrivateLink ? 'none' : 'block';
-        if (gcpPrivateLinkNetworkInfo) gcpPrivateLinkNetworkInfo.style.display = gcpPrivateLink ? 'block' : 'none';
-        if (gcpPrivateLinkNetworkFields) gcpPrivateLinkNetworkFields.style.display = gcpPrivateLink ? 'block' : 'none';
-        if (gcpPscSubnetInput) {
-          if (gcpPrivateLink) gcpPscSubnetInput.setAttribute('required', '');
-          else gcpPscSubnetInput.removeAttribute('required');
         }
       }
 
@@ -2669,15 +2675,6 @@ class App {
         privateLinkCheckbox.setAttribute('aria-disabled', String(!enterpriseSelected));
       }
 
-      if (this.currentProvider === 'gcp' && privateLinkCheckbox) {
-        const privateLinkEnabled = privateLinkCheckbox.checked;
-        if (createNewVpcCheckbox) {
-          if (privateLinkEnabled) createNewVpcCheckbox.checked = true;
-          createNewVpcCheckbox.disabled = privateLinkEnabled;
-          createNewVpcCheckbox.setAttribute('aria-disabled', String(privateLinkEnabled));
-        }
-      }
-
       if (this.currentProvider === 'azure' && privateLinkCheckbox) {
         const privateLinkEnabled = privateLinkCheckbox.checked;
         const standardFields = document.getElementById('azure-standard-fields');
@@ -2779,12 +2776,11 @@ class App {
       config.enable_private_link = document.getElementById('enable_private_link')?.checked || false;
       if (this.currentProvider === 'gcp') {
         config.create_new_vpc = document.getElementById('create_new_vpc')?.checked !== false;
-        if (config.enable_private_link) config.create_new_vpc = true;
         config.pricing_tier = config.enable_private_link ? 'PREMIUM' : '';
         config.subnet_cidr = config.create_new_vpc
           ? (document.getElementById('subnet_cidr')?.value?.trim() || '')
           : '';
-        config.psc_subnet_cidr = config.create_new_vpc && config.enable_private_link
+        config.psc_subnet_cidr = config.enable_private_link
           ? (document.getElementById('psc_subnet_cidr')?.value?.trim() || '')
           : '';
         const [workspaceAttachment = '', relayAttachment = ''] = GCP_PSC_SERVICE_ATTACHMENTS[config.region] || [];
@@ -3349,11 +3345,13 @@ class App {
                       </tr>
                       ` : ''}
                       ${config.provider === 'gcp' ? `
-                      ${config.create_new_vpc ? `
+                      ${config.create_new_vpc || config.enable_private_link ? `
                       <tr>
                         <td class="fw-semibold">Cloud NAT:</td>
                         <td><span class="badge bg-${config.enable_nat_gateway ? 'success' : 'secondary'}">${config.enable_nat_gateway ? 'Created' : 'Not created'}</span></td>
                       </tr>
+                      ` : ''}
+                      ${config.create_new_vpc ? `
                       <tr>
                         <td class="fw-semibold">Subnet CIDR:</td>
                         <td><code>${config.subnet_cidr}</code></td>

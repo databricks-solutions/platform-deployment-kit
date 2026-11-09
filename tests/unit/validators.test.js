@@ -886,7 +886,7 @@ describe('Validators.validateConfiguration — cloud-specific error branches', (
     expect(errors.metastore_id).toBeDefined();
   });
 
-  test('GCP Private Service Connect rejects an existing VPC', () => {
+  test('GCP Private Service Connect accepts an existing VPC with a PSC subnet CIDR', () => {
     const config = {
       provider: 'gcp', project_prefix: 'myproject', region: 'us-central1',
       project_id: 'my-gcp-project',
@@ -896,9 +896,30 @@ describe('Validators.validateConfiguration — cloud-specific error branches', (
       create_new_vpc: false, enable_private_link: true,
       existing_vpc_id: 'my-vpc', existing_subnet_name: 'my-subnet',
       vpc_network_project_id: 'my-gcp-project',
+      psc_subnet_cidr: '10.10.4.0/28',
+      workspace_service_attachment: 'projects/a/regions/us-central1/serviceAttachments/plproxy',
+      relay_service_attachment: 'projects/b/regions/us-central1/serviceAttachments/ngrok',
     };
     const errors = Validators.validateConfiguration(config).errors;
-    expect(errors.create_new_vpc).toMatch(/new dedicated VPC/i);
+    expect(errors.create_new_vpc).toBeUndefined();
+    expect(errors.psc_subnet_cidr).toBeUndefined();
+  });
+
+  test('GCP Private Service Connect on an existing VPC still requires a PSC subnet CIDR', () => {
+    const config = {
+      provider: 'gcp', project_prefix: 'myproject', region: 'us-central1',
+      project_id: 'my-gcp-project',
+      google_service_account_email: 'creator@my-gcp-project.iam.gserviceaccount.com',
+      databricks_account_id: '11111111-1111-4111-8111-111111111111',
+      databricks_admin_user: 'admin@example.com',
+      create_new_vpc: false, enable_private_link: true,
+      existing_vpc_id: 'my-vpc', existing_subnet_name: 'my-subnet',
+      vpc_network_project_id: 'my-gcp-project',
+      workspace_service_attachment: 'projects/a/regions/us-central1/serviceAttachments/plproxy',
+      relay_service_attachment: 'projects/b/regions/us-central1/serviceAttachments/ngrok',
+    };
+    const errors = Validators.validateConfiguration(config).errors;
+    expect(errors.psc_subnet_cidr).toMatch(/PSC endpoint subnet CIDR is required/i);
   });
 
   test('GCP PSC endpoint subnet must not overlap the Databricks subnet', () => {
