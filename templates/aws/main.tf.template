@@ -1,0 +1,519 @@
+# ============================================================================
+# AWS Main Terraform Configuration
+# ============================================================================
+# Deploys Databricks workspace on AWS with VPC, IAM, S3, and networking.
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# DATA SOURCES
+# ----------------------------------------------------------------------------
+
+# Current AWS account information
+data "aws_caller_identity" "current" {}
+
+# AWS partition (aws, aws-cn, aws-us-gov)
+data "aws_partition" "current" {}
+
+# Available AZs in the region
+data "aws_availability_zones" "available" {
+  state = "available"
+  filter {
+    name   = "opt-in-status"
+    values = ["opt-in-not-required"]
+  }
+}
+
+# ----------------------------------------------------------------------------
+# DATABRICKS IAM POLICIES
+# ----------------------------------------------------------------------------
+# Required policies for Databricks cross-account access
+
+# Policy allowing Databricks to assume the IAM role
+data "databricks_aws_assume_role_policy" "this" {
+  external_id = var.databricks_account_id
+}
+
+# Cross-account policy with required Databricks permissions
+data "databricks_aws_crossaccount_policy" "this" {}
+
+# ----------------------------------------------------------------------------
+# VPC
+# ----------------------------------------------------------------------------
+
+# Virtual Private Cloud for Databricks resources
+resource "aws_vpc" "this" {
+  count = var.create_new_vpc ? 1 : 0
+  
+  cidr_block           = var.vpc_cidr
+  enable_dns_hostnames = true
+  enable_dns_support   = true
+  
+  tags = merge(var.common_tags, {
+    Name = "${var.project_prefix}-vpc"
+  })
+}
+
+# Internet Gateway for public internet access
+resource "aws_internet_gateway" "this" {
+  count = var.create_new_vpc ? 1 : 0
+  
+  vpc_id = aws_vpc.this[0].id
+  
+  tags = merge(var.common_tags, {
+    Name = "${var.project_prefix}-igw"
+  })
+}
+
+# ----------------------------------------------------------------------------
+# LOCAL VALUES
+# ----------------------------------------------------------------------------
+
+locals {
+  # VPC ID (new or existing)
+  vpc_id = var.create_new_vpc ? aws_vpc.this[0].id : var.existing_vpc_id
+  
+  # Whether to create network resources (subnets, security groups)
+  create_network_resources = var.create_new_vpc || var.create_new_subnets
+  
+  # Private subnet IDs for Databricks clusters
+  # Uses created subnets when create_network_resources is true, otherwise uses existing subnet IDs
+  databricks_subnet_ids = local.create_network_resources ? [
+    {{#each calculated_subnets}}
+    {{#if is_private}}
+    aws_subnet.{{name_replace}}[0].id{{#unless @last}},{{/unless}}
+    {{/if}}
+    {{/each}}
+  ] : var.existing_subnet_ids
+  
+  # All subnet IDs for network configuration
+  all_subnet_ids = local.create_network_resources ? [
+    {{#each calculated_subnets}}
+    aws_subnet.{{name_replace}}[0].id{{#unless @last}},{{/unless}}
+    {{/each}}
+  ] : var.existing_subnet_ids
+  
+  # Security group IDs - created or existing
+  security_group_ids = local.create_network_resources ? [
+    aws_security_group.databricks[0].id
+  ] : var.existing_security_group_ids
+}
+
+# ----------------------------------------------------------------------------
+# SUBNETS
+# ----------------------------------------------------------------------------
+# Subnets are created when creating a new VPC OR when creating new subnets in an existing VPC
+
+{{#each calculated_subnets}}
+# {{name}} subnet in {{availability_zone}}
+resource "aws_subnet" "{{name_replace}}" {
+  count = local.create_network_resources ? 1 : 0
+  
+  vpc_id                  = local.vpc_id
+  cidr_block              = var.{{name_replace}}_subnet_cidr
+  availability_zone       = "{{availability_zone}}"
+  map_public_ip_on_launch = {{is_public}}
+  
+  tags = merge(var.common_tags, {
+    Name = "${var.project_prefix}-{{name}}"
+  })
+}
+
+{{/each}}
+# ----------------------------------------------------------------------------
+# SECURITY GROUP
+# ----------------------------------------------------------------------------
+# Security group is created when creating network resources (new VPC or new subnets)
+
+# Security group for Databricks cluster nodes
+resource "aws_security_group" "databricks" {
+  count = local.create_network_resources ? 1 : 0
+  
+  name        = "${var.project_prefix}-databricks-sg"
+  description = "Security group for Databricks workspace"
+  vpc_id      = local.vpc_id
+  
+  # Allow all traffic between cluster nodes
+  ingress {
+    description = "Allow all internal traffic"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    self        = true
+  }
+  
+  # Allow outbound internet access
+  egress {
+    description = "Allow all outbound traffic"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  
+  tags = merge(var.common_tags, {
+    Name = "${var.project_prefix}-databricks-sg"
+  })
+  
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# ----------------------------------------------------------------------------
+# IAM ROLE - Databricks Cross-Account
+# ----------------------------------------------------------------------------
+# IAM role that Databricks assumes to manage AWS resources
+
+{{#unless cross_account_role_arn}}
+# Cross-account role for Databricks
+resource "aws_iam_role" "databricks_cross_account" {
+  name               = "${var.project_prefix}-databricks-cross-account-role"
+  assume_role_policy = data.databricks_aws_assume_role_policy.this.json
+  
+  tags = merge(var.common_tags, {
+    Name = "${var.project_prefix}-databricks-cross-account-role"
+  })
+}
+
+# Policy attached to the cross-account role
+resource "aws_iam_role_policy" "databricks_cross_account" {
+  name   = "${var.project_prefix}-databricks-cross-account-policy"
+  role   = aws_iam_role.databricks_cross_account.id
+  policy = data.databricks_aws_crossaccount_policy.this.json
+}
+
+# ----------------------------------------------------------------------------
+# SELF-ASSUME ROLE (via AWS CLI)
+# ----------------------------------------------------------------------------
+# Databricks requires the role to assume itself (self-assume)
+
+# Wait for IAM role propagation
+resource "time_sleep" "wait_for_role" {
+  depends_on = [
+    aws_iam_role.databricks_cross_account,
+    aws_iam_role_policy.databricks_cross_account
+  ]
+  
+  create_duration = "10s"
+}
+
+# Update assume role policy to include self-assume
+resource "null_resource" "configure_self_assume_role" {
+  depends_on = [time_sleep.wait_for_role]
+  
+  provisioner "local-exec" {
+    command = <<-EOT
+      aws iam update-assume-role-policy \
+        --role-name "${aws_iam_role.databricks_cross_account.name}" \
+        --policy-document '{
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Effect": "Allow",
+            "Principal": {
+              "AWS": [
+                "${aws_iam_role.databricks_cross_account.arn}",
+                "arn:${data.aws_partition.current.partition}:iam::414351767826:root"
+              ]
+            },
+            "Action": "sts:AssumeRole",
+            "Condition": {
+              "StringEquals": {
+                "sts:ExternalId": "${var.databricks_account_id}"
+              }
+            }
+          }]
+        }'
+    EOT
+  }
+  
+  triggers = {
+    role_arn              = aws_iam_role.databricks_cross_account.arn
+    databricks_account_id = var.databricks_account_id
+  }
+}
+{{/unless}}
+
+# IAM role ARN to use (new or existing)
+locals {
+  databricks_role_arn = {{#if cross_account_role_arn}}var.cross_account_role_arn{{else}}aws_iam_role.databricks_cross_account.arn{{/if}}
+}
+
+# ----------------------------------------------------------------------------
+# S3 BUCKET - Databricks Root Storage
+# ----------------------------------------------------------------------------
+
+# Root storage bucket for Databricks workspace data
+resource "aws_s3_bucket" "databricks_root" {
+  bucket        = "${var.project_prefix}-databricks-root-${data.aws_caller_identity.current.account_id}"
+  force_destroy = true
+  
+  tags = merge(var.common_tags, {
+    Name = "${var.project_prefix}-databricks-root"
+  })
+}
+
+# Versioning disabled to reduce storage costs
+resource "aws_s3_bucket_versioning" "databricks_root" {
+  bucket = aws_s3_bucket.databricks_root.id
+  
+  versioning_configuration {
+    status = "Disabled"
+  }
+}
+
+# Enable encryption at rest
+resource "aws_s3_bucket_server_side_encryption_configuration" "databricks_root" {
+  bucket = aws_s3_bucket.databricks_root.id
+  
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+# Block all public access
+resource "aws_s3_bucket_public_access_block" "databricks_root" {
+  bucket = aws_s3_bucket.databricks_root.id
+  
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# Databricks-specific bucket policy
+data "databricks_aws_bucket_policy" "this" {
+  bucket = aws_s3_bucket.databricks_root.bucket
+}
+
+resource "aws_s3_bucket_policy" "databricks_root" {
+  bucket = aws_s3_bucket.databricks_root.id
+  policy = data.databricks_aws_bucket_policy.this.json
+  
+  depends_on = [aws_s3_bucket_public_access_block.databricks_root]
+}
+
+{{#if enable_private_link}}
+# ----------------------------------------------------------------------------
+# AWS PRIVATELINK CONFIGURATION
+# ----------------------------------------------------------------------------
+# PrivateLink enables private connectivity between VPC and Databricks services
+
+# PrivateLink service names by region
+locals {
+  # Databricks PrivateLink service endpoints per region
+  # See: https://docs.databricks.com/en/security/network/classic/privatelink.html
+  privatelink_workspace_service = {
+    "us-east-1"      = "com.amazonaws.vpce.us-east-1.vpce-svc-09143d1e626de2f04"
+    "us-east-2"      = "com.amazonaws.vpce.us-east-2.vpce-svc-041dc2b4d7796b8d3"
+    "us-west-1"      = "com.amazonaws.vpce.us-west-1.vpce-svc-09d86b19b532dc24e"
+    "us-west-2"      = "com.amazonaws.vpce.us-west-2.vpce-svc-0129f463fcfbc46c5"
+    "eu-west-1"      = "com.amazonaws.vpce.eu-west-1.vpce-svc-0da6c0c08f0f3db01"
+    "eu-west-2"      = "com.amazonaws.vpce.eu-west-2.vpce-svc-01148c7cdc1d1326c"
+    "eu-west-3"      = "com.amazonaws.vpce.eu-west-3.vpce-svc-008b9368d1d011f37"
+    "eu-central-1"   = "com.amazonaws.vpce.eu-central-1.vpce-svc-08e5dfca9572c85c4"
+    "eu-north-1"     = "com.amazonaws.vpce.eu-north-1.vpce-svc-0fc41571e57f47f1b"
+    "eu-south-1"     = "com.amazonaws.vpce.eu-south-1.vpce-svc-0e449124e1e14e5d0"
+    "ap-south-1"     = "com.amazonaws.vpce.ap-south-1.vpce-svc-0dbfe5e9ee18d6411"
+    "ap-southeast-1" = "com.amazonaws.vpce.ap-southeast-1.vpce-svc-02535b257fc253ff4"
+    "ap-southeast-2" = "com.amazonaws.vpce.ap-southeast-2.vpce-svc-0b87155ddd6954974"
+    "ap-northeast-1" = "com.amazonaws.vpce.ap-northeast-1.vpce-svc-02691fd610d24fd64"
+    "ap-northeast-2" = "com.amazonaws.vpce.ap-northeast-2.vpce-svc-0babb9bde64f34d7e"
+    "ap-northeast-3" = "com.amazonaws.vpce.ap-northeast-3.vpce-svc-0a38bc12e40d0d3f5"
+    "ca-central-1"   = "com.amazonaws.vpce.ca-central-1.vpce-svc-0205f197ec0e28d65"
+    "sa-east-1"      = "com.amazonaws.vpce.sa-east-1.vpce-svc-0fc36a14f131bf532"
+  }
+  
+  privatelink_relay_service = {
+    "us-east-1"      = "com.amazonaws.vpce.us-east-1.vpce-svc-00018a8c3ff62ffdf"
+    "us-east-2"      = "com.amazonaws.vpce.us-east-2.vpce-svc-090a8fab0f69f89af"
+    "us-west-1"      = "com.amazonaws.vpce.us-west-1.vpce-svc-0e4e1f3b8e8d8a0e6"
+    "us-west-2"      = "com.amazonaws.vpce.us-west-2.vpce-svc-0158114c0c730c3bb"
+    "eu-west-1"      = "com.amazonaws.vpce.eu-west-1.vpce-svc-09b4eb2bc775f4e8c"
+    "eu-west-2"      = "com.amazonaws.vpce.eu-west-2.vpce-svc-05279412bf5353a45"
+    "eu-west-3"      = "com.amazonaws.vpce.eu-west-3.vpce-svc-005b039dd0b5f857d"
+    "eu-central-1"   = "com.amazonaws.vpce.eu-central-1.vpce-svc-0355e6b4fa0d42d7e"
+    "eu-north-1"     = "com.amazonaws.vpce.eu-north-1.vpce-svc-0a28f24fc9456e46e"
+    "eu-south-1"     = "com.amazonaws.vpce.eu-south-1.vpce-svc-01e7d0a4a1b78455e"
+    "ap-south-1"     = "com.amazonaws.vpce.ap-south-1.vpce-svc-03fd4d9b61414f3de"
+    "ap-southeast-1" = "com.amazonaws.vpce.ap-southeast-1.vpce-svc-0557367c6fc1a0c5c"
+    "ap-southeast-2" = "com.amazonaws.vpce.ap-southeast-2.vpce-svc-0b4a72e8f825f7571"
+    "ap-northeast-1" = "com.amazonaws.vpce.ap-northeast-1.vpce-svc-02aa633bda3edbec0"
+    "ap-northeast-2" = "com.amazonaws.vpce.ap-northeast-2.vpce-svc-0dc0e98a5800db5c4"
+    "ap-northeast-3" = "com.amazonaws.vpce.ap-northeast-3.vpce-svc-0a38bc12e40d0d3f6"
+    "ca-central-1"   = "com.amazonaws.vpce.ca-central-1.vpce-svc-0c4e25bdbcbfbb684"
+    "sa-east-1"      = "com.amazonaws.vpce.sa-east-1.vpce-svc-0bafcea8cdfe11b66"
+  }
+  
+  # PrivateLink subnet ID - terraform managed or user provided
+  privatelink_subnet_id = var.privatelink_subnet_mode == "terraform_managed" ? (
+    aws_subnet.service[0].id
+  ) : var.existing_privatelink_subnet_id
+}
+
+# Security group for PrivateLink VPC Endpoints
+resource "aws_security_group" "privatelink" {
+  name        = "${var.project_prefix}-privatelink-sg"
+  description = "Security group for Databricks PrivateLink VPC Endpoints"
+  vpc_id      = local.vpc_id
+  
+  # Allow HTTPS from VPC CIDR
+  ingress {
+    description = "Allow HTTPS from VPC"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
+  }
+  
+  # Allow all outbound traffic
+  egress {
+    description = "Allow all outbound traffic"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  
+  tags = merge(var.common_tags, {
+    Name = "${var.project_prefix}-privatelink-sg"
+  })
+}
+
+# VPC Endpoint for Databricks Workspace (REST API)
+resource "aws_vpc_endpoint" "workspace" {
+  vpc_id              = local.vpc_id
+  service_name        = local.privatelink_workspace_service[var.aws_region]
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = [local.privatelink_subnet_id]
+  security_group_ids  = [aws_security_group.privatelink.id]
+  private_dns_enabled = false
+  
+  tags = merge(var.common_tags, {
+    Name = "${var.project_prefix}-workspace-vpce"
+  })
+}
+
+# VPC Endpoint for Databricks Backend Relay (SCC Relay)
+resource "aws_vpc_endpoint" "relay" {
+  vpc_id              = local.vpc_id
+  service_name        = local.privatelink_relay_service[var.aws_region]
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = [local.privatelink_subnet_id]
+  security_group_ids  = [aws_security_group.privatelink.id]
+  private_dns_enabled = false
+  
+  tags = merge(var.common_tags, {
+    Name = "${var.project_prefix}-relay-vpce"
+  })
+}
+
+# Register Workspace VPC Endpoint with Databricks
+resource "databricks_mws_vpc_endpoint" "workspace" {
+  provider            = databricks.mws
+  account_id          = var.databricks_account_id
+  vpc_endpoint_name   = "${var.project_prefix}-workspace-vpce"
+  aws_vpc_endpoint_id = aws_vpc_endpoint.workspace.id
+  region              = var.aws_region
+}
+
+# Register Backend Relay VPC Endpoint with Databricks
+resource "databricks_mws_vpc_endpoint" "relay" {
+  provider            = databricks.mws
+  account_id          = var.databricks_account_id
+  vpc_endpoint_name   = "${var.project_prefix}-relay-vpce"
+  aws_vpc_endpoint_id = aws_vpc_endpoint.relay.id
+  region              = var.aws_region
+}
+
+# Private Access Settings for the workspace
+resource "databricks_mws_private_access_settings" "this" {
+  provider                     = databricks.mws
+  account_id                   = var.databricks_account_id
+  private_access_settings_name = "${var.project_prefix}-pas"
+  region                       = var.aws_region
+  
+  # Allow access from PrivateLink only
+  public_access_enabled = false
+  
+  # Allow access from any VPC endpoint (not restricted to specific endpoints)
+  private_access_level = "ACCOUNT"
+}
+{{/if}}
+
+# ----------------------------------------------------------------------------
+# DATABRICKS MWS CONFIGURATION
+# ----------------------------------------------------------------------------
+
+# Register IAM credentials with Databricks
+resource "databricks_mws_credentials" "this" {
+  provider         = databricks.mws
+  credentials_name = "${var.project_prefix}-credentials"
+  role_arn         = local.databricks_role_arn
+  
+  {{#unless cross_account_role_arn}}
+  depends_on = [null_resource.configure_self_assume_role]
+  {{/unless}}
+}
+
+# Register S3 bucket with Databricks
+resource "databricks_mws_storage_configurations" "this" {
+  provider                   = databricks.mws
+  account_id                 = var.databricks_account_id
+  storage_configuration_name = "${var.project_prefix}-storage"
+  bucket_name                = aws_s3_bucket.databricks_root.bucket
+  
+  depends_on = [aws_s3_bucket_policy.databricks_root]
+}
+
+# Register VPC network with Databricks
+# Network is registered when:
+# - Creating a new VPC
+# - Using an existing VPC with new subnets
+# - Using an existing VPC with existing subnets
+resource "databricks_mws_networks" "this" {
+  count = var.create_new_vpc || var.create_new_subnets || length(var.existing_subnet_ids) > 0 ? 1 : 0
+  
+  provider     = databricks.mws
+  account_id   = var.databricks_account_id
+  network_name = "${var.project_prefix}-network"
+  vpc_id             = local.vpc_id
+  subnet_ids         = local.databricks_subnet_ids
+  security_group_ids = local.security_group_ids
+}
+
+# ----------------------------------------------------------------------------
+# DATABRICKS WORKSPACE
+# ----------------------------------------------------------------------------
+
+# Main Databricks workspace resource
+resource "databricks_mws_workspaces" "this" {
+  provider       = databricks.mws
+  account_id     = var.databricks_account_id
+  workspace_name = var.workspace_name
+  deployment_name = var.workspace_name
+  aws_region      = var.aws_region
+  
+  credentials_id           = databricks_mws_credentials.this.credentials_id
+  storage_configuration_id = databricks_mws_storage_configurations.this.storage_configuration_id
+  # Network ID is set when using custom network configuration
+  network_id               = length(databricks_mws_networks.this) > 0 ? databricks_mws_networks.this[0].network_id : null
+  
+  {{#if enable_private_link}}
+  # PrivateLink configuration
+  private_access_settings_id = databricks_mws_private_access_settings.this.private_access_settings_id
+  {{/if}}
+  
+  # Generate workspace token for API access
+  token {
+    comment = "Terraform provisioning token"
+  }
+  
+  {{#if enable_private_link}}
+  depends_on = [
+    databricks_mws_vpc_endpoint.workspace,
+    databricks_mws_vpc_endpoint.relay
+  ]
+  {{/if}}
+}

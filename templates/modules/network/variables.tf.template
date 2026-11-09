@@ -1,0 +1,63 @@
+# ============================================================================
+# Network Module - Variables
+# ============================================================================
+#
+# PURPOSE:
+#   This file defines input variables for the Network module.
+#   These are the parameters that must be provided when calling this module.
+#   The module abstracts provider-specific networking concepts behind a common
+#   set of variables.
+#
+# KEY CONCEPTS FOR BEGINNERS:
+#   - Module variables: Inputs that the calling module must provide
+#   - Required vs optional: Variables without defaults are required
+#   - Variable types: Same as root module variables (string, number, bool, etc.)
+#   - Module inputs: Passed from root module using module block
+#   - Provider abstraction: Variables use generic names (VPC CIDR) that work across providers
+#
+# TERRAFORM DOCUMENTATION:
+#   - Module Variables: https://developer.hashicorp.com/terraform/language/modules/develop/variables
+#   - Module Inputs: https://developer.hashicorp.com/terraform/language/modules/syntax#calling-a-child-module
+#
+# USAGE EXAMPLE:
+#   In the root module, you would call this module like:
+#   module "network" {
+#     source = "./modules/network"
+#     vpc_cidr = "10.0.0.0/16"
+#     # ... other variables
+#   }
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# REQUIRED VARIABLES
+# ----------------------------------------------------------------------------
+
+# CIDR block for the VPC/VNet
+# This defines the IP address range for your network
+# Format: CIDR notation (e.g., "10.0.0.0/16")
+# Examples:
+#   - "10.0.0.0/16" = 65,536 IPs (AWS VPC, Azure VNet)
+#   - "10.0.0.0/24" = 256 IPs (smaller network)
+# Note: Terminology varies by provider:
+#   - AWS: VPC CIDR
+#   - Azure: VNet address space
+#   - GCP: VPC network CIDR
+variable "vpc_cidr" {
+  description = "CIDR block for the VPC/VNet (IP address range for the network)"
+  type        = string
+  # No default - this must be provided by the calling module
+}
+
+# ----------------------------------------------------------------------------
+# NOTE: Additional Variables
+# ----------------------------------------------------------------------------
+# In a complete module implementation, you would also have variables for:
+# - project_prefix: Prefix for resource names
+# - region: Cloud provider region
+# - availability_zones: List of AZs for subnet deployment
+# - subnet_cidrs: List of subnet CIDR blocks
+# - enable_nat_gateway: Whether to create NAT gateway
+# - enable_flow_logs: Whether to enable network flow logging
+# - tags: Resource tags
+# - existing_vpc_id: Optional existing VPC to use instead of creating new one
+# - And other provider-specific configuration options

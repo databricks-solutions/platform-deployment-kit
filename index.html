@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="description" content="Platform Kit - Simplify Databricks infrastructure deployment across AWS, Azure, and GCP. Generate production-ready Terraform configurations instantly.">
+    <meta name="keywords" content="Databricks, Terraform, AWS, Azure, GCP, Infrastructure as Code, Deployment">
+    <meta name="author" content="Platform Kit">
+    <meta name="color-scheme" content="dark light">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Platform Kit - Databricks Infrastructure Generator">
+    <meta property="og:description" content="Simplify Databricks infrastructure deployment across multi-cloud environments">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:title" content="Platform Kit - Databricks Infrastructure Generator">
+    <meta property="twitter:description" content="Simplify Databricks infrastructure deployment across multi-cloud environments">
+    
+    <title>Platform Kit - Databricks Infrastructure Generator</title>
+    
+    <meta name="theme-color" content="#0B2026" id="theme-color-meta">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="./icons/favicon.svg">
+    
+    <!-- Theme detection script - must run before body renders to prevent flash -->
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('theme');
+            const theme = savedTheme || 'dark';
+            document.documentElement.setAttribute('data-theme', theme);
+            document.getElementById('theme-color-meta')?.setAttribute('content', theme === 'dark' ? '#0B2026' : '#F9F7F4');
+        })();
+    </script>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="./libs/bootstrap/css/bootstrap.min.css?v=2.0.0" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="./libs/bootstrap-icons/font/bootstrap-icons.css?v=2.0.0" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="./css/main.css?v=2.1.2" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <header role="banner">
+        <nav class="navbar navbar-expand-lg sticky-top" aria-label="Main navigation">
+            <div class="container">
+                <a class="navbar-brand" href="#/" data-navigate aria-label="Platform Kit Home">
+                    <i class="bi bi-cloud-arrow-up-fill" aria-hidden="true"></i>
+                    Platform Kit
+                </a>
+                
+                <div class="d-flex align-items-center gap-2 d-lg-none">
+                    <!-- Theme Toggle - Mobile -->
+                    <button class="theme-toggle" id="theme-toggle-mobile" type="button" aria-label="Toggle dark/light mode" title="Toggle theme">
+                        <i class="bi bi-moon-stars-fill" aria-hidden="true"></i>
+                        <i class="bi bi-sun-fill" aria-hidden="true"></i>
+                    </button>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                </div>
+                
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto align-items-center gap-1">
+                        <li class="nav-item">
+                            <a class="nav-link d-flex align-items-center" href="https://www.youtube.com/watch?v=44zUbgUq7JA" target="_blank" rel="noopener noreferrer" aria-label="Watch the tutorial on YouTube (opens in a new tab)">
+                                <i class="bi bi-youtube me-2" aria-hidden="true" style="color: var(--accent-primary); font-size: 1.6rem; line-height: 1;"></i>Tutorial
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#/reset" data-navigate>
+                                <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>Start Over
+                            </a>
+                        </li>
+                        <!-- Theme Toggle - Desktop -->
+                        <li class="nav-item d-none d-lg-block">
+                            <button class="theme-toggle" id="theme-toggle-desktop" type="button" aria-label="Toggle dark/light mode" title="Toggle theme">
+                                <i class="bi bi-moon-stars-fill" aria-hidden="true"></i>
+                                <i class="bi bi-sun-fill" aria-hidden="true"></i>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Progress Indicator -->
+    <div id="progress-indicator" class="container mt-4" style="display: none;">
+        <div class="row">
+            <div class="col-12 col-lg-8 mx-auto">
+                <div class="progress-container">
+                    <div class="progress mb-4">
+                        <div class="progress-bar" role="progressbar" 
+                             id="progress-bar"
+                             style="width: 0%"
+                             aria-valuenow="0" 
+                             aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    
+                    <div class="progress-steps">
+                        <span id="step-1" class="progress-step">
+                            <i class="bi bi-1-circle-fill"></i>
+                            <span>Select Provider</span>
+                        </span>
+                        <span id="step-2" class="progress-step">
+                            <i class="bi bi-2-circle-fill"></i>
+                            <span>Configure</span>
+                        </span>
+                        <span id="step-3" class="progress-step">
+                            <i class="bi bi-3-circle-fill"></i>
+                            <span>Download</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Flash Messages -->
+    <div id="flash-messages" class="container mt-3"></div>
+
+    <!-- Main Content -->
+    <main id="app-content" class="container-fluid px-0">
+        <!-- Content will be loaded here by JavaScript -->
+    </main>
+
+    <!-- Footer -->
+    <footer role="contentinfo">
+        <div class="container">
+            <div class="row">
+                <div class="col-12 text-center">
+                    <h6 class="text-gradient">Platform Kit</h6>
+                    <p>
+                        Simplifying Databricks infrastructure deployment across multi-cloud environments.
+                    </p>
+                    <p class="deploy-version" id="deploy-version"></p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Loading overlay -->
+    <div id="loading-overlay" class="loading-overlay d-none">
+        <div class="loading-content">
+            <div class="loading-spinner" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <h5 id="loading-message">Generating your Terraform project...</h5>
+            <p>This may take a few seconds</p>
+        </div>
+    </div>
+
+
+    <!-- Contextual configuration help -->
+    <aside class="offcanvas offcanvas-end context-help-drawer" tabindex="-1" id="contextHelpDrawer"
+           aria-labelledby="contextHelpTitle">
+        <div class="offcanvas-header">
+            <div>
+                <div class="context-help-eyebrow" id="contextHelpProvider">Configuration guidance</div>
+                <h2 class="offcanvas-title" id="contextHelpTitle">Configuration help</h2>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close help"></button>
+        </div>
+        <div class="offcanvas-body" id="contextHelpBody"></div>
+    </aside>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="./libs/bootstrap/js/bootstrap.bundle.min.js?v=1.0.0"></script>
+    <!-- Choices.js for modern select component -->
+    <link rel="stylesheet" href="./libs/choices.js/css/choices.min.css?v=1.0.0" />
+    <script src="./libs/choices.js/js/choices.min.js?v=1.0.0"></script>
+    <!-- JSZip for ZIP generation -->
+    <script src="./libs/jszip/jszip.min.js?v=1.0.0"></script>
+    
+    <!-- App JavaScript -->
+    <script src="./js/network-calculator.js?v=1.0.0"></script>
+    <script src="./js/validators.js?v=1.0.3"></script>
+    <script src="./js/utils.js?v=2.1.0"></script>
+    <script src="./libs/handlebars/handlebars.min.js?v=4.7.8"></script>
+    <script src="./js/template-loader.js?v=1.1.0"></script>
+    <script src="./js/template-engine.js?v=2.1.0"></script>
+    <script src="./js/terraform-generator.js?v=1.1.0"></script>
+    <script src="./js/help-content.js?v=1.0.0"></script>
+    <script src="./js/analytics.js?v=1.1.0"></script>
+    <script src="./js/app.js?v=2.2.1"></script>
+
+    <!-- Deploy version display (reads version.json generated at deploy time) -->
+    <script>
+        fetch('./version.json').then(r => r.ok ? r.json() : null).then(v => {
+            if (v) document.getElementById('deploy-version').textContent =
+                'Deployed ' + v.date + ' \u2014 ' + v.commit;
+        }).catch(() => {});
+    </script>
+
+    <!-- Theme toggle and legacy installable-release cleanup -->
+    <script>
+        // Theme Toggle Functionality
+        const ThemeManager = {
+            init() {
+                this.setupListeners();
+                this.applySystemThemeListener();
+            },
+
+            getTheme() {
+                return document.documentElement.getAttribute('data-theme') || 'dark';
+            },
+
+            setTheme(theme) {
+                // Add transition class for smooth change
+                document.body.classList.add('theme-transitioning');
+                
+                document.documentElement.setAttribute('data-theme', theme);
+                localStorage.setItem('theme', theme);
+                
+                // Update theme-color meta tag
+                const themeColorMeta = document.getElementById('theme-color-meta');
+                if (themeColorMeta) {
+                    themeColorMeta.setAttribute('content', theme === 'dark' ? '#0B2026' : '#F9F7F4');
+                }
+
+                // Remove transition class after animation
+                setTimeout(() => {
+                    document.body.classList.remove('theme-transitioning');
+                }, 500);
+            },
+
+            toggle() {
+                const currentTheme = this.getTheme();
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                this.setTheme(newTheme);
+            },
+
+            setupListeners() {
+                // Desktop toggle
+                const desktopToggle = document.getElementById('theme-toggle-desktop');
+                if (desktopToggle) {
+                    desktopToggle.addEventListener('click', () => this.toggle());
+                }
+
+                // Mobile toggle
+                const mobileToggle = document.getElementById('theme-toggle-mobile');
+                if (mobileToggle) {
+                    mobileToggle.addEventListener('click', () => this.toggle());
+                }
+            },
+
+            applySystemThemeListener() {
+                // Listen for system theme changes (only if no saved preference)
+                // Note: Dark theme is now the default, so we don't auto-apply system changes
+                window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+                    // System theme changes are ignored - dark is always the default
+                    // Users can manually toggle if they prefer light mode
+                });
+            }
+        };
+
+        // Initialize theme manager
+        ThemeManager.init();
+
+        // Retire registrations and caches created by earlier installable releases.
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', async () => {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                await Promise.all(registrations.map(registration => registration.unregister()));
+
+                if ('caches' in window) {
+                    const cacheNames = await caches.keys();
+                    await Promise.all(
+                        cacheNames
+                            .filter(name => name.startsWith('databricks-deployer-'))
+                            .map(name => caches.delete(name))
+                    );
+                }
+
+                localStorage.removeItem('pwa-installed');
+                localStorage.removeItem('pwa-install-dismissed');
+            });
+        }
+    </script>
+
+</body>
+</html>

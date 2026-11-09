@@ -1,0 +1,59 @@
+# Generated variables for the Databricks Azure deployment.
+# Keep the Databricks account ID outside this file:
+# export TF_VAR_databricks_account_id="<your-account-id>"
+
+{{#if enable_private_link}}
+# Azure Back-end Private Link (classic)
+resource_prefix = "{{project_prefix}}"
+az_subscription = "{{azure_subscription_id}}"
+location        = "{{#if azure_create_data_plane_resource_group}}{{region}}{{/if}}"
+
+create_data_plane_resource_group        = {{azure_create_data_plane_resource_group}}
+existing_data_plane_resource_group_name = "{{azure_existing_data_plane_resource_group_name}}"
+
+cidr_dp                      = "{{vpc_cidr}}"
+subnet_workspace_cidrs       = {{{azure_workspace_subnet_cidrs}}}
+subnet_private_endpoint_cidr = "{{azure_private_endpoint_subnet_cidr}}"
+
+create_nat_gateway = {{enable_nat_gateway}}
+nat_gateway_zones = {{{azure_private_link_nat_gateway_zones}}}
+
+# Add full Azure resource IDs here when cluster nodes must reach customer-managed
+# storage through the Microsoft.Storage service endpoint policy.
+service_endpoint_policy_storage_accounts = []
+
+# Do not assign a Unity Catalog metastore in the Back-end Private Link example.
+metastore_id = ""
+tags = {{{common_tags}}}
+{{else}}
+# Azure VNet injection with Unity Catalog
+tenant_id             = "{{azure_tenant_id}}"
+azure_subscription_id = "{{azure_subscription_id}}"
+resource_group_name   = "{{resource_group_name}}"
+location              = "{{region}}"
+tags = {{{common_tags}}}
+
+workspace_name              = "{{project_prefix}}"
+admin_user                  = "{{azure_admin_user}}"
+root_storage_name           = "{{azure_root_storage_name}}"
+managed_resource_group_name = null
+
+existing_metastore_id = "{{metastore_id}}"
+new_metastore_name     = "{{metastore_name}}"
+
+uc_storage_account_name = "{{azure_uc_storage_account_name}}"
+catalog_name              = "{{azure_catalog_name}}"
+storage_credential_name   = "{{azure_storage_credential_name}}"
+external_location_name    = "{{azure_external_location_name}}"
+
+# Optional UC compute is deliberately disabled.
+create_cluster = false
+
+create_new_vnet          = {{create_new_vpc}}
+vnet_name                = "{{azure_vnet_name}}"
+vnet_resource_group_name = "{{azure_vnet_resource_group_name}}"
+nat_gateway_zones        = {{{azure_nat_gateway_zones}}}
+cidr                     = "{{vpc_cidr}}"
+subnet_public_cidr       = "{{azure_public_subnet_cidr}}"
+subnet_private_cidr      = "{{azure_private_subnet_cidr}}"
+{{/if}}

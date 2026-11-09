@@ -1,0 +1,91 @@
+# Databricks Deployment on AWS
+
+This ready-to-deploy Terraform project was generated from your selections.
+
+## Configuration Summary
+
+| Setting | Value |
+|---------|-------|
+| Provider | AWS |
+| Region | `{{region}}` |
+| Project Prefix | `{{project_prefix}}` |
+| Pricing Tier | `{{#if enable_private_link}}ENTERPRISE{{else}}{{pricing_tier}}{{/if}}` |
+| VPC | {{#if create_new_vpc}}Create new{{else}}Use `{{aws_vpc_id}}`{{/if}} |
+{{#if create_new_vpc}}
+| NAT Gateway | {{nat_gateway_summary}} |
+{{/if}}
+| Back-end PrivateLink | {{private_link_status}} |
+| Metastore | {{#if metastore_id}}Attach `{{metastore_id}}`{{else}}Create `{{metastore_name}}`{{/if}} |
+
+## Prerequisites
+
+- Terraform installed
+- AWS credentials with permission to create the selected EC2/VPC, endpoint, NAT gateway, IAM, and S3 resources
+- A Databricks service principal with the Account Admin role ([create and manage service principals](https://docs.databricks.com/aws/en/admin/users-groups/manage-service-principals))
+- Your Databricks account ID
+{{#unless create_new_vpc}}
+- Existing VPC, at least two private subnets in different Availability Zones, and a workspace security group
+{{/unless}}
+{{#if enable_private_link}}
+{{#unless create_new_vpc}}
+- Existing Databricks REST API and SCC relay VPC endpoints in that VPC
+{{/unless}}
+{{/if}}
+
+## Authenticate
+
+Configure AWS credentials with `aws configure` or your normal AWS CLI/profile process. See [AWS CLI configuration](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html). These AWS credentials are separate from the Databricks credentials below.
+
+Create an OAuth secret for the Databricks service principal by following the [OAuth machine-to-machine authentication guide](https://docs.databricks.com/aws/en/dev-tools/auth/oauth-m2m), then export its client ID and secret without placing them in `terraform.tfvars`:
+
+```bash
+export TF_VAR_databricks_account_id="<your-databricks-account-id>"
+export DATABRICKS_CLIENT_ID="<service-principal-client-id>"
+export DATABRICKS_CLIENT_SECRET="<service-principal-secret>"
+```
+
+Do not commit these values.
+
+## Metastore
+
+This deployment requires a Unity Catalog metastore assignment for the workspace. It creates or attaches the selected metastore. Optional catalog and cluster creation are disabled.
+
+{{#if enable_private_link}}
+## Back-end PrivateLink Networking
+
+{{#if create_new_vpc}}
+{{#if is_fully_private}}
+The fully private network topology creates no NAT gateway or internet gateway. Back-end PrivateLink and the S3, STS, and Kinesis endpoints provide the required private paths for control-plane and AWS service communication.
+{{else}}
+The standard network topology creates the VPC, {{#if (eq nat_gateway_mode "per_az")}}one NAT gateway per availability zone{{else}}one shared NAT gateway{{/if}}, an internet gateway, workspace subnets, and the required endpoints.
+{{/if}}
+{{else}}
+The custom topology uses the existing VPC, subnet, security group, REST VPC endpoint, and SCC relay VPC endpoint IDs in `terraform.tfvars`. Terraform does not create or modify those existing network resources.
+{{/if}}
+{{/if}}
+
+## Deploy
+
+All Terraform files are at the ZIP root:
+
+```bash
+terraform init
+terraform fmt -check
+terraform validate
+terraform plan -var-file=terraform.tfvars
+terraform apply -var-file=terraform.tfvars
+```
+
+Review the plan carefully before applying it.
+
+## Cleanup
+
+```bash
+terraform destroy -var-file=terraform.tfvars
+```
+
+Destroying infrastructure can permanently remove workspace resources and data.
+
+---
+
+Generated: {{generated_date}}

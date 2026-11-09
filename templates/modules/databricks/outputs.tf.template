@@ -1,0 +1,62 @@
+# ============================================================================
+# Databricks Module - Outputs
+# ============================================================================
+#
+# PURPOSE:
+#   This file defines output values that the module exposes to the calling
+#   module. Outputs allow the root module to access information about resources
+#   created within this module.
+#
+# KEY CONCEPTS FOR BEGINNERS:
+#   - Module outputs: Values exposed from the module to the caller
+#   - Accessing outputs: Root modules use module.<name>.<output> syntax
+#   - Output dependencies: Outputs can reference any resource created in the module
+#   - Information hiding: Only outputs are accessible outside the module
+#
+# TERRAFORM DOCUMENTATION:
+#   - Module Outputs: https://developer.hashicorp.com/terraform/language/modules/develop/outputs
+#   - Accessing Module Outputs: https://developer.hashicorp.com/terraform/language/modules/syntax#accessing-module-output-values
+#
+# USAGE EXAMPLE:
+#   In the root module, you would access outputs like:
+#   output "workspace_url" {
+#     value = module.databricks.workspace_url
+#   }
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# WORKSPACE OUTPUTS
+# ----------------------------------------------------------------------------
+
+# The URL to access the Databricks workspace
+# This is the web address users will use to log into Databricks
+# Format varies by provider:
+#   - AWS: https://<workspace-id>.cloud.databricks.com
+#   - Azure: https://adb-<workspace-id>.<region>.azuredatabricks.net
+#   - GCP: https://<workspace-id>.gcp.databricks.com
+output "workspace_url" {
+  description = "Databricks workspace URL - use this to access the workspace in a web browser"
+  value       = "Configured in main.tf"
+  
+  # Note: In a complete implementation, this would reference the actual workspace resource:
+  # value = databricks_mws_workspaces.this.workspace_url
+  # or
+  # value = azurerm_databricks_workspace.this.workspace_url
+  #
+  # This output is useful for:
+  # - Root modules that need to pass the URL to other modules
+  # - Displaying the URL after deployment
+  # - Configuring CI/CD pipelines
+  # - Documentation and sharing with team members
+}
+
+# ----------------------------------------------------------------------------
+# NOTE: Additional Outputs
+# ----------------------------------------------------------------------------
+# In a complete module implementation, you would also have outputs for:
+# - workspace_id: Unique identifier for the workspace
+# - workspace_name: Name of the workspace (for reference)
+# - deployment_name: Deployment identifier
+# - network_id: Network configuration ID (if applicable)
+# - storage_configuration_id: Storage configuration ID (if applicable)
+# - credentials_id: Credentials configuration ID (if applicable)

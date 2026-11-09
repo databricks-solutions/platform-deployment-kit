@@ -1,0 +1,68 @@
+# ============================================================================
+# Network Module - Outputs
+# ============================================================================
+#
+# PURPOSE:
+#   This file defines output values that the module exposes to the calling
+#   module. Outputs allow the root module to access information about network
+#   resources created within this module, which can then be used by other
+#   modules (like the Databricks module).
+#
+# KEY CONCEPTS FOR BEGINNERS:
+#   - Module outputs: Values exposed from the module to the caller
+#   - Accessing outputs: Root modules use module.<name>.<output> syntax
+#   - Output dependencies: Outputs can reference any resource created in the module
+#   - Information hiding: Only outputs are accessible outside the module
+#   - Module composition: Outputs from one module can be inputs to another
+#
+# TERRAFORM DOCUMENTATION:
+#   - Module Outputs: https://developer.hashicorp.com/terraform/language/modules/develop/outputs
+#   - Accessing Module Outputs: https://developer.hashicorp.com/terraform/language/modules/syntax#accessing-module-output-values
+#
+# USAGE EXAMPLE:
+#   In the root module, you would access outputs like:
+#   module "databricks" {
+#     source = "./modules/databricks"
+#     network_id = module.network.vpc_id  # Pass network output to Databricks module
+#   }
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# NETWORK OUTPUTS
+# ----------------------------------------------------------------------------
+
+# The VPC/VNet ID that was created or is being used
+# This is useful for creating additional resources in the same network
+# Format varies by provider:
+#   - AWS: vpc-xxxxxxxxxxxxxxxxx
+#   - Azure: /subscriptions/.../resourceGroups/.../providers/Microsoft.Network/virtualNetworks/...
+#   - GCP: projects/PROJECT_ID/global/networks/VPC_NAME
+output "vpc_id" {
+  description = "VPC/VNet ID - use this to create additional resources in the same network"
+  value       = "Configured in main.tf"
+  
+  # Note: In a complete implementation, this would reference the actual network resource:
+  # AWS: value = aws_vpc.this.id
+  # Azure: value = azurerm_virtual_network.this.id
+  # GCP: value = google_compute_network.this.id
+  #
+  # This output is useful for:
+  # - Passing to other modules (like Databricks module)
+  # - Creating additional resources in the same network
+  # - Network troubleshooting and documentation
+  # - Connecting other Terraform configurations to this network
+}
+
+# ----------------------------------------------------------------------------
+# NOTE: Additional Outputs
+# ----------------------------------------------------------------------------
+# In a complete module implementation, you would also have outputs for:
+# - subnet_ids: List of subnet IDs (for Databricks network configuration)
+# - public_subnet_ids: List of public subnet IDs
+# - private_subnet_ids: List of private subnet IDs
+# - security_group_id: Security group/NSG ID (for Databricks)
+# - internet_gateway_id: Internet gateway ID (AWS)
+# - nat_gateway_id: NAT gateway ID (if created)
+# - route_table_ids: Route table IDs
+# - vpc_cidr: VPC CIDR block (for reference)
+# - And other provider-specific network identifiers
