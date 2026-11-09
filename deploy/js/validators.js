@@ -511,7 +511,7 @@ class Validators {
     }
     
     // Azure-specific: Existing VNet validation
-    if (config.provider === 'azure' && !config.enable_private_link && !config.create_new_vpc) {
+    if (config.provider === 'azure' && !config.create_new_vpc) {
       const vnetIdCheck = this.validateAzureVnetId(config.existing_vpc_id);
       if (!vnetIdCheck.valid) {
         errors.existing_vpc_id = vnetIdCheck.message;
@@ -524,7 +524,6 @@ class Validators {
       if (!subscriptionCheck.valid) errors.azure_subscription_id = subscriptionCheck.message;
 
       if (config.enable_private_link) {
-        if (!config.create_new_vpc) errors.create_new_vpc = 'Back-end Private Link requires a new dedicated VNet';
         if (!['new', 'existing'].includes(config.azure_resource_group_mode)) {
           errors.azure_resource_group_mode = 'Choose whether to create or reuse the data plane resource group';
         }
