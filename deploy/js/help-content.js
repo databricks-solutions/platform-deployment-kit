@@ -44,6 +44,22 @@ class HelpContent {
           { label: 'Create a Unity Catalog metastore on AWS', url: 'https://docs.databricks.com/aws/en/data-governance/unity-catalog/create-metastore' }
         ]
       },
+      gcp: {
+        title: 'Unity Catalog metastore',
+        overview: 'A metastore is the top-level Unity Catalog container for data and AI assets in a region. The workspace must be assigned to one metastore.',
+        whenToUse: [
+          'Create a new metastore when the account does not already have an appropriate regional metastore.',
+          'Attach an existing metastore when governance is already centralized in the selected region.'
+        ],
+        considerations: [
+          'An existing metastore must belong to the same Databricks account and be available for the workspace region.',
+          'Creating a metastore fails if a Unity Catalog metastore already exists for the region.',
+          'Creating a metastore requires the account-level permissions used by the generated Terraform project.'
+        ],
+        links: [
+          { label: 'Create a Unity Catalog metastore on GCP', url: 'https://docs.databricks.com/gcp/en/data-governance/unity-catalog/create-metastore' }
+        ]
+      },
       azure: {
         title: 'Unity Catalog metastore',
         overview: 'A metastore is the top-level Unity Catalog container for data and AI assets in a region. The standard Azure flow assigns the workspace to a new or existing metastore.',
@@ -74,6 +90,22 @@ class HelpContent {
         ],
         links: [
           { label: 'Customer-managed VPC requirements', url: 'https://docs.databricks.com/aws/en/security/network/classic/customer-managed-vpc' }
+        ]
+      },
+      gcp: {
+        title: 'New or existing VPC',
+        overview: 'Choose whether Terraform creates a dedicated VPC and subnet or attaches the workspace to a VPC and subnet you already manage.',
+        whenToUse: [
+          'Create a new VPC for an isolated deployment managed entirely by this Terraform project.',
+          'Use an existing VPC when networking is centrally managed, including Shared VPC host projects.'
+        ],
+        considerations: [
+          'Existing-VPC mode requires the VPC name, subnet name, and the GCP project that owns the VPC.',
+          'The existing subnet must be in the selected workspace region and should have Private Google Access enabled.',
+          'With Back-end Private Service Connect, Terraform still creates a dedicated PSC subnet, endpoints, and private DNS in the selected VPC.'
+        ],
+        links: [
+          { label: 'Customer-managed VPC on GCP', url: 'https://docs.databricks.com/gcp/en/security/network/classic/customer-managed-vpc' }
         ]
       },
       azure: {
@@ -133,7 +165,8 @@ class HelpContent {
         ],
         considerations: [
           'Back-end Private Service Connect secures control-plane communication but does not provide general internet access.',
-          'Private Google Access remains available without Cloud NAT for supported Google APIs and services.'
+          'Private Google Access remains available without Cloud NAT for supported Google APIs and services.',
+          'In an existing or Shared VPC, the generated Cloud NAT covers every subnet in the region. Choose no Cloud NAT if the VPC already has a Cloud NAT gateway or another egress path there.'
         ],
         links: [
           { label: 'Cloud NAT overview', url: 'https://cloud.google.com/nat/docs/overview' }
@@ -240,8 +273,9 @@ class HelpContent {
         overview: 'Back-end Private Service Connect routes classic compute-plane communication to the Databricks control plane through private endpoints.',
         considerations: [
           'The generated topology creates separate REST API and secure cluster connectivity relay endpoints in the selected region.',
+          'You can create a new VPC or reuse an existing VPC and node subnet; Terraform always creates a dedicated PSC subnet for the endpoint IPs.',
           'This does not configure front-end private access, so users continue to access the workspace through its public URL.',
-          'A Databricks Enterprise plan is required. Private Service Connect does not provide general internet egress.'
+          'A Databricks Premium plan is required. Private Service Connect does not provide general internet egress.'
         ],
         links: [
           { label: 'Private Service Connect for classic compute', url: 'https://docs.databricks.com/gcp/en/security/network/classic/private-service-connect' },

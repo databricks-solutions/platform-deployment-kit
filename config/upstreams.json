@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "repository": "https://github.com/databricks-solutions/technical-services-solutions.git",
-  "ref": "main",
+  "ref": "gcp/psc-existing-vpc",
   "licenseFiles": [
     "LICENSE.md",
     "NOTICE.md"
@@ -36,6 +36,13 @@
       "provider": "gcp",
       "privateLink": false,
       "path": "workspace-setup/terraform-examples/gcp/gcp-byovpc-standalone",
+      "terraformSubdirectory": "."
+    },
+    "gcp-existing": {
+      "label": "GCP BYOVPC Shared / Existing VPC",
+      "provider": "gcp",
+      "privateLink": false,
+      "path": "workspace-setup/terraform-examples/gcp/gcp-byovpc-shared-vpc",
       "terraformSubdirectory": "."
     },
     "gcp-privatelink": {

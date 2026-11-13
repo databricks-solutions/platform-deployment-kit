@@ -658,11 +658,29 @@ class Validators {
           !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(config.databricks_admin_user.trim())) {
         errors.databricks_admin_user = 'Workspace admin user must be a valid email address';
       }
-      if (!config.subnet_cidr || !config.subnet_cidr.trim()) {
-        errors.subnet_cidr = 'Databricks subnet CIDR is required';
+      if (config.metastore_mode === 'existing' && (!config.metastore_id || !config.metastore_id.trim())) {
+        errors.metastore_id = 'Existing metastore ID is required';
+      }
+
+      const gcpCreateNewVpc = config.create_new_vpc !== false;
+
+      if (gcpCreateNewVpc) {
+        if (!config.subnet_cidr || !config.subnet_cidr.trim()) {
+          errors.subnet_cidr = 'Databricks subnet CIDR is required';
+        } else {
+          const subnetCheck = this.validateCIDR(config.subnet_cidr, 8, 29);
+          if (!subnetCheck.valid) errors.subnet_cidr = subnetCheck.message;
+        }
       } else {
-        const subnetCheck = this.validateCIDR(config.subnet_cidr, 8, 29);
-        if (!subnetCheck.valid) errors.subnet_cidr = subnetCheck.message;
+        if (!config.existing_vpc_id || !config.existing_vpc_id.trim()) {
+          errors.existing_vpc_id = 'Existing VPC name is required';
+        }
+        if (!config.existing_subnet_name || !config.existing_subnet_name.trim()) {
+          errors.existing_subnet_name = 'Existing subnet name is required';
+        }
+        if (!config.vpc_network_project_id || !config.vpc_network_project_id.trim()) {
+          errors.vpc_network_project_id = 'VPC host project ID is required';
+        }
       }
 
       if (config.enable_private_link) {
@@ -672,7 +690,8 @@ class Validators {
           const pscSubnetCheck = this.validateCIDR(config.psc_subnet_cidr, 8, 29);
           if (!pscSubnetCheck.valid) {
             errors.psc_subnet_cidr = pscSubnetCheck.message;
-          } else if (config.subnet_cidr && CIDRUtils.overlaps(config.subnet_cidr, config.psc_subnet_cidr)) {
+          } else if (gcpCreateNewVpc && config.subnet_cidr &&
+                     CIDRUtils.overlaps(config.subnet_cidr, config.psc_subnet_cidr)) {
             errors.psc_subnet_cidr = 'PSC endpoint subnet must not overlap the Databricks subnet';
           }
         }

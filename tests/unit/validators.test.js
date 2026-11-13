@@ -778,21 +778,22 @@ describe('Validators.validateConfiguration', () => {
     expect(result.errors.existing_vpc_id).toBeDefined();
   });
 
-  test('GCP ignores legacy existing VPC fields for the new-VPC-only topology', () => {
+  test('GCP existing VPC requires VPC name, subnet name, and host project', () => {
     const config = {
       provider: 'gcp',
       project_prefix: 'myproject',
       region: 'us-central1',
-      pricing_tier: 'STANDARD',
       project_id: 'my-gcp-project',
+      google_service_account_email: 'creator@my-gcp-project.iam.gserviceaccount.com',
+      databricks_account_id: '11111111-1111-4111-8111-111111111111',
+      databricks_admin_user: 'admin@example.com',
       create_new_vpc: false,
-      existing_vpc_id: 'BadVPCName', // uppercase invalid for GCP
-      existing_subnet_name: 'my-subnet',
-      existing_pod_range_name: 'pod-range',
-      existing_service_range_name: 'svc-range',
     };
     const result = Validators.validateConfiguration(config);
-    expect(result.errors.existing_vpc_id).toBeUndefined();
+    expect(result.errors.existing_vpc_id).toBeDefined();
+    expect(result.errors.existing_subnet_name).toBeDefined();
+    expect(result.errors.vpc_network_project_id).toBeDefined();
+    expect(result.errors.subnet_cidr).toBeUndefined();
   });
 
   test('AWS PrivateLink without ENTERPRISE returns feature error', () => {
@@ -886,6 +887,56 @@ describe('Validators.validateConfiguration — cloud-specific error branches', (
     };
     const errors = Validators.validateConfiguration(config).errors;
     expect(errors.subnet_cidr).toBeDefined();
+  });
+
+  test('GCP existing metastore mode requires a metastore ID', () => {
+    const config = {
+      provider: 'gcp', project_prefix: 'myproject', region: 'us-central1',
+      project_id: 'my-gcp-project',
+      google_service_account_email: 'creator@my-gcp-project.iam.gserviceaccount.com',
+      databricks_account_id: '11111111-1111-4111-8111-111111111111',
+      databricks_admin_user: 'admin@example.com',
+      create_new_vpc: true, subnet_cidr: '10.10.0.0/20',
+      metastore_mode: 'existing', metastore_id: '',
+    };
+    const errors = Validators.validateConfiguration(config).errors;
+    expect(errors.metastore_id).toBeDefined();
+  });
+
+  test('GCP Private Service Connect accepts an existing VPC with a PSC subnet CIDR', () => {
+    const config = {
+      provider: 'gcp', project_prefix: 'myproject', region: 'us-central1',
+      project_id: 'my-gcp-project',
+      google_service_account_email: 'creator@my-gcp-project.iam.gserviceaccount.com',
+      databricks_account_id: '11111111-1111-4111-8111-111111111111',
+      databricks_admin_user: 'admin@example.com',
+      create_new_vpc: false, enable_private_link: true,
+      existing_vpc_id: 'my-vpc', existing_subnet_name: 'my-subnet',
+      vpc_network_project_id: 'my-gcp-project',
+      psc_subnet_cidr: '10.10.4.0/28',
+      workspace_service_attachment: 'projects/a/regions/us-central1/serviceAttachments/plproxy',
+      relay_service_attachment: 'projects/b/regions/us-central1/serviceAttachments/ngrok',
+    };
+    const errors = Validators.validateConfiguration(config).errors;
+    expect(errors.create_new_vpc).toBeUndefined();
+    expect(errors.psc_subnet_cidr).toBeUndefined();
+  });
+
+  test('GCP Private Service Connect on an existing VPC still requires a PSC subnet CIDR', () => {
+    const config = {
+      provider: 'gcp', project_prefix: 'myproject', region: 'us-central1',
+      project_id: 'my-gcp-project',
+      google_service_account_email: 'creator@my-gcp-project.iam.gserviceaccount.com',
+      databricks_account_id: '11111111-1111-4111-8111-111111111111',
+      databricks_admin_user: 'admin@example.com',
+      create_new_vpc: false, enable_private_link: true,
+      existing_vpc_id: 'my-vpc', existing_subnet_name: 'my-subnet',
+      vpc_network_project_id: 'my-gcp-project',
+      workspace_service_attachment: 'projects/a/regions/us-central1/serviceAttachments/plproxy',
+      relay_service_attachment: 'projects/b/regions/us-central1/serviceAttachments/ngrok',
+    };
+    const errors = Validators.validateConfiguration(config).errors;
+    expect(errors.psc_subnet_cidr).toMatch(/PSC endpoint subnet CIDR is required/i);
   });
 
   test('GCP PSC endpoint subnet must not overlap the Databricks subnet', () => {
