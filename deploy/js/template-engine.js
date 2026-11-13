@@ -178,12 +178,19 @@ class TemplateEngine {
       vars.availability_zones = '[]';
     }
     
-    // Format tags - ensure it's always a valid JSON object
-    if (config.tags && typeof config.tags === 'object') {
-      vars.common_tags = JSON.stringify(config.tags);
-    } else {
-      vars.common_tags = '{}';
+    // Format optional tags - the form stores JSON text, while callers may pass an object.
+    let configuredTags = config.tags;
+    if (typeof configuredTags === 'string' && configuredTags.trim()) {
+      try {
+        configuredTags = JSON.parse(configuredTags);
+      } catch {
+        configuredTags = {};
+      }
     }
+    vars.user_tags = configuredTags && typeof configuredTags === 'object' && !Array.isArray(configuredTags)
+      ? configuredTags
+      : {};
+    vars.common_tags = JSON.stringify(vars.user_tags);
     
     // Add computed values for readme
     vars.private_link_status = vars.enable_private_link ? 'Enabled' : 'Disabled';
@@ -196,14 +203,11 @@ class TemplateEngine {
       const formatStringList = values => `[${values.map(value => JSON.stringify(String(value))).join(', ')}]`;
       const privateSubnets = vars.calculated_subnets.filter(subnet => subnet.subnet_type === 'private');
       const publicSubnets = vars.calculated_subnets.filter(subnet => subnet.subnet_type === 'public');
-      const intraSubnets = vars.calculated_subnets.filter(subnet =>
-        subnet.subnet_type === 'intra' || subnet.subnet_type === 'service'
-      );
       const endpointSubnet = vars.calculated_subnets.find(subnet => subnet.subnet_type === 'endpoint');
       const managedNetwork = vars.create_new_vpc;
       const fullyPrivateNetwork = managedNetwork && vars.enable_private_link && !vars.enable_nat_gateway;
       const useExistingMetastore = config.metastore_mode === 'existing';
-      const tags = config.tags && typeof config.tags === 'object' ? config.tags : {
+      const tags = Object.keys(vars.user_tags).length ? vars.user_tags : {
         Project: config.project_prefix || 'databricks',
         Environment: 'dev',
         ManagedBy: 'terraform',
@@ -220,7 +224,6 @@ class TemplateEngine {
 
       vars.byovpc_private_subnets_cidr = formatStringList(managedNetwork ? privateSubnets.map(subnet => subnet.cidr) : []);
       vars.byovpc_public_subnets_cidr = formatStringList(managedNetwork ? publicSubnets.map(subnet => subnet.cidr) : []);
-      vars.byovpc_intra_subnet_cidr = formatStringList(managedNetwork ? intraSubnets.map(subnet => subnet.cidr) : []);
       vars.aws_availability_zones = formatStringList(managedNetwork && Array.isArray(config.availability_zones) ? config.availability_zones : []);
       vars.aws_vpc_id = managedNetwork ? '' : (config.existing_vpc_id || '');
       vars.aws_subnet_ids = formatStringList(managedNetwork ? [] : (config.existing_subnet_ids || []));
@@ -240,6 +243,15 @@ class TemplateEngine {
       vars.backend_relay_aws_vpce_id = managedNetwork ? '' : (config.backend_relay_aws_vpce_id || '');
       vars.metastore_id = useExistingMetastore ? (config.metastore_id || '') : '';
       vars.metastore_name = useExistingMetastore ? '' : (config.metastore_name || `${config.project_prefix || 'databricks'}-metastore`);
+      vars.aws_catalog_name = config.catalog_name || `${config.project_prefix || 'databricks'}_catalog`;
+      vars.create_catalog = config.create_catalog !== false;
+      vars.aws_databricks_account_id = config.databricks_account_id || '';
+      vars.aws_storage_credential_name = config.storage_credential_name || `${config.project_prefix || 'databricks'}-storage-credential`;
+      vars.aws_external_location_name = config.external_location_name || `${config.project_prefix || 'databricks'}-external-location`;
+      vars.aws_account_id = config.aws_account_id || '';
+      vars.aws_workspace_admin_email = config.workspace_admin_email || '';
+      vars.new_cluster = config.new_cluster === true;
+      vars.cluster_autotermination_minutes = Number(config.cluster_autotermination_minutes) || 10;
       vars.terraform_source_commit = config.terraform_source_commit || '';
       vars.terraform_source_ref = config.terraform_source_ref || 'main';
       vars.terraform_source_url = config.terraform_source_url || '';
@@ -257,7 +269,7 @@ class TemplateEngine {
       );
       const prefix = config.project_prefix || 'databricks';
       const storageBase = prefix.toLowerCase().replace(/[^a-z0-9]/g, '') || 'databricks';
-      const tags = config.tags && typeof config.tags === 'object' ? config.tags : {
+      const tags = Object.keys(vars.user_tags).length ? vars.user_tags : {
         Project: prefix,
         Environment: 'dev',
         ManagedBy: 'terraform',
@@ -269,14 +281,15 @@ class TemplateEngine {
       vars.common_tags = tagEntries.length
         ? `{\n${tagEntries.map(([key, value]) => `  ${JSON.stringify(key)} = ${JSON.stringify(String(value))}`).join('\n')}\n}`
         : '{}';
-      vars.azure_tenant_id = config.azure_tenant_id || '';
       vars.azure_subscription_id = config.azure_subscription_id || '';
       vars.azure_admin_user = config.azure_admin_user || '';
-      vars.azure_root_storage_name = config.azure_root_storage_name || `dbfs${storageBase}`.slice(0, 24);
+      vars.azure_root_storage_name = `dbfs${storageBase}`.slice(0, 24);
       vars.azure_uc_storage_account_name = config.azure_uc_storage_account_name || `uc${storageBase}`.slice(0, 24);
       vars.azure_catalog_name = config.azure_catalog_name || `${prefix.replace(/-/g, '_')}_catalog`;
+      vars.create_catalog = config.create_catalog !== false;
       vars.azure_storage_credential_name = config.azure_storage_credential_name || `${prefix}-storage-credential`;
       vars.azure_external_location_name = config.azure_external_location_name || `${prefix}-external-location`;
+      vars.azure_uc_container_name = config.azure_uc_container_name || 'uc-catalog';
       const configuredAzureNatGatewayZone = Object.prototype.hasOwnProperty.call(config, 'azure_nat_gateway_zone')
         ? String(config.azure_nat_gateway_zone)
         : '1';
@@ -302,10 +315,13 @@ class TemplateEngine {
           ? `Availability Zone ${azurePrivateLinkNatGatewayZone}`
           : 'Regional / non-zonal'}`
         : 'Disabled';
-      vars.azure_vnet_name = vars.create_new_vpc ? '' : (existingVnetMatch?.[2] || '');
-      vars.azure_vnet_resource_group_name = vars.create_new_vpc
-        ? (config.azure_vnet_resource_group_name || `${prefix}-network-rg`)
-        : (existingVnetMatch?.[1] || '');
+      vars.azure_create_resource_group = config.azure_resource_group_mode !== 'existing';
+      vars.azure_managed_resource_group_name = config.managed_resource_group_name || '';
+      vars.azure_location = vars.azure_create_resource_group ? (config.region || '') : '';
+      vars.azure_vnet_name = vars.create_new_vpc ? '' : (existingVnetMatch?.[2] || config.existing_vnet_name || '');
+      vars.azure_vnet_resource_group_name = config.azure_vnet_resource_group_name || (vars.create_new_vpc
+        ? ''
+        : (existingVnetMatch?.[1] || ''));
       vars.azure_public_subnet_cidr = publicSubnet?.cidr || '';
       vars.azure_private_subnet_cidr = privateSubnet?.cidr || '';
       vars.azure_private_endpoint_subnet_cidr = privateEndpointSubnet?.cidr || '';
@@ -313,14 +329,19 @@ class TemplateEngine {
         vars.azure_public_subnet_cidr,
         vars.azure_private_subnet_cidr
       ]);
-      vars.azure_create_data_plane_resource_group = config.azure_resource_group_mode !== 'existing';
-      vars.azure_existing_data_plane_resource_group_name = vars.azure_create_data_plane_resource_group
-        ? ''
-        : (config.azure_existing_resource_group_name || '');
       vars.metastore_id = config.metastore_mode === 'existing' ? (config.metastore_id || '') : '';
       vars.metastore_name = config.metastore_mode === 'existing'
         ? ''
         : (config.metastore_name || `${prefix}-metastore`);
+      vars.azure_databricks_account_id = config.databricks_account_id || '';
+      vars.azure_admin_user = config.enable_private_link
+        ? (config.azure_private_link_admin_user || config.azure_admin_user || '')
+        : (config.azure_admin_user || '');
+      vars.azure_root_storage_name = config.azure_root_storage_name || '';
+      vars.azure_workspace_name = config.azure_workspace_name || '';
+      vars.azure_create_cluster = config.create_cluster === true;
+      vars.azure_node_type_id = config.node_type_id || 'Standard_DS3_v2';
+      vars.cluster_autotermination_minutes = Number(config.cluster_autotermination_minutes) || 10;
       vars.terraform_source_commit = config.terraform_source_commit || '';
       vars.terraform_source_ref = config.terraform_source_ref || 'main';
       vars.terraform_source_url = config.terraform_source_url || '';

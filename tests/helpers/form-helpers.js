@@ -48,6 +48,28 @@ class FormHelpers {
         await page.waitForTimeout(300); // Wait for any dependent fields to update
       }
     }
+
+    if (config.aws_account_id || await page.locator('input[name="aws_account_id"]').count()) {
+      const field = page.locator('input[name="aws_account_id"]');
+      if (await field.count()) {
+        await field.fill(config.aws_account_id || '123456789012');
+        await field.blur();
+      }
+    }
+
+    const databricksAccountField = page.locator('input[name="databricks_account_id"]');
+    if (await databricksAccountField.count()) {
+      await databricksAccountField.first().fill(
+        config.databricks_account_id || '11111111-1111-4111-8111-111111111111'
+      );
+      await databricksAccountField.first().blur();
+    }
+
+    const workspaceAdminField = page.locator('input[name="workspace_admin_email"]');
+    if (await workspaceAdminField.count() && config.workspace_admin_email) {
+      await workspaceAdminField.fill(config.workspace_admin_email);
+      await workspaceAdminField.blur();
+    }
     
     if (config.resource_group_name) {
       const field = page.locator('input[name="resource_group_name"]');
@@ -62,6 +84,19 @@ class FormHelpers {
       await field.fill(config.project_id);
       await field.blur();
     }
+
+    const ucDefaults = {
+      catalog_name: 'oneclick_catalog',
+      storage_credential_name: 'oneclick-storage-credential',
+      external_location_name: 'oneclick-external-location'
+    };
+    for (const fieldName of Object.keys(ucDefaults)) {
+      const field = page.locator(`[name="${fieldName}"]`);
+      if (await field.count()) {
+        await field.fill(config[fieldName] || ucDefaults[fieldName]);
+        await field.blur();
+      }
+    }
     
     await page.waitForTimeout(300); // Small delay for any async updates
   }
@@ -75,7 +110,6 @@ class FormHelpers {
       project_prefix: 'test-azure',
       region: 'eastus',
       azure_subscription_id: '11111111-1111-4111-8111-111111111111',
-      azure_tenant_id: '22222222-2222-4222-8222-222222222222',
       resource_group_name: 'rg-databricks-workspace',
       azure_admin_user: 'admin@example.com',
       azure_root_storage_name: 'dbfsoneclicktest',
@@ -83,6 +117,9 @@ class FormHelpers {
       azure_catalog_name: 'oneclick_catalog',
       azure_storage_credential_name: 'oneclick-storage-credential',
       azure_external_location_name: 'oneclick-external-location',
+      databricks_account_id: '11111111-1111-4111-8111-111111111111',
+      azure_uc_container_name: 'uc-catalog',
+      azure_private_link_admin_user: 'admin@example.com',
       azure_vnet_resource_group_name: 'rg-databricks-network',
       ...config
     };
@@ -91,13 +128,14 @@ class FormHelpers {
 
     for (const fieldName of [
       'azure_subscription_id',
-      'azure_tenant_id',
       'azure_admin_user',
       'azure_root_storage_name',
       'azure_uc_storage_account_name',
       'azure_catalog_name',
       'azure_storage_credential_name',
       'azure_external_location_name',
+      'databricks_account_id',
+      'azure_private_link_admin_user',
       'azure_vnet_resource_group_name'
     ]) {
       const field = page.locator(`[name="${fieldName}"]`);

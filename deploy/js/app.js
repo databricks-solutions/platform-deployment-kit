@@ -798,7 +798,7 @@ class App {
     const form = document.getElementById('config-form');
     if (!form) return;
     
-    const fields = form.querySelectorAll('input, select');
+    const fields = form.querySelectorAll('input, select, textarea');
     fields.forEach(field => {
       field.removeAttribute('data-invalid');
       field.removeAttribute('data-error');
@@ -906,6 +906,18 @@ class App {
                       </select>
                       <div class="form-text">Cloud provider region for resource deployment</div>
                     </div>
+                    ${this.currentProvider === 'aws' || this.currentProvider === 'azure' ? `
+                    <div class="col-12">
+                      <div class="d-flex align-items-center gap-2 mb-2">
+                        <label class="form-label fw-semibold mb-0">Resource Tags <span class="text-muted fw-normal">(optional)</span></label>
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="add-resource-tag" aria-label="Add resource tag">
+                          <i class="bi bi-plus-lg"></i>
+                        </button>
+                      </div>
+                      <div id="resource-tags-container"></div>
+                      <div class="form-text">Optional key/value tags applied to deployed resources. Add any tags required by your cloud policies, such as <code>Owner</code>.</div>
+                    </div>
+                    ` : ''}
                     ${this.currentProvider === 'aws' ? `
                     <div class="col-md-6">
                       <div class="field-label-with-help">
@@ -919,6 +931,27 @@ class App {
                         ${this.renderPricingTierOptions(this.currentProvider, this.currentConfig.pricing_tier)}
                       </select>
                     </div>
+                    <div class="col-md-6">
+                      <label class="form-label fw-semibold">AWS Account ID <span class="text-danger">*</span></label>
+                      <input type="text" class="form-control" name="aws_account_id"
+                             value="${this.currentConfig.aws_account_id || ''}"
+                             placeholder="123456789012" required>
+                      <div class="form-text">Used to create the Unity Catalog IAM role and S3 storage.</div>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label fw-semibold">Databricks Account ID <span class="text-danger">*</span></label>
+                      <input type="text" class="form-control" name="databricks_account_id"
+                             value="${this.currentConfig.databricks_account_id || ''}"
+                             placeholder="e.g., 00000000-0000-0000-0000-000000000000" required>
+                      <div class="form-text">Find this in the Databricks Account Console under Settings &gt; Account ID.</div>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label fw-semibold">Workspace Admin Email <span class="text-muted fw-normal">(optional)</span></label>
+                      <input type="email" class="form-control" name="workspace_admin_email"
+                             value="${this.currentConfig.workspace_admin_email || ''}"
+                             placeholder="admin@example.com">
+                      <div class="form-text">If provided, this user receives workspace admin access and UC catalog privileges.</div>
+                    </div>
                     ` : ''}
                     ${this.currentProvider === 'azure' ? `
                       <div class="col-md-6">
@@ -927,54 +960,37 @@ class App {
                                value="${this.currentConfig.azure_subscription_id || ''}"
                                placeholder="00000000-0000-0000-0000-000000000000" required>
                       </div>
-                    ` : ''}
-                    ${this.currentProvider === 'azure' ? `
-                      <div id="azure-standard-fields" class="col-12">
-                        <div class="row g-3">
-                          <div class="col-md-6">
-                            <label class="form-label fw-semibold">Azure Tenant ID <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control azure-standard-required" name="azure_tenant_id"
-                                   value="${this.currentConfig.azure_tenant_id || ''}"
-                                   placeholder="00000000-0000-0000-0000-000000000000">
-                          </div>
-                          <div class="col-md-6">
-                            <label class="form-label fw-semibold">Workspace Resource Group <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control azure-standard-required" name="resource_group_name"
-                                   value="${this.currentConfig.resource_group_name || ''}"
-                                   placeholder="e.g., rg-databricks-workspace">
-                          </div>
-                          <div class="col-md-6">
-                            <label class="form-label fw-semibold">Workspace Admin User <span class="text-danger">*</span></label>
-                            <input type="email" class="form-control azure-standard-required" name="azure_admin_user"
-                                   value="${this.currentConfig.azure_admin_user || ''}"
-                                   placeholder="admin@example.com">
-                          </div>
-                          <div class="col-md-6">
-                            <label class="form-label fw-semibold">Workspace Root Storage Account <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control azure-standard-required" name="azure_root_storage_name"
-                                   value="${this.currentConfig.azure_root_storage_name || ''}"
-                                   placeholder="dbfsuniquename">
-                            <div class="form-text">Globally unique, 3-24 lowercase letters and numbers.</div>
-                          </div>
-                        </div>
+                      <div class="col-md-6">
+                        <label class="form-label fw-semibold">Databricks Account ID <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="databricks_account_id"
+                               value="${this.currentConfig.databricks_account_id || ''}"
+                               placeholder="e.g., 00000000-0000-0000-0000-000000000000" required>
+                        <div class="form-text">Required for account-level Databricks resources and Private Link networking.</div>
                       </div>
-                      <div id="azure-private-link-fields" class="col-12" style="display: none;">
-                        <div class="row g-3">
-                          <div class="col-md-6">
-                            <label class="form-label fw-semibold">Data Plane Resource Group</label>
-                            <select class="form-select" name="azure_resource_group_mode" id="azure_resource_group_mode">
-                              <option value="new" ${this.currentConfig.azure_resource_group_mode !== 'existing' ? 'selected' : ''}>Create a new resource group</option>
-                              <option value="existing" ${this.currentConfig.azure_resource_group_mode === 'existing' ? 'selected' : ''}>Use an existing resource group</option>
-                            </select>
-                            <div class="form-text">New resource group name: <code>rg-${this.currentConfig.project_prefix || '&lt;project-prefix&gt;'}-dp</code></div>
-                          </div>
-                          <div class="col-md-6" id="azure-existing-resource-group-field" style="display: none;">
-                            <label class="form-label fw-semibold">Existing Resource Group Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" name="azure_existing_resource_group_name"
-                                   value="${this.currentConfig.azure_existing_resource_group_name || ''}"
-                                   placeholder="e.g., rg-databricks-data-plane">
-                          </div>
-                        </div>
+                      <div class="col-md-6">
+                        <label class="form-label fw-semibold">Workspace Resource Group Mode <span class="text-danger">*</span></label>
+                        <select class="form-select" name="azure_resource_group_mode" id="azure_resource_group_mode">
+                          <option value="new" ${this.currentConfig.azure_resource_group_mode !== 'existing' ? 'selected' : ''}>Create resource group</option>
+                          <option value="existing" ${this.currentConfig.azure_resource_group_mode === 'existing' ? 'selected' : ''}>Use existing resource group</option>
+                        </select>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label fw-semibold">Workspace Resource Group Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control azure-resource-group-required" name="resource_group_name"
+                               value="${this.currentConfig.resource_group_name || ''}"
+                               placeholder="e.g., rg-databricks-workspace" required>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label fw-semibold">Managed Resource Group Name <span class="text-muted fw-normal">(optional)</span></label>
+                        <input type="text" class="form-control" name="managed_resource_group_name"
+                               value="${this.currentConfig.managed_resource_group_name || ''}"
+                               placeholder="Defaults to mrg-dbw-&lt;project-prefix&gt;">
+                      </div>
+                      <div class="col-md-6" id="azure-standard-admin-field">
+                        <label class="form-label fw-semibold">Workspace Admin User <span class="text-danger">*</span></label>
+                        <input type="email" class="form-control azure-standard-required" name="azure_admin_user"
+                               value="${this.currentConfig.azure_admin_user || ''}"
+                               placeholder="admin@example.com">
                       </div>
                     ` : ''}
                     ${this.currentProvider === 'gcp' ? `
@@ -1024,6 +1040,17 @@ class App {
                 </div>
                 <div class="card-body">
                   ${this.currentProvider === 'gcp' ? `
+                  <div class="mb-3">
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" id="enable_private_link" name="enable_private_link">
+                      <label class="form-check-label fw-semibold" for="enable_private_link">Enable Back-end Private Service Connect</label>
+                      ${this.renderHelpButton('backend-private-link', 'Back-end Private Service Connect')}
+                    </div>
+                    <div id="private-link-warning" class="alert alert-info mt-2" style="display: none;">
+                      <i class="bi bi-info-circle me-2"></i>
+                      <strong>Note:</strong> Private connectivity requires a Databricks Enterprise plan.
+                    </div>
+                  </div>
                   <div class="alert alert-info mb-4" id="gcp-standard-network-info">
                     <i class="bi bi-info-circle me-2"></i>
                     This deployment creates a new VPC, one regional subnet with Private Google Access,
@@ -1079,13 +1106,28 @@ class App {
                       ${this.renderHelpButton('network-mode', this.currentProvider === 'azure' ? 'new or existing VNet' : 'new or existing VPC')}
                     </div>
                   </div>
+                  <div class="mb-3">
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" id="enable_private_link" name="enable_private_link"
+                             ${this.currentProvider === 'aws' && (this.currentConfig.pricing_tier || 'ENTERPRISE') !== 'ENTERPRISE' ? 'disabled aria-disabled="true"' : ''}>
+                      <label class="form-check-label fw-semibold" for="enable_private_link">
+                        ${this.currentProvider === 'azure' ? 'Enable Back-end Private Link' : 'Enable Back-end PrivateLink'}
+                      </label>
+                      ${this.renderHelpButton('backend-private-link', this.currentProvider === 'azure' ? 'Back-end Private Link' : 'Back-end PrivateLink')}
+                    </div>
+                    <div id="private-link-warning" class="alert alert-info mt-2" style="display: none;">
+                      <i class="bi bi-info-circle me-2"></i>
+                      <strong>Note:</strong> Private connectivity requires
+                      ${this.currentProvider === 'aws' ? 'the Enterprise pricing tier.' : 'the Premium pricing tier.'}
+                    </div>
+                  </div>
                   ${this.currentProvider === 'azure' ? `
                   <div class="mb-3" id="azure-vnet-resource-group-field">
-                    <label class="form-label fw-semibold">VNet Resource Group Name <span class="text-danger">*</span></label>
+                    <label class="form-label fw-semibold">VNet Resource Group Name <span class="text-muted fw-normal">(optional)</span></label>
                     <input type="text" class="form-control" name="azure_vnet_resource_group_name"
                            value="${this.currentConfig.azure_vnet_resource_group_name || ''}"
                            placeholder="e.g., rg-databricks-network">
-                    <div class="form-text">Must differ from the workspace resource group.</div>
+                    <div class="form-text">Leave empty to use the workspace resource group. For an existing VNet, enter the resource group that contains it.</div>
                   </div>
                   <div class="mb-3" id="azure-nat-gateway-zone-section"
                        ${this.currentConfig.enable_private_link ? 'style="display: none;"' : ''}>
@@ -1108,7 +1150,14 @@ class App {
                       <label class="form-label fw-semibold" for="nat_gateway_mode">NAT Gateway</label>
                       ${this.renderHelpButton('nat-gateway', 'NAT gateway options')}
                     </div>
-                    <select class="form-select" id="nat_gateway_mode"
+                    ${this.currentProvider === 'azure' ? `
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" role="switch" id="create-nat-gateway"
+                             ${savedNatGatewayMode !== 'none' ? 'checked' : ''}>
+                      <label class="form-check-label" for="create-nat-gateway">Create NAT Gateway</label>
+                    </div>
+                    ` : ''}
+                    <select class="form-select ${this.currentProvider === 'azure' ? 'd-none' : ''}" id="nat_gateway_mode"
                             name="${this.currentProvider === 'azure' ? 'azure_private_link_nat_gateway_mode' : 'nat_gateway_mode'}">
                       <option value="single" ${savedNatGatewayMode === 'single' ? 'selected' : ''}>Single NAT gateway</option>
                       ${this.currentProvider === 'aws' ? `
@@ -1324,37 +1373,6 @@ class App {
                 </div>
               </div>
               
-              <div class="card mb-4">
-                <div class="card-header bg-warning text-dark">
-                  <h5 class="card-title mb-0">
-                    <i class="bi bi-shield-check me-2"></i>
-                    Security Configuration
-                  </h5>
-                </div>
-                <div class="card-body">
-                  <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="enable_private_link" name="enable_private_link"
-                           ${this.currentProvider === 'aws' && (this.currentConfig.pricing_tier || 'ENTERPRISE') !== 'ENTERPRISE' ? 'disabled aria-disabled="true"' : ''}>
-                    <label class="form-check-label fw-semibold" for="enable_private_link">
-                      ${this.currentProvider === 'azure' ? 'Enable Back-end Private Link' :
-                        this.currentProvider === 'gcp' ? 'Enable Back-end Private Service Connect' :
-                        'Enable Back-end PrivateLink'}
-                    </label>
-                    ${this.renderHelpButton('backend-private-link', this.currentProvider === 'azure' ? 'Back-end Private Link' : this.currentProvider === 'gcp' ? 'Back-end Private Service Connect' : 'Back-end PrivateLink')}
-                  </div>
-                  <div id="private-link-warning" class="alert alert-info mt-2" style="display: none;">
-                    <i class="bi bi-info-circle me-2"></i>
-                    <strong>Note:</strong> Private connectivity requires
-                    ${this.currentProvider === 'aws'
-                      ? 'the Enterprise pricing tier.'
-                      : this.currentProvider === 'gcp'
-                        ? 'a Databricks Enterprise plan.'
-                        : 'the Premium pricing tier.'}
-                  </div>
-                  
-                </div>
-              </div>
-
               ${this.currentProvider === 'aws' || this.currentProvider === 'azure' ? `
               <div class="card mb-4" id="unity-catalog-configuration"
                    ${this.currentProvider === 'azure' && this.currentConfig.enable_private_link ? 'style="display: none;"' : ''}>
@@ -1371,6 +1389,11 @@ class App {
                         <label class="form-label fw-semibold">Unity Catalog Metastore <span class="text-danger">*</span></label>
                         ${this.renderHelpButton('metastore', 'Unity Catalog metastore')}
                       </div>
+                      ${this.currentProvider === 'azure' && this.currentConfig.enable_private_link ? `
+                      <div class="alert alert-info mb-0">
+                        Private Link can assign an existing Unity Catalog metastore. Catalog and storage objects remain managed by the standard Azure UC deployment.
+                      </div>
+                      ` : `
                       <div class="form-check">
                         <input class="form-check-input" type="radio" name="metastore_mode" id="metastore_mode_create"
                                value="create" ${this.currentConfig.metastore_mode !== 'existing' ? 'checked' : ''}>
@@ -1381,53 +1404,127 @@ class App {
                                value="existing" ${this.currentConfig.metastore_mode === 'existing' ? 'checked' : ''}>
                         <label class="form-check-label" for="metastore_mode_existing">Attach an existing metastore</label>
                       </div>
+                      `}
                     </div>
                     <div class="col-md-6">
-                      <div id="new-metastore-section">
+                      <div id="new-metastore-section" ${this.currentProvider === 'azure' && this.currentConfig.enable_private_link ? 'style="display: none;"' : ''}>
                         <label class="form-label" for="metastore_name">Metastore Name</label>
                         <input type="text" class="form-control" id="metastore_name" name="metastore_name"
                                value="${this.currentConfig.metastore_name || ''}"
                                placeholder="Defaults to &lt;project-prefix&gt;-metastore">
                       </div>
-                      <div id="existing-metastore-section" style="display: none;">
-                        <label class="form-label" for="metastore_id">Existing Metastore ID <span class="text-danger">*</span></label>
+                      <div id="existing-metastore-section" ${this.currentProvider === 'azure' && this.currentConfig.enable_private_link ? '' : 'style="display: none;"'}>
+                        <label class="form-label" for="metastore_id">Existing Metastore ID <span class="text-muted fw-normal">(optional)</span></label>
                         <input type="text" class="form-control" id="metastore_id" name="metastore_id"
                                value="${this.currentConfig.metastore_id || ''}"
                                placeholder="e.g., 12345678-1234-1234-1234-123456789abc">
                       </div>
                     </div>
+                    <div class="col-12">
+                      <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" id="create-catalog"
+                               ${this.currentConfig.create_catalog !== false ? 'checked' : ''}>
+                        <label class="form-check-label fw-semibold" for="create-catalog">Create a catalog</label>
+                        <div class="form-text">Optionally create a catalog and its storage objects as part of the deployment.</div>
+                      </div>
+                    </div>
+                    <div class="col-12">
+                    <div id="catalog-creation-fields" class="row g-3"
+                         ${this.currentConfig.create_catalog === false ? 'style="display: none;"' : ''}>
                     ${this.currentProvider === 'azure' ? `
                     <div class="col-md-6">
                       <label class="form-label fw-semibold">UC Storage Account <span class="text-danger">*</span></label>
-                      <input type="text" class="form-control azure-standard-required" name="azure_uc_storage_account_name"
+                      <input type="text" class="form-control azure-standard-required catalog-input" name="azure_uc_storage_account_name"
                              value="${this.currentConfig.azure_uc_storage_account_name || ''}"
                              placeholder="ucuniquename">
                       <div class="form-text">Globally unique, 3-24 lowercase letters and numbers.</div>
                     </div>
                     <div class="col-md-6">
+                      <label class="form-label fw-semibold">UC Container Name <span class="text-danger">*</span></label>
+                      <input type="text" class="form-control catalog-input" name="azure_uc_container_name"
+                             value="${this.currentConfig.azure_uc_container_name || 'uc-catalog'}"
+                             placeholder="uc-catalog">
+                    </div>
+                    <div class="col-md-6">
                       <label class="form-label fw-semibold">Catalog Name <span class="text-danger">*</span></label>
-                      <input type="text" class="form-control azure-standard-required" name="azure_catalog_name"
+                      <input type="text" class="form-control azure-standard-required catalog-input" name="azure_catalog_name"
                              value="${this.currentConfig.azure_catalog_name || ''}"
                              placeholder="my_catalog">
                     </div>
                     <div class="col-md-6">
                       <label class="form-label fw-semibold">Storage Credential Name <span class="text-danger">*</span></label>
-                      <input type="text" class="form-control azure-standard-required" name="azure_storage_credential_name"
+                      <input type="text" class="form-control azure-standard-required catalog-input" name="azure_storage_credential_name"
                              value="${this.currentConfig.azure_storage_credential_name || ''}"
                              placeholder="my-storage-credential">
                     </div>
                     <div class="col-md-6">
                       <label class="form-label fw-semibold">External Location Name <span class="text-danger">*</span></label>
-                      <input type="text" class="form-control azure-standard-required" name="azure_external_location_name"
+                      <input type="text" class="form-control azure-standard-required catalog-input" name="azure_external_location_name"
                              value="${this.currentConfig.azure_external_location_name || ''}"
                              placeholder="my-external-location">
                     </div>
                     ` : ''}
+                    ${this.currentProvider === 'aws' ? `
+                    <div class="col-md-6">
+                      <label class="form-label fw-semibold">Catalog Name <span class="text-danger">*</span></label>
+                      <input type="text" class="form-control catalog-input" name="catalog_name"
+                             value="${this.currentConfig.catalog_name || ''}" placeholder="my_catalog" required>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label fw-semibold">Storage Credential Name <span class="text-danger">*</span></label>
+                      <input type="text" class="form-control catalog-input" name="storage_credential_name"
+                             value="${this.currentConfig.storage_credential_name || ''}" placeholder="my-storage-credential" required>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label fw-semibold">External Location Name <span class="text-danger">*</span></label>
+                      <input type="text" class="form-control catalog-input" name="external_location_name"
+                             value="${this.currentConfig.external_location_name || ''}" placeholder="my-external-location" required>
+                    </div>
+                    ` : ''}
+                    </div>
+                    </div>
                   </div>
                 </div>
               </div>
               ` : ''}
               
+              ${this.currentProvider === 'aws' || this.currentProvider === 'azure' ? `
+              <div class="card mb-4" id="test-cluster-configuration">
+                <div class="card-header bg-secondary text-white">
+                  <h5 class="card-title mb-0"><i class="bi bi-cpu-fill me-2"></i>Optional Test Cluster</h5>
+                </div>
+                <div class="card-body">
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch" id="create-test-cluster">
+                    <label class="form-check-label fw-semibold" for="create-test-cluster">Create test cluster</label>
+                  </div>
+                  <div class="form-text mb-3">Creates a UC-compatible single-node cluster to validate the deployment. This creates ongoing cloud costs while running.</div>
+                  <div id="test-cluster-parameters" class="row g-3" style="display: none;">
+                    ${this.currentProvider === 'azure' ? `
+                    <div class="col-md-6">
+                      <label class="form-label fw-semibold" for="node_type_id">Azure VM SKU</label>
+                      <input type="text" class="form-control" id="node_type_id" name="node_type_id"
+                             value="${this.currentConfig.node_type_id || 'Standard_DS3_v2'}" placeholder="Standard_DS3_v2">
+                      <div class="form-text">VM size used by the single-node cluster driver.</div>
+                    </div>
+                    ` : `
+                    <div class="col-md-6">
+                      <label class="form-label fw-semibold">AWS Node Type</label>
+                      <input type="text" class="form-control" value="r5d.large" disabled>
+                      <div class="form-text">The upstream AWS template fixes this to <code>r5d.large</code>.</div>
+                    </div>
+                    `}
+                    <div class="col-md-6">
+                      <label class="form-label fw-semibold" for="cluster_autotermination_minutes">Auto-termination (minutes)</label>
+                      <input type="number" class="form-control" id="cluster_autotermination_minutes" name="cluster_autotermination_minutes"
+                             value="${this.currentConfig.cluster_autotermination_minutes || 10}" min="10" step="1">
+                      <div class="form-text">Minimum 10 minutes. The cluster shuts down after being idle.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              ` : ''}
+
               <div class="d-flex justify-content-between">
                 <a href="#/select-provider" class="btn btn-outline-secondary btn-lg" data-navigate>
                   <i class="bi bi-arrow-left me-2"></i>
@@ -1446,6 +1543,39 @@ class App {
     
     this.render(content);
     Utils.updateProgress(2);
+
+    // Render optional resource tags as editable key/value rows.
+    const resourceTagsContainer = document.getElementById('resource-tags-container');
+    const addResourceTagButton = document.getElementById('add-resource-tag');
+    const addResourceTagRow = (key = '', value = '') => {
+      if (!resourceTagsContainer) return;
+      const row = document.createElement('div');
+      row.className = 'row g-2 mb-2 resource-tag-row';
+      row.innerHTML = `
+        <div class="col-md-5">
+          <input type="text" class="form-control resource-tag-key" placeholder="Key" aria-label="Tag key" value="${Utils.escapeHtml(key)}">
+        </div>
+        <div class="col-md-6">
+          <input type="text" class="form-control resource-tag-value" placeholder="Value" aria-label="Tag value" value="${Utils.escapeHtml(value)}">
+        </div>
+        <div class="col-md-1 d-flex">
+          <button type="button" class="btn btn-outline-danger w-100 remove-resource-tag" aria-label="Remove resource tag">
+            <i class="bi bi-trash"></i>
+          </button>
+        </div>`;
+      row.querySelector('.remove-resource-tag')?.addEventListener('click', () => row.remove());
+      resourceTagsContainer.appendChild(row);
+    };
+    addResourceTagButton?.addEventListener('click', () => addResourceTagRow());
+    if (resourceTagsContainer && this.currentConfig.tags) {
+      let savedTags = this.currentConfig.tags;
+      if (typeof savedTags === 'string') {
+        try { savedTags = JSON.parse(savedTags); } catch { savedTags = {}; }
+      }
+      if (savedTags && typeof savedTags === 'object' && !Array.isArray(savedTags)) {
+        Object.entries(savedTags).forEach(([key, value]) => addResourceTagRow(key, value));
+      }
+    }
     
     // Real-time subnet calculation function (defined early so it can be used in availability zone handlers)
     const vpcCidrInput = document.querySelector('input[name="vpc_cidr"]');
@@ -1453,6 +1583,7 @@ class App {
     const privateLinkCheckbox = document.getElementById('enable_private_link');
     const privateLinkWarning = document.getElementById('private-link-warning');
     const natGatewaySelect = document.getElementById('nat_gateway_mode');
+    const createNatGatewayCheckbox = document.getElementById('create-nat-gateway');
     const natGatewaySection = document.getElementById('nat-gateway-section');
     const natGatewayPrivateLinkMessage = document.getElementById('nat-gateway-private-link-message');
     const azureNatGatewayZoneSection = document.getElementById('azure-nat-gateway-zone-section');
@@ -1461,6 +1592,20 @@ class App {
     const gcpPrivateLinkNetworkInfo = document.getElementById('gcp-private-link-network-info');
     const gcpPrivateLinkNetworkFields = document.getElementById('gcp-private-link-network-fields');
     const gcpPscSubnetInput = document.getElementById('psc_subnet_cidr');
+    const createTestClusterInput = document.getElementById('create-test-cluster');
+    const testClusterParameters = document.getElementById('test-cluster-parameters');
+    const updateTestClusterUI = () => {
+      if (testClusterParameters && createTestClusterInput) {
+        testClusterParameters.style.display = createTestClusterInput.checked ? 'flex' : 'none';
+      }
+    };
+    createTestClusterInput?.addEventListener('change', updateTestClusterUI);
+    if (createTestClusterInput) {
+      createTestClusterInput.checked = this.currentProvider === 'aws'
+        ? this.currentConfig.new_cluster === true
+        : this.currentConfig.create_cluster === true;
+      updateTestClusterUI();
+    }
     
     // Subnet size selector elements
     const subnetSizeSelectorContainer = document.getElementById('subnet-size-selector-container');
@@ -1497,7 +1642,7 @@ class App {
       }
 
       // Cards make a short list easy to scan. A slider keeps larger ranges compact.
-      if (prefixes.length <= 4) {
+      if (prefixes.length <= 4 && this.currentProvider !== 'aws') {
         subnetSizeOptions.className = 'subnet-size-options';
         subnetSizeOptions.setAttribute('role', 'radiogroup');
         subnetSizeOptions.innerHTML = prefixes.map(prefix => {
@@ -2468,7 +2613,7 @@ class App {
           // The Azure standard source creates the workspace subnets in the existing VNet.
           if (vpcCidrContainer) vpcCidrContainer.style.display = 'block';
           if (azContainer) azContainer.style.display = 'none';
-          if (natGatewaySection) natGatewaySection.style.display = 'none';
+          if (natGatewaySection) natGatewaySection.style.display = azurePrivateLink ? 'block' : 'none';
         } else {
           if (vpcCidrContainer) vpcCidrContainer.style.display = 'none';
           if (azContainer) azContainer.style.display = 'none';
@@ -2476,7 +2621,7 @@ class App {
       }
 
       if (azureVnetResourceGroupField) {
-        azureVnetResourceGroupField.style.display = !azurePrivateLink && isCreateNewVpc ? 'block' : 'none';
+        azureVnetResourceGroupField.style.display = this.currentProvider === 'azure' ? 'block' : 'none';
       }
 
       if (natGatewayPrivateLinkMessage) {
@@ -2602,14 +2747,9 @@ class App {
     const azureExistingResourceGroupInput = document.querySelector('input[name="azure_existing_resource_group_name"]');
     const updateAzureResourceGroupUI = () => {
       if (this.currentProvider !== 'azure') return;
-      const useExisting = privateLinkCheckbox?.checked === true && azureResourceGroupMode?.value === 'existing';
-      if (azureExistingResourceGroupField) {
-        azureExistingResourceGroupField.style.display = useExisting ? 'block' : 'none';
-      }
-      if (azureExistingResourceGroupInput) {
-        if (useExisting) azureExistingResourceGroupInput.setAttribute('required', '');
-        else azureExistingResourceGroupInput.removeAttribute('required');
-      }
+      if (azureExistingResourceGroupField) azureExistingResourceGroupField.style.display = 'none';
+      if (azureExistingResourceGroupInput) azureExistingResourceGroupInput.removeAttribute('required');
+      document.querySelectorAll('.azure-resource-group-required').forEach(input => input.setAttribute('required', ''));
     };
 
     // Setup private link validation
@@ -2633,17 +2773,25 @@ class App {
         const unityCatalogConfiguration = document.getElementById('unity-catalog-configuration');
         if (standardFields) standardFields.style.display = privateLinkEnabled ? 'none' : 'block';
         if (privateLinkFields) privateLinkFields.style.display = privateLinkEnabled ? 'block' : 'none';
-        if (unityCatalogConfiguration) unityCatalogConfiguration.style.display = privateLinkEnabled ? 'none' : 'block';
+        if (unityCatalogConfiguration) unityCatalogConfiguration.style.display = 'block';
+        document.querySelectorAll('.azure-private-link-uc-field').forEach(field => {
+          field.style.display = privateLinkEnabled ? 'block' : 'none';
+        });
         if (azureNatGatewayZoneSection) azureNatGatewayZoneSection.style.display = privateLinkEnabled ? 'none' : 'block';
         if (natGatewaySection) natGatewaySection.style.display = privateLinkEnabled ? 'block' : 'none';
         document.querySelectorAll('.azure-standard-required').forEach(input => {
           if (privateLinkEnabled) input.removeAttribute('required');
           else input.setAttribute('required', '');
         });
+        document.querySelectorAll('.azure-private-link-required').forEach(input => {
+          if (privateLinkEnabled) input.setAttribute('required', '');
+          else input.removeAttribute('required');
+        });
         if (createNewVpcCheckbox) {
-          if (privateLinkEnabled) createNewVpcCheckbox.checked = true;
-          createNewVpcCheckbox.disabled = privateLinkEnabled;
-          createNewVpcCheckbox.setAttribute('aria-disabled', String(privateLinkEnabled));
+          // The merged AWS and Azure templates both support reusing an existing
+          // network while Back-end PrivateLink is enabled.
+          createNewVpcCheckbox.disabled = false;
+          createNewVpcCheckbox.setAttribute('aria-disabled', 'false');
         }
         updateAzureResourceGroupUI();
       }
@@ -2663,13 +2811,26 @@ class App {
     const newMetastoreSection = document.getElementById('new-metastore-section');
     const existingMetastoreSection = document.getElementById('existing-metastore-section');
     const metastoreIdInput = document.getElementById('metastore_id');
+    const createCatalogCheckbox = document.getElementById('create-catalog');
+    const catalogCreationFields = document.getElementById('catalog-creation-fields');
+    const updateCatalogUI = () => {
+      const createCatalog = createCatalogCheckbox?.checked !== false;
+      if (catalogCreationFields) catalogCreationFields.style.display = createCatalog ? 'flex' : 'none';
+      document.querySelectorAll('.catalog-input').forEach(input => {
+        const privateLinkOnly = input.classList.contains('azure-private-link-required');
+        const requiredForCurrentMode = !privateLinkOnly || privateLinkCheckbox?.checked === true;
+        if (createCatalog && requiredForCurrentMode) input.setAttribute('required', '');
+        else input.removeAttribute('required');
+      });
+    };
+    createCatalogCheckbox?.addEventListener('change', updateCatalogUI);
+    updateCatalogUI();
     const updateMetastoreUI = () => {
       const useExisting = metastoreModeExisting?.checked === true;
       if (newMetastoreSection) newMetastoreSection.style.display = useExisting ? 'none' : 'block';
       if (existingMetastoreSection) existingMetastoreSection.style.display = useExisting ? 'block' : 'none';
       if (metastoreIdInput) {
-        const metastoreVisible = this.currentProvider !== 'azure' || privateLinkCheckbox?.checked !== true;
-        if (useExisting && metastoreVisible) metastoreIdInput.setAttribute('required', '');
+        if (useExisting) metastoreIdInput.setAttribute('required', '');
         else metastoreIdInput.removeAttribute('required');
       }
     };
@@ -2680,6 +2841,11 @@ class App {
     privateLinkCheckbox?.addEventListener('change', checkPrivateLinkRequirements);
     pricingTierSelect?.addEventListener('change', checkPrivateLinkRequirements);
     natGatewaySelect?.addEventListener('change', () => {
+      updateNetworkConfigUI();
+      calculateSubnets();
+    });
+    createNatGatewayCheckbox?.addEventListener('change', () => {
+      if (natGatewaySelect) natGatewaySelect.value = createNatGatewayCheckbox.checked ? 'single' : 'none';
       updateNetworkConfigUI();
       calculateSubnets();
     });
@@ -2694,6 +2860,7 @@ class App {
     });
     privateLinkCheckbox?.addEventListener('change', () => {
       checkPrivateLinkRequirements();
+      updateCatalogUI();
       updateMetastoreUI();
       updateNetworkConfigUI();
       calculateSubnets();
@@ -2710,6 +2877,7 @@ class App {
       privateLinkCheckbox.checked = true;
     }
     checkPrivateLinkRequirements();
+    updateCatalogUI();
     updateMetastoreUI();
     updateAzureResourceGroupUI();
     updateNetworkConfigUI();
@@ -2723,8 +2891,16 @@ class App {
       const formData = new FormData(e.target);
       const config = Object.fromEntries(formData);
       config.provider = this.currentProvider;
+      const tags = {};
+      resourceTagsContainer?.querySelectorAll('.resource-tag-row').forEach(row => {
+        const key = row.querySelector('.resource-tag-key')?.value?.trim() || '';
+        const value = row.querySelector('.resource-tag-value')?.value ?? '';
+        if (key) tags[key] = value;
+      });
+      config.tags = Object.keys(tags).length ? JSON.stringify(tags) : '';
       config.create_new_vpc = document.getElementById('create_new_vpc')?.checked !== false;
       config.enable_private_link = document.getElementById('enable_private_link')?.checked || false;
+      config.create_catalog = document.getElementById('create-catalog')?.checked !== false;
       if (this.currentProvider === 'gcp') {
         config.create_new_vpc = true;
         config.pricing_tier = config.enable_private_link ? 'PREMIUM' : '';
@@ -2749,14 +2925,26 @@ class App {
         config.azure_private_link_nat_gateway_zone = ['', '1', '2', '3'].includes(azurePrivateLinkNatGatewayZone)
           ? azurePrivateLinkNatGatewayZone
           : '';
+        config.azure_uc_container_name = document.querySelector('[name="azure_uc_container_name"]')?.value?.trim() || 'uc-catalog';
       }
       if (this.currentProvider === 'aws') {
         config.nat_gateway_mode = document.getElementById('nat_gateway_mode')?.value || 'single';
         config.enable_nat_gateway = !config.create_new_vpc || config.nat_gateway_mode !== 'none';
+        config.new_cluster = document.getElementById('create-test-cluster')?.checked || false;
+        config.cluster_autotermination_minutes = Number(document.getElementById('cluster_autotermination_minutes')?.value || 10);
       } else if (this.currentProvider === 'azure' && config.enable_private_link) {
         config.azure_private_link_nat_gateway_mode = document.getElementById('nat_gateway_mode')?.value || 'single';
         config.nat_gateway_mode = config.azure_private_link_nat_gateway_mode;
         config.enable_nat_gateway = config.nat_gateway_mode !== 'none';
+        config.create_cluster = document.getElementById('create-test-cluster')?.checked || false;
+        config.node_type_id = document.getElementById('node_type_id')?.value?.trim() || 'Standard_DS3_v2';
+        config.cluster_autotermination_minutes = Number(document.getElementById('cluster_autotermination_minutes')?.value || 10);
+      } else if (this.currentProvider === 'azure') {
+        config.nat_gateway_mode = 'single';
+        config.enable_nat_gateway = true;
+        config.create_cluster = document.getElementById('create-test-cluster')?.checked || false;
+        config.node_type_id = document.getElementById('node_type_id')?.value?.trim() || 'Standard_DS3_v2';
+        config.cluster_autotermination_minutes = Number(document.getElementById('cluster_autotermination_minutes')?.value || 10);
       } else if (this.currentProvider === 'gcp' && config.enable_private_link) {
         config.nat_gateway_mode = document.getElementById('nat_gateway_mode')?.value || 'single';
         config.enable_nat_gateway = config.nat_gateway_mode !== 'none';
@@ -2778,10 +2966,11 @@ class App {
       if (this.currentProvider === 'azure') {
         config.azure_resource_group_mode = document.getElementById('azure_resource_group_mode')?.value || 'new';
         if (config.enable_private_link) {
-          config.create_new_vpc = true;
-          config.metastore_mode = 'none';
-          config.metastore_id = '';
-          config.metastore_name = '';
+          config.metastore_mode = document.querySelector('input[name="metastore_mode"]:checked')?.value || 'create';
+          config.metastore_id = document.getElementById('metastore_id')?.value?.trim() || '';
+          config.metastore_name = config.metastore_mode === 'existing'
+            ? ''
+            : (document.getElementById('metastore_name')?.value?.trim() || `${config.project_prefix}-metastore`);
         } else {
           config.metastore_mode = document.querySelector('input[name="metastore_mode"]:checked')?.value || 'create';
           config.metastore_id = config.metastore_mode === 'existing'
@@ -3404,7 +3593,7 @@ class App {
                     ${config.calculated_subnets.map(subnet => {
                       const typeColor = subnet.subnet_type === 'private' ? 'primary' :
                         subnet.subnet_type === 'public' ? 'success' :
-                        (subnet.subnet_type === 'service' || subnet.subnet_type === 'intra') ? 'warning' :
+                        subnet.subnet_type === 'service' ? 'warning' :
                         subnet.subnet_type === 'host' ? 'info' : 'secondary';
                       return `
                         <div class="col-md-6 col-lg-4">
@@ -3503,6 +3692,9 @@ class App {
 
   async renderDownload() {
     const config = this.currentConfig;
+    const databricksAccountId = config.databricks_account_id
+      ? Utils.escapeHtml(config.databricks_account_id)
+      : '&lt;account-id&gt;';
     const providerIcon = config.provider === 'aws' ? 
       '<i class="bi bi-amazon text-warning me-1"></i> AWS' :
       config.provider === 'azure' ?
@@ -3514,8 +3706,8 @@ class App {
 gcloud config set auth/impersonate_service_account ${config.google_service_account_email}
 export GOOGLE_OAUTH_ACCESS_TOKEN="$(gcloud auth print-access-token)"`
       : config.provider === 'azure'
-        ? 'export TF_VAR_databricks_account_id="&lt;account-id&gt;"'
-        : `export TF_VAR_databricks_account_id="&lt;account-id&gt;"
+        ? `export TF_VAR_databricks_account_id="${databricksAccountId}"`
+        : `export TF_VAR_databricks_account_id="${databricksAccountId}"
 export DATABRICKS_CLIENT_ID="&lt;client-id&gt;"
 export DATABRICKS_CLIENT_SECRET="&lt;client-secret&gt;"`;
 

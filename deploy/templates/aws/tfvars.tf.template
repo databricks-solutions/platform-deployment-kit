@@ -1,16 +1,24 @@
 # Generated variables for the Databricks AWS deployment.
-# Databricks account ID remains outside this file:
-# export TF_VAR_databricks_account_id="<your-account-id>"
-
 # Databricks and AWS
 prefix          = "{{project_prefix}}"
 resource_prefix = "{{project_prefix}}"
 region          = "{{region}}"
+databricks_account_id = "{{aws_databricks_account_id}}"
 tags = {{{common_tags}}}
 
 # Unity Catalog metastore required by the workspace deployment
 metastore_id   = "{{metastore_id}}"
 metastore_name = "{{metastore_name}}"
+
+# User-defined catalog and its dedicated S3 storage.
+aws_account_id          = "{{aws_account_id}}"
+new_catalog             = {{create_catalog}}
+catalog_name            = "{{aws_catalog_name}}"
+external_location_name  = "{{aws_external_location_name}}"
+storage_credential_name = "{{aws_storage_credential_name}}"
+workspace_admin_email   = "{{aws_workspace_admin_email}}"
+new_cluster             = {{new_cluster}}
+cluster_autotermination_minutes = {{cluster_autotermination_minutes}}
 
 {{#if enable_private_link}}
 # Classic Back-end PrivateLink always creates an Enterprise workspace.
@@ -39,13 +47,8 @@ availability_zones      = {{{aws_availability_zones}}}
 subnet_ids              = {{{aws_subnet_ids}}}
 private_subnets_cidr    = {{{byovpc_private_subnets_cidr}}}
 public_subnets_cidr     = {{{byovpc_public_subnets_cidr}}}
-intra_subnet_cidr       = {{{byovpc_intra_subnet_cidr}}}
 security_group_ids      = {{{aws_security_group_ids}}}
 new_security_group_name = ""
 sg_egress_ports         = [443, 3306, 2443, 5432, 8443, 8444, 8445, 8446, 8447, 8448, 8449, 8450, 8451]
 
-# Required input, unused while new_catalog is false.
-aws_account_id = ""
-new_catalog    = false
-new_cluster    = false
 {{/if}}

@@ -53,7 +53,7 @@ class HelpContent {
         ],
         considerations: [
           'The existing metastore must be in the same region as the workspace.',
-          'The Azure Back-end Private Link source does not expose this metastore choice in the application.'
+          'The Azure Back-end Private Link source can assign an existing metastore; it does not create catalogs or storage objects.'
         ],
         links: [
           { label: 'Create a Unity Catalog metastore on Azure', url: 'https://learn.microsoft.com/en-us/azure/databricks/data-governance/unity-catalog/create-metastore' }

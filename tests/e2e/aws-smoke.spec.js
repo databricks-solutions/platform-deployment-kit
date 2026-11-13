@@ -32,10 +32,10 @@ test.describe('AWS critical journeys', () => {
       availability_zones: ['us-west-2a', 'us-west-2b']
     });
     await page.locator('#nat_gateway_mode').selectOption('per_az');
-    await expect(page.locator('.subnet-size-radio')).toHaveCount(2);
-    await expect(page.locator('#subnet-size-25')).toBeChecked();
-    await page.locator('label[for="subnet-size-26"]').click();
-    await expect(page.locator('#subnet-size-26')).toBeChecked();
+    await expect(page.locator('#subnet-size-range')).toBeVisible();
+    await expect(page.locator('#subnet-size-range')).toHaveValue('25');
+    await page.locator('#subnet-size-range').fill('26');
+    await expect(page.locator('#subnet-size-range')).toHaveValue('26');
 
     await FormHelpers.submitConfigForm(page);
     await expect(page).toHaveURL(/.*#\/summary/);

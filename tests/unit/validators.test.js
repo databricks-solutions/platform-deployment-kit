@@ -627,10 +627,15 @@ describe('Validators.validateConfiguration', () => {
     provider: 'aws',
     project_prefix: 'myproject',
     region: 'us-east-1',
+    aws_account_id: '123456789012',
+    databricks_account_id: '11111111-1111-4111-8111-111111111111',
     pricing_tier: 'PREMIUM',
     create_new_vpc: true,
     vpc_cidr: '10.0.0.0/16',
     availability_zones: ['us-east-1a', 'us-east-1b'],
+    catalog_name: 'my_catalog',
+    storage_credential_name: 'my-storage-credential',
+    external_location_name: 'my-external-location',
   };
 
   test('valid AWS config returns valid with no errors', () => {
@@ -644,6 +649,18 @@ describe('Validators.validateConfiguration', () => {
     const result = Validators.validateConfiguration(config);
     expect(result.valid).toBe(false);
     expect(result.errors.project_prefix).toBeDefined();
+  });
+
+  test('AWS requires a Databricks account ID', () => {
+    const config = { ...validAwsConfig, databricks_account_id: '' };
+    const result = Validators.validateConfiguration(config);
+    expect(result.errors.databricks_account_id).toBeDefined();
+  });
+
+  test('AWS accepts an optional workspace admin email', () => {
+    const config = { ...validAwsConfig, workspace_admin_email: 'not-an-email' };
+    const result = Validators.validateConfiguration(config);
+    expect(result.errors.workspace_admin_email).toBeDefined();
   });
 
   test('invalid region returns region error', () => {
