@@ -138,7 +138,6 @@ class NetworkCalculator {
     this.MAX_VPC_SIZE = 24;
     this.MIN_SUBNET_SIZE = 26;
     this.SERVICE_SUBNET_SIZE = 28;
-    this.AWS_INTRA_SUBNET_SIZE = 27;
   }
 
   /**
@@ -228,9 +227,8 @@ class NetworkCalculator {
       numSubnets = shouldCreateServiceSubnet ? 3 : 2;
     } else if (this.provider === 'aws') {
       // NAT deployments have one public subnet per AZ. Standard deployments
-      // also need an intra subnet, while fully private PrivateLink deployments
-      // need a dedicated endpoint subnet.
-      numSubnets = numAZs + (enableNatGateway ? numAZs : 0) + ((!enablePrivateLink || !enableNatGateway) ? 1 : 0);
+      // Fully private PrivateLink deployments need a dedicated endpoint subnet.
+      numSubnets = numAZs + (enableNatGateway ? numAZs : 0) + (enablePrivateLink && !enableNatGateway ? 1 : 0);
     } else {
       // Azure: 2 subnets per AZ + service (when requested)
       numSubnets = (numAZs * 2) + (shouldCreateServiceSubnet ? 1 : 0);
@@ -306,8 +304,7 @@ class NetworkCalculator {
   _getAWSSubnetSizes(vpcSize, pricingTier) {
     return {
       private: this.calculateSubnetSize(vpcSize, 1),
-      public: this.calculateSubnetSize(vpcSize, 1),
-      intra: this.AWS_INTRA_SUBNET_SIZE
+      public: this.calculateSubnetSize(vpcSize, 1)
     };
   }
 
@@ -403,8 +400,7 @@ class NetworkCalculator {
         subnetSizes = {
           private: customSubnetSize,
           public: customSubnetSize,
-          service: this.SERVICE_SUBNET_SIZE,
-          intra: this.AWS_INTRA_SUBNET_SIZE
+          service: this.SERVICE_SUBNET_SIZE
         };
       }
     }
@@ -416,15 +412,15 @@ class NetworkCalculator {
       subnets.push(...this._allocateAWSAzureSubnets(
         currentIP, availabilityZones, subnetSizes, false, enableNatGateway
       ));
-      if ((!enablePrivateLink || !enableNatGateway) && subnets.length > 0) {
+      if (enablePrivateLink && !enableNatGateway && subnets.length > 0) {
         currentIP = this.getNextIPAfterSubnet(subnets[subnets.length - 1].cidr);
-        const intraCIDR = this.getNextSubnetCIDR(currentIP, subnetSizes.intra);
+        const endpointCIDR = this.getNextSubnetCIDR(currentIP, this.MIN_SUBNET_SIZE);
         subnets.push(new SubnetAllocation(
-          enablePrivateLink ? 'endpoint' : 'intra',
-          intraCIDR,
-          subnetSizes.intra,
+          'endpoint',
+          endpointCIDR,
+          this.MIN_SUBNET_SIZE,
           availabilityZones[0],
-          enablePrivateLink ? 'endpoint' : 'intra'
+          'endpoint'
         ));
       }
     } else if (this.provider === 'azure') {

@@ -503,6 +503,27 @@ class Validators {
     }
 
     if (config.provider === 'aws') {
+      if (!config.databricks_account_id || !config.databricks_account_id.trim()) {
+        errors.databricks_account_id = 'Databricks Account ID is required';
+      }
+      if (config.workspace_admin_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(config.workspace_admin_email.trim())) {
+        errors.workspace_admin_email = 'Workspace Admin Email must be a valid email address';
+      }
+      if (config.new_cluster && Number(config.cluster_autotermination_minutes) < 10) {
+        errors.cluster_autotermination_minutes = 'Auto-termination must be at least 10 minutes';
+      }
+      if (!/^\d{12}$/.test(String(config.aws_account_id || '').trim())) {
+        errors.aws_account_id = 'AWS Account ID must be exactly 12 digits';
+      }
+      if (config.create_catalog !== false) {
+        for (const [field, label] of [
+          ['catalog_name', 'Catalog name'],
+          ['storage_credential_name', 'Storage credential name'],
+          ['external_location_name', 'External location name']
+        ]) {
+          if (!config[field] || !config[field].trim()) errors[field] = `${label} is required`;
+        }
+      }
       if (config.metastore_mode === 'existing') {
         if (!config.metastore_id || !config.metastore_id.trim()) {
           errors.metastore_id = 'Existing metastore ID is required';
@@ -522,43 +543,84 @@ class Validators {
     if (config.provider === 'azure') {
       const subscriptionCheck = this.validateUuid(config.azure_subscription_id, 'Azure subscription ID');
       if (!subscriptionCheck.valid) errors.azure_subscription_id = subscriptionCheck.message;
+      if (!config.databricks_account_id || !config.databricks_account_id.trim()) {
+        errors.databricks_account_id = 'Databricks Account ID is required';
+      }
+      if (config.azure_resource_group_mode && !['new', 'existing'].includes(config.azure_resource_group_mode)) {
+        errors.azure_resource_group_mode = 'Choose whether to create or reuse the workspace resource group';
+      }
+      if (config.create_cluster) {
+        if (!config.node_type_id || !config.node_type_id.trim()) errors.node_type_id = 'Azure VM SKU is required';
+        if (Number(config.cluster_autotermination_minutes) < 10) {
+          errors.cluster_autotermination_minutes = 'Auto-termination must be at least 10 minutes';
+        }
+      }
 
       if (config.enable_private_link) {
-        if (!config.create_new_vpc) errors.create_new_vpc = 'Back-end Private Link requires a new dedicated VNet';
-        if (!['new', 'existing'].includes(config.azure_resource_group_mode)) {
-          errors.azure_resource_group_mode = 'Choose whether to create or reuse the data plane resource group';
+        if (config.metastore_id && !this.validateUuid(config.metastore_id, 'Metastore ID').valid) {
+          errors.metastore_id = 'Metastore ID must be a valid UUID';
         }
-        if (config.azure_resource_group_mode === 'existing') {
-          const rgCheck = this.validateAzureResourceGroupName(
-            config.azure_existing_resource_group_name,
-            'Existing resource group name'
+        if (config.create_catalog !== false) {
+          const ucStorageCheck = this.validateAzureStorageAccountName(
+            config.azure_uc_storage_account_name,
+            'UC storage account'
           );
-          if (!rgCheck.valid) errors.azure_existing_resource_group_name = rgCheck.message;
+          if (!ucStorageCheck.valid) errors.azure_uc_storage_account_name = ucStorageCheck.message;
+          if (!config.azure_uc_container_name || !/^[a-z0-9]([a-z0-9]|-[a-z0-9]){2,62}$/.test(config.azure_uc_container_name.trim())) {
+            errors.azure_uc_container_name = 'UC container name must be 3-63 lowercase letters, numbers, or hyphens';
+          }
         }
+        if (config.create_catalog !== false) {
+          for (const [field, label] of [
+            ['azure_catalog_name', 'Catalog name'],
+            ['azure_storage_credential_name', 'Storage credential name'],
+            ['azure_external_location_name', 'External location name']
+          ]) {
+            if (!config[field] || !config[field].trim()) errors[field] = `${label} is required`;
+          }
+        }
+        if (config.metastore_mode === 'existing' && !config.metastore_id?.trim()) {
+          errors.metastore_id = 'Existing metastore ID is required';
+        }
+        if (config.metastore_mode !== 'existing' && !config.metastore_name?.trim()) {
+          errors.metastore_name = 'Metastore name is required when creating a metastore';
+        }
+        if (config.metastore_mode !== 'existing' && (!config.azure_admin_user || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(config.azure_admin_user.trim()))) {
+          errors.azure_admin_user = 'Workspace admin user must be a valid email address when creating a metastore';
+        }
+        const rgCheck = this.validateAzureResourceGroupName(config.resource_group_name, 'Workspace resource group');
+        if (!rgCheck.valid) errors.resource_group_name = rgCheck.message;
       } else {
-        const tenantCheck = this.validateUuid(config.azure_tenant_id, 'Azure tenant ID');
-        if (!tenantCheck.valid) errors.azure_tenant_id = tenantCheck.message;
         const rgCheck = this.validateAzureResourceGroupName(config.resource_group_name, 'Workspace resource group');
         if (!rgCheck.valid) errors.resource_group_name = rgCheck.message;
         if (!config.azure_admin_user || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(config.azure_admin_user.trim())) {
           errors.azure_admin_user = 'Workspace admin user must be a valid email address';
         }
-        const rootStorageCheck = this.validateAzureStorageAccountName(
-          config.azure_root_storage_name,
-          'Workspace root storage account'
-        );
-        if (!rootStorageCheck.valid) errors.azure_root_storage_name = rootStorageCheck.message;
-        const ucStorageCheck = this.validateAzureStorageAccountName(
-          config.azure_uc_storage_account_name,
-          'UC storage account'
-        );
-        if (!ucStorageCheck.valid) errors.azure_uc_storage_account_name = ucStorageCheck.message;
-        for (const [field, label] of [
-          ['azure_catalog_name', 'Catalog name'],
-          ['azure_storage_credential_name', 'Storage credential name'],
-          ['azure_external_location_name', 'External location name']
-        ]) {
-          if (!config[field] || !config[field].trim()) errors[field] = `${label} is required`;
+        if (config.azure_root_storage_name) {
+          const rootStorageCheck = this.validateAzureStorageAccountName(
+            config.azure_root_storage_name,
+            'Workspace root storage account'
+          );
+          if (!rootStorageCheck.valid) errors.azure_root_storage_name = rootStorageCheck.message;
+        }
+        if (config.create_catalog !== false) {
+          const ucStorageCheck = this.validateAzureStorageAccountName(
+            config.azure_uc_storage_account_name,
+            'UC storage account'
+          );
+          if (!ucStorageCheck.valid) errors.azure_uc_storage_account_name = ucStorageCheck.message;
+          if (!config.azure_uc_container_name || !/^[a-z0-9]([a-z0-9]|-[a-z0-9]){2,62}$/.test(config.azure_uc_container_name.trim())) {
+            errors.azure_uc_container_name = 'UC container name must be 3-63 lowercase letters, numbers, or hyphens';
+          }
+        }
+        if (config.create_catalog !== false) {
+          for (const [field, label] of [
+            ['azure_catalog_name', 'Catalog name'],
+            ['azure_storage_credential_name', 'Storage credential name'],
+            ['azure_external_location_name', 'External location name']
+          ]) {
+            if (!config[field] || !config[field].trim()) errors[field] = `${label} is required`;
+          }
         }
         if (config.metastore_mode === 'existing' && (!config.metastore_id || !config.metastore_id.trim())) {
           errors.metastore_id = 'Existing metastore ID is required';

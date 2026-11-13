@@ -36,10 +36,9 @@ This ready-to-deploy Terraform project was generated from your selections.
 
 Configure AWS credentials with `aws configure` or your normal AWS CLI/profile process. See [AWS CLI configuration](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html). These AWS credentials are separate from the Databricks credentials below.
 
-Create an OAuth secret for the Databricks service principal by following the [OAuth machine-to-machine authentication guide](https://docs.databricks.com/aws/en/dev-tools/auth/oauth-m2m), then export its client ID and secret without placing them in `terraform.tfvars`:
+The Databricks account ID is already included in `terraform.tfvars`. Create an OAuth secret for the Databricks service principal by following the [OAuth machine-to-machine authentication guide](https://docs.databricks.com/aws/en/dev-tools/auth/oauth-m2m), then export its client ID and secret without placing them in `terraform.tfvars`:
 
 ```bash
-export TF_VAR_databricks_account_id="<your-databricks-account-id>"
 export DATABRICKS_CLIENT_ID="<service-principal-client-id>"
 export DATABRICKS_CLIENT_SECRET="<service-principal-secret>"
 ```

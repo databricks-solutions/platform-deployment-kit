@@ -10,7 +10,8 @@ This ready-to-deploy Terraform project was generated from your selections.
 | Region | `{{region}}` |
 | Project Prefix | `{{project_prefix}}` |
 | Pricing Tier | Premium |
-| VNet | {{#if enable_private_link}}Create dedicated VNet{{else}}{{#if create_new_vpc}}Create new{{else}}Use `{{existing_vpc_id}}`{{/if}}{{/if}} |
+| Resource group | {{#if azure_create_resource_group}}Create `{{resource_group_name}}`{{else}}Reuse `{{resource_group_name}}`{{/if}} |
+| VNet | {{#if create_new_vpc}}Create new{{else}}Reuse `{{azure_vnet_name}}`{{/if}} |
 | Back-end Private Link | {{private_link_status}} |
 {{#unless enable_private_link}}
 | Metastore | {{#if metastore_id}}Attach `{{metastore_id}}`{{else}}Create `{{metastore_name}}`{{/if}} |
@@ -46,7 +47,7 @@ For CI/CD, Terraform also auto-detects service-principal credentials from `ARM_C
 {{#if enable_private_link}}
 ## Back-end Private Link Topology
 
-This Azure Back-end Private Link topology creates a dedicated VNet, {{#if enable_nat_gateway}}a NAT gateway, {{/if}}Back-end and DBFS private endpoints, private DNS zones, storage service endpoints with an endpoint policy, and an account-level NCC for serverless DBFS access. The workspace UI remains available over the public network; front-end Private Link is not configured. Metastore assignment is deliberately disabled.
+This Azure Back-end Private Link topology creates or reuses a VNet, {{#if enable_nat_gateway}}a NAT gateway, {{/if}}Back-end and DBFS private endpoints, private DNS zones, storage service endpoints with an endpoint policy, and an account-level NCC for serverless DBFS access. The workspace UI remains available over the public network; front-end Private Link is not configured. It also assigns or creates the selected Unity Catalog metastore and catalog resources.
 
 {{#unless enable_nat_gateway}}
 The deployment does not create a NAT gateway, so classic cluster nodes have no general internet egress by default. Ensure all required traffic is covered by the built-in Microsoft.Storage and Microsoft.EventHub service endpoints or routed through your own firewall/network virtual appliance (NVA). If clusters need customer-managed storage through the storage service endpoint, add its full Azure resource ID to `service_endpoint_policy_storage_accounts` before applying.
@@ -54,7 +55,7 @@ The deployment does not create a NAT gateway, so classic cluster nodes have no g
 {{else}}
 ## Unity Catalog
 
-This VNet-injection deployment creates or attaches a metastore and provisions the selected UC storage account, storage credential, external location, and catalog. The storage account enforces TLS 1.2, infrastructure encryption, and disabled public blob access. Optional cluster creation is disabled.
+This VNet-injection deployment creates or attaches a metastore and provisions the selected UC storage account, storage credential, external location, and catalog. The storage account enforces TLS 1.2, infrastructure encryption, and disabled public blob access. Optional single-node UC cluster creation is controlled by `create_cluster`.
 {{/if}}
 
 ## Deploy
