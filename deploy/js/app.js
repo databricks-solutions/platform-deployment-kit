@@ -741,12 +741,20 @@ class App {
    * Clear validation state from a field
    */
   clearFieldValidation(fieldName) {
+    if (fieldName === 'availability_zones') {
+      const error = document.getElementById('availability-zones-error');
+      if (error) {
+        error.textContent = '';
+        error.style.display = 'none';
+      }
+    }
     const field = document.querySelector(`input[name="${fieldName}"], select[name="${fieldName}"]`);
     if (field) {
       field.removeAttribute('data-invalid');
       field.removeAttribute('data-error');
       field.classList.remove('is-invalid');
       field.setCustomValidity('');
+      field.closest('.choices')?.classList.remove('is-invalid');
     }
   }
 
@@ -754,23 +762,23 @@ class App {
    * Mark a field as invalid with error message
    */
   markFieldAsInvalid(fieldName, errorMessage) {
-    // Try to find input, select, or checkbox
-    let field = document.querySelector(`input[name="${fieldName}"], select[name="${fieldName}"]`);
-    
-    // If not found and it's availability_zones, mark the select
-    if (!field && fieldName === 'availability_zones') {
+    if (fieldName === 'availability_zones') {
+      const error = document.getElementById('availability-zones-error');
+      if (error) {
+        error.textContent = errorMessage;
+        error.style.display = 'block';
+      }
       const azSelect = document.getElementById('availability-zones-select');
       if (azSelect) {
         azSelect.setAttribute('data-invalid', 'true');
         azSelect.setAttribute('data-error', errorMessage);
-        // Also mark the Choices.js container
-        const choicesContainer = azSelect.closest('.choices');
-        if (choicesContainer) {
-          choicesContainer.classList.add('is-invalid');
-        }
+        azSelect.classList.add('is-invalid');
+        azSelect.closest('.choices')?.classList.add('is-invalid');
       }
       return;
     }
+    // Try to find input, select, or checkbox
+    let field = document.querySelector(`input[name="${fieldName}"], select[name="${fieldName}"]`);
     
     if (field) {
       field.setAttribute('data-invalid', 'true');
@@ -805,6 +813,11 @@ class App {
       field.classList.remove('is-invalid');
       field.setCustomValidity('');
     });
+    const availabilityZoneError = document.getElementById('availability-zones-error');
+    if (availabilityZoneError) {
+      availabilityZoneError.textContent = '';
+      availabilityZoneError.style.display = 'none';
+    }
   }
 
   renderConfiguration() {
@@ -1365,7 +1378,7 @@ class App {
                     <select id="availability-zones-select" class="form-select" name="availability_zones" multiple required>
                       <option value="" disabled>Select availability zones</option>
                     </select>
-                    <div class="form-text">Select at least 2 Availability Zones for AWS workspace subnets.</div>
+                    <div id="availability-zones-error" class="invalid-feedback" style="display: none;"></div>
                   </div>
                   ` : ''}
                   <div id="subnet-size-selector-container" class="mb-4" style="display: none;">
@@ -2168,7 +2181,7 @@ class App {
         
         // Only use stored zones if they're valid for current region AND region hasn't changed
         // If region changed, defaultZones will be empty (cleared in region change handler)
-        if (validDefaultZones.length >= limits.min && currentRegion === (this.currentConfig.region || '')) {
+        if (validDefaultZones.length > 0 && currentRegion === (this.currentConfig.region || '')) {
           initialValues = validDefaultZones;
         } else if (currentRegion) {
           // Set default zones based on provider and region (respecting minimum)
@@ -2446,11 +2459,17 @@ class App {
                 const limits = appInstance.getAvailabilityZoneLimits(appInstance.currentProvider);
                 
                 // Validate minimum
-                if (selectedValues.length < limits.min) {
+                if (appInstance.currentProvider === 'aws' && selectedValues.length < limits.min) {
+                  appInstance.markFieldAsInvalid(
+                    'availability_zones',
+                    'Select at least 2 Availability Zones for the workspace subnets.'
+                  );
                   Utils.showFlashMessage(
-                    `At least ${limits.min} availability zone(s) required for ${appInstance.currentProvider.toUpperCase()}.`, 
+                    'At least 2 availability zones are required for AWS workspace subnets.',
                     'warning'
                   );
+                } else if (appInstance.currentProvider === 'aws') {
+                  appInstance.clearFieldValidation('availability_zones');
                 }
                 
                 // Trigger subnet recalculation
@@ -2463,28 +2482,6 @@ class App {
               
               // Use Choices.js event system
               if (container) {
-                const syncMinimumAvailabilityZoneRemoval = () => {
-                  const selectedCount = (choicesInstance.getValue(true) || []).length;
-                  const atMinimum = appInstance.currentProvider === 'aws' && selectedCount <= limits.min;
-                  container.querySelectorAll('.choices__button').forEach(button => {
-                    button.disabled = atMinimum;
-                    button.setAttribute('aria-disabled', String(atMinimum));
-                    button.title = atMinimum ? 'AWS workspace subnets require at least 2 Availability Zones.' : 'Remove Availability Zone';
-                  });
-                };
-
-                // Prevent the Choices.js remove button from taking AWS below the
-                // two-AZ minimum. Submission validation remains the final guard.
-                container.addEventListener('click', event => {
-                  if (appInstance.currentProvider !== 'aws' || !event.target.closest('.choices__button')) return;
-                  const selectedCount = (choicesInstance.getValue(true) || []).length;
-                  if (selectedCount <= limits.min) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    Utils.showFlashMessage('AWS workspace subnets require at least 2 Availability Zones.', 'warning');
-                  }
-                }, true);
-
                 // Helper function to sync dropdown visibility with selected items
                 const syncDropdownVisibility = () => {
                   if (!choicesInstance) return;
@@ -2505,7 +2502,6 @@ class App {
                 };
                 
                 container.addEventListener('addItem', function() {
-                  syncMinimumAvailabilityZoneRemoval();
                   // Trigger subnet recalculation when AZ is added
                   if (appInstance.calculateSubnets) {
                     appInstance.calculateSubnets();
@@ -2517,7 +2513,6 @@ class App {
                 });
                 
                 container.addEventListener('removeItem', function() {
-                  syncMinimumAvailabilityZoneRemoval();
                   // Trigger subnet recalculation when AZ is removed
                   if (appInstance.calculateSubnets) {
                     appInstance.calculateSubnets();
@@ -2577,19 +2572,6 @@ class App {
                 });
               }
 
-              // Apply the initial disabled state after Choices has rendered the
-              // selected AWS availability zones.
-              if (container) {
-                const selectedCount = (choicesInstance.getValue(true) || []).length;
-                if (this.currentProvider === 'aws' && selectedCount <= limits.min) {
-                  container.querySelectorAll('.choices__button').forEach(button => {
-                    button.disabled = true;
-                    button.setAttribute('aria-disabled', 'true');
-                    button.title = 'AWS workspace subnets require at least 2 Availability Zones.';
-                  });
-                }
-              }
-              
               azSelect.hasChoicesListeners = true;
             }
             
@@ -3141,30 +3123,14 @@ class App {
         const limits = this.getAvailabilityZoneLimits(this.currentProvider);
         
         if (zones.length === 0) {
-          const azSelect = document.getElementById('availability-zones-select');
-          if (azSelect) {
-            azSelect.setAttribute('data-invalid', 'true');
-            azSelect.setAttribute('data-error', `At least ${limits.min} availability zone(s) required for ${this.currentProvider.toUpperCase()}.`);
-            const choicesContainer = azSelect.closest('.choices');
-            if (choicesContainer) {
-              choicesContainer.classList.add('is-invalid');
-            }
-          }
+          this.markFieldAsInvalid('availability_zones', `At least ${limits.min} availability zone(s) required for ${this.currentProvider.toUpperCase()}.`);
           Utils.showFlashMessage(`At least ${limits.min} availability zone(s) required for ${this.currentProvider.toUpperCase()}.`, 'error');
           return;
         }
         
         // Check minimum
         if (zones.length < limits.min) {
-          const azSelect = document.getElementById('availability-zones-select');
-          if (azSelect) {
-            azSelect.setAttribute('data-invalid', 'true');
-            azSelect.setAttribute('data-error', `At least ${limits.min} availability zone(s) required for ${this.currentProvider.toUpperCase()}.`);
-            const choicesContainer = azSelect.closest('.choices');
-            if (choicesContainer) {
-              choicesContainer.classList.add('is-invalid');
-            }
-          }
+          this.markFieldAsInvalid('availability_zones', `At least ${limits.min} availability zone(s) required for ${this.currentProvider.toUpperCase()}.`);
           Utils.showFlashMessage(`At least ${limits.min} availability zone(s) required for ${this.currentProvider.toUpperCase()}.`, 'error');
           return;
         }
