@@ -849,15 +849,19 @@ class App {
       'azure_nat_gateway_zone'
     ) ? String(this.currentConfig.azure_nat_gateway_zone) : '1';
     const savedAzureNatGatewayZone = ['', '1', '2', '3'].includes(configuredAzureNatGatewayZone)
-      ? configuredAzureNatGatewayZone
+      ? (configuredAzureNatGatewayZone === '2' || configuredAzureNatGatewayZone === '3' ? '1' : configuredAzureNatGatewayZone)
       : '1';
     const configuredAzurePrivateLinkNatGatewayZone = Object.prototype.hasOwnProperty.call(
       this.currentConfig,
       'azure_private_link_nat_gateway_zone'
     ) ? String(this.currentConfig.azure_private_link_nat_gateway_zone) : '';
     const savedAzurePrivateLinkNatGatewayZone = ['', '1', '2', '3'].includes(configuredAzurePrivateLinkNatGatewayZone)
-      ? configuredAzurePrivateLinkNatGatewayZone
-      : '';
+      ? (savedNatGatewayMode === 'none'
+        ? ''
+        : (configuredAzurePrivateLinkNatGatewayZone === '2' || configuredAzurePrivateLinkNatGatewayZone === '3'
+          ? '1'
+          : configuredAzurePrivateLinkNatGatewayZone || '1'))
+      : (savedNatGatewayMode === 'none' ? '' : '1');
     
     // Load configuration form based on provider
     const content = `
@@ -1196,9 +1200,7 @@ class App {
                       ${this.renderHelpButton('nat-placement', 'NAT gateway placement')}
                     </div>
                     <select class="form-select" id="azure_nat_gateway_zone" name="azure_nat_gateway_zone">
-                      <option value="1" ${savedAzureNatGatewayZone === '1' ? 'selected' : ''}>Availability Zone 1 (default)</option>
-                      <option value="2" ${savedAzureNatGatewayZone === '2' ? 'selected' : ''}>Availability Zone 2</option>
-                      <option value="3" ${savedAzureNatGatewayZone === '3' ? 'selected' : ''}>Availability Zone 3</option>
+                      <option value="1" ${savedAzureNatGatewayZone === '1' ? 'selected' : ''}>Zonal</option>
                       <option value="" ${savedAzureNatGatewayZone === '' ? 'selected' : ''}>Regional / non-zonal</option>
                     </select>
                   </div>
@@ -1233,10 +1235,8 @@ class App {
                         ${this.renderHelpButton('nat-placement', 'NAT gateway placement')}
                       </div>
                       <select class="form-select" id="azure_private_link_nat_gateway_zone" name="azure_private_link_nat_gateway_zone">
-                        <option value="" ${savedAzurePrivateLinkNatGatewayZone === '' ? 'selected' : ''}>Regional / non-zonal (recommended)</option>
-                        <option value="1" ${savedAzurePrivateLinkNatGatewayZone === '1' ? 'selected' : ''}>Availability Zone 1</option>
-                        <option value="2" ${savedAzurePrivateLinkNatGatewayZone === '2' ? 'selected' : ''}>Availability Zone 2</option>
-                        <option value="3" ${savedAzurePrivateLinkNatGatewayZone === '3' ? 'selected' : ''}>Availability Zone 3</option>
+                        <option value="1" ${savedAzurePrivateLinkNatGatewayZone === '1' ? 'selected' : ''}>Zonal</option>
+                        <option value="" ${savedAzurePrivateLinkNatGatewayZone === '' ? 'selected' : ''}>Regional / non-zonal</option>
                       </select>
                     </div>
                     ` : ''}
@@ -1365,6 +1365,7 @@ class App {
                     <select id="availability-zones-select" class="form-select" name="availability_zones" multiple required>
                       <option value="" disabled>Select availability zones</option>
                     </select>
+                    <div class="form-text">Select at least 2 Availability Zones for AWS workspace subnets.</div>
                   </div>
                   ` : ''}
                   <div id="subnet-size-selector-container" class="mb-4" style="display: none;">
@@ -2167,7 +2168,7 @@ class App {
         
         // Only use stored zones if they're valid for current region AND region hasn't changed
         // If region changed, defaultZones will be empty (cleared in region change handler)
-        if (validDefaultZones.length > 0 && currentRegion === (this.currentConfig.region || '')) {
+        if (validDefaultZones.length >= limits.min && currentRegion === (this.currentConfig.region || '')) {
           initialValues = validDefaultZones;
         } else if (currentRegion) {
           // Set default zones based on provider and region (respecting minimum)
@@ -2435,6 +2436,7 @@ class App {
             
             // Add event listeners for validation and subnet recalculation
             const appInstance = this;
+            const container = azSelect.closest('.choices') || document.querySelector('.choices');
             
             // Listen to Choices.js events (only add once)
             if (!azSelect.hasChoicesListeners) {
@@ -2460,8 +2462,29 @@ class App {
               });
               
               // Use Choices.js event system
-              const container = azSelect.closest('.choices') || document.querySelector('.choices');
               if (container) {
+                const syncMinimumAvailabilityZoneRemoval = () => {
+                  const selectedCount = (choicesInstance.getValue(true) || []).length;
+                  const atMinimum = appInstance.currentProvider === 'aws' && selectedCount <= limits.min;
+                  container.querySelectorAll('.choices__button').forEach(button => {
+                    button.disabled = atMinimum;
+                    button.setAttribute('aria-disabled', String(atMinimum));
+                    button.title = atMinimum ? 'AWS workspace subnets require at least 2 Availability Zones.' : 'Remove Availability Zone';
+                  });
+                };
+
+                // Prevent the Choices.js remove button from taking AWS below the
+                // two-AZ minimum. Submission validation remains the final guard.
+                container.addEventListener('click', event => {
+                  if (appInstance.currentProvider !== 'aws' || !event.target.closest('.choices__button')) return;
+                  const selectedCount = (choicesInstance.getValue(true) || []).length;
+                  if (selectedCount <= limits.min) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    Utils.showFlashMessage('AWS workspace subnets require at least 2 Availability Zones.', 'warning');
+                  }
+                }, true);
+
                 // Helper function to sync dropdown visibility with selected items
                 const syncDropdownVisibility = () => {
                   if (!choicesInstance) return;
@@ -2482,6 +2505,7 @@ class App {
                 };
                 
                 container.addEventListener('addItem', function() {
+                  syncMinimumAvailabilityZoneRemoval();
                   // Trigger subnet recalculation when AZ is added
                   if (appInstance.calculateSubnets) {
                     appInstance.calculateSubnets();
@@ -2493,6 +2517,7 @@ class App {
                 });
                 
                 container.addEventListener('removeItem', function() {
+                  syncMinimumAvailabilityZoneRemoval();
                   // Trigger subnet recalculation when AZ is removed
                   if (appInstance.calculateSubnets) {
                     appInstance.calculateSubnets();
@@ -2550,6 +2575,19 @@ class App {
                   attributes: true,
                   attributeFilter: ['class']
                 });
+              }
+
+              // Apply the initial disabled state after Choices has rendered the
+              // selected AWS availability zones.
+              if (container) {
+                const selectedCount = (choicesInstance.getValue(true) || []).length;
+                if (this.currentProvider === 'aws' && selectedCount <= limits.min) {
+                  container.querySelectorAll('.choices__button').forEach(button => {
+                    button.disabled = true;
+                    button.setAttribute('aria-disabled', 'true');
+                    button.title = 'AWS workspace subnets require at least 2 Availability Zones.';
+                  });
+                }
               }
               
               azSelect.hasChoicesListeners = true;
@@ -2985,13 +3023,13 @@ class App {
       if (this.currentProvider === 'azure') {
         config.pricing_tier = 'PREMIUM';
         const azureNatGatewayZone = document.getElementById('azure_nat_gateway_zone')?.value ?? '1';
-        config.azure_nat_gateway_zone = ['', '1', '2', '3'].includes(azureNatGatewayZone)
+        config.azure_nat_gateway_zone = ['', '1'].includes(azureNatGatewayZone)
           ? azureNatGatewayZone
           : '1';
         const azurePrivateLinkNatGatewayZone = document.getElementById('azure_private_link_nat_gateway_zone')?.value ?? '';
-        config.azure_private_link_nat_gateway_zone = ['', '1', '2', '3'].includes(azurePrivateLinkNatGatewayZone)
+        config.azure_private_link_nat_gateway_zone = ['', '1'].includes(azurePrivateLinkNatGatewayZone)
           ? azurePrivateLinkNatGatewayZone
-          : '';
+          : '1';
         config.azure_uc_container_name = document.querySelector('[name="azure_uc_container_name"]')?.value?.trim() || 'uc-catalog';
       }
       if (this.currentProvider === 'aws') {
@@ -3354,7 +3392,7 @@ class App {
       ? String(config.azure_nat_gateway_zone)
       : '1';
     const azureNatGatewayZone = ['1', '2', '3'].includes(configuredAzureNatGatewayZone)
-      ? configuredAzureNatGatewayZone
+      ? (configuredAzureNatGatewayZone === '2' || configuredAzureNatGatewayZone === '3' ? '1' : configuredAzureNatGatewayZone)
       : '';
     const azureNatGatewayLabel = azureNatGatewayZone
       ? `Availability Zone ${azureNatGatewayZone}`
@@ -3364,7 +3402,7 @@ class App {
       'azure_private_link_nat_gateway_zone'
     ) ? String(config.azure_private_link_nat_gateway_zone) : '';
     const azurePrivateLinkNatGatewayZone = ['1', '2', '3'].includes(configuredAzurePrivateLinkNatGatewayZone)
-      ? configuredAzurePrivateLinkNatGatewayZone
+      ? (configuredAzurePrivateLinkNatGatewayZone === '2' || configuredAzurePrivateLinkNatGatewayZone === '3' ? '1' : configuredAzurePrivateLinkNatGatewayZone)
       : '';
     const azurePrivateLinkNatGatewayLabel = natGatewayMode === 'none'
       ? 'None'

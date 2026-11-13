@@ -38,7 +38,7 @@ test.describe('Azure critical journeys', () => {
     await FormHelpers.fillNetworkConfig(page, {
       create_new_vpc: true,
       vpc_cidr: '10.16.0.0/20',
-      azure_nat_gateway_zone: '2'
+      azure_nat_gateway_zone: '1'
     });
     await expect(page.locator('[name="pricing_tier"]')).toHaveCount(0);
 
@@ -51,7 +51,7 @@ test.describe('Azure critical journeys', () => {
     const tfvars = await archive.file('terraform.tfvars').async('string');
     expect(tfvars).toContain('resource_group_name   = "rg-standard-workspace"');
     expect(tfvars).toContain('create_new_vnet          = true');
-    expect(tfvars).toContain('nat_gateway_zones        = ["2"]');
+    expect(tfvars).toContain('nat_gateway_zones        = ["1"]');
   });
 
   test('supports an existing VNet', async ({ page }) => {
@@ -82,7 +82,7 @@ test.describe('Azure critical journeys', () => {
     await FormHelpers.fillAzureConfig(page, { project_prefix: 'azure-pl-nat' });
     await enablePrivateLink(page, 'existing');
     await page.locator('#nat_gateway_mode').selectOption('single');
-    await page.locator('#azure_private_link_nat_gateway_zone').selectOption('3');
+    await page.locator('#azure_private_link_nat_gateway_zone').selectOption('1');
     await FormHelpers.fillNetworkConfig(page, { vpc_cidr: '10.48.0.0/20' });
 
     await FormHelpers.submitConfigForm(page);
@@ -94,7 +94,7 @@ test.describe('Azure critical journeys', () => {
     const tfvars = await archive.file('terraform.tfvars').async('string');
     expect(tfvars).toContain('create_resource_group = false');
     expect(tfvars).toContain('create_nat_gateway = true');
-    expect(tfvars).toContain('nat_gateway_zones = ["3"]');
+    expect(tfvars).toContain('nat_gateway_zones = ["1"]');
     expect(tfvars).toContain('new_catalog = true');
   });
 

@@ -176,14 +176,15 @@ class HelpContent {
     'nat-placement': {
       azure: {
         title: 'NAT gateway placement',
-        overview: 'Choose whether the NAT gateway and its public IP are regional resources or pinned to a specific Availability Zone.',
+        overview: 'Choose whether the NAT gateway and its public IP are regional resources or pinned to one Availability Zone.',
         whenToUse: [
-          'Regional placement is the default for the Private Link flow and is not tied to one zone.',
-          'Zonal placement is useful when the network architecture intentionally aligns egress with a selected zone.'
+          'Zonal placement keeps NAT egress aligned with a single Availability Zone. Choose it when your network design intentionally keeps the workspace subnets and egress in that zone.',
+          'Regional / non-zonal placement is the safer general choice: it avoids pinning egress to one zone and works in regions without Availability Zone support.'
         ],
         considerations: [
-          'Use regional placement in regions that do not support Availability Zones.',
-          'The selected zone must be supported in the workspace region.'
+          'Zonal placement can simplify locality and reduce cross-zone traffic, but it is tied to one zone and may be less resilient if that zone has an outage.',
+          'Regional / non-zonal placement avoids a fixed zone dependency, but traffic may cross zones depending on subnet placement.',
+          'The zonal placement is limited to Availability Zone 1 in this deployment; the NAT gateway and public IP use the same placement.'
         ],
         links: [
           { label: 'Azure NAT Gateway overview', url: 'https://learn.microsoft.com/en-us/azure/nat-gateway/nat-overview' },
