@@ -60,7 +60,7 @@ admin_user                  = "{{azure_admin_user}}"
 root_storage_name           = "{{azure_root_storage_name}}"
 managed_resource_group_name = "{{azure_managed_resource_group_name}}"
 
-metastore_id           = "{{metastore_id}}"
+existing_metastore_id  = "{{metastore_id}}"
 new_metastore_name     = "{{metastore_name}}"
 
 uc_storage_account_name = "{{azure_uc_storage_account_name}}"

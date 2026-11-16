@@ -582,10 +582,10 @@ class Validators {
         if (config.metastore_mode === 'existing' && !config.metastore_id?.trim()) {
           errors.metastore_id = 'Existing metastore ID is required';
         }
-        if (config.metastore_mode !== 'existing' && !config.metastore_name?.trim()) {
+        if (config.metastore_mode === 'create' && !config.metastore_name?.trim()) {
           errors.metastore_name = 'Metastore name is required when creating a metastore';
         }
-        if (config.metastore_mode !== 'existing' && (!config.azure_admin_user || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(config.azure_admin_user.trim()))) {
+        if (config.metastore_mode === 'create' && (!config.azure_admin_user || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(config.azure_admin_user.trim()))) {
           errors.azure_admin_user = 'Workspace admin user must be a valid email address when creating a metastore';
         }
         const rgCheck = this.validateAzureResourceGroupName(config.resource_group_name, 'Workspace resource group');

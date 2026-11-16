@@ -746,6 +746,14 @@ pre code {
   font-size: var(--text-xs);
 }
 
+.resource-tag-add-button {
+  width: 1.75rem !important;
+  height: 1.75rem;
+  padding: 0;
+  flex: 0 0 1.75rem;
+  border-radius: var(--radius-sm);
+}
+
 /* Primary Button */
 .btn-primary {
   background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%);

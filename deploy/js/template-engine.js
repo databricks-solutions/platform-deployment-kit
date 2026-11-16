@@ -330,9 +330,9 @@ class TemplateEngine {
         vars.azure_private_subnet_cidr
       ]);
       vars.metastore_id = config.metastore_mode === 'existing' ? (config.metastore_id || '') : '';
-      vars.metastore_name = config.metastore_mode === 'existing'
-        ? ''
-        : (config.metastore_name || `${prefix}-metastore`);
+      vars.metastore_name = config.metastore_mode === 'create'
+        ? (config.metastore_name || `${prefix}-metastore`)
+        : '';
       vars.azure_databricks_account_id = config.databricks_account_id || '';
       vars.azure_admin_user = config.enable_private_link
         ? (config.azure_private_link_admin_user || config.azure_admin_user || '')

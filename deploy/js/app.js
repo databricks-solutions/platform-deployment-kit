@@ -927,7 +927,7 @@ class App {
                     <div class="col-12">
                       <div class="d-flex align-items-center gap-2 mb-2">
                         <label class="form-label fw-semibold mb-0">Resource Tags <span class="text-muted fw-normal">(optional)</span></label>
-                        <button type="button" class="btn btn-outline-primary btn-sm" id="add-resource-tag" aria-label="Add resource tag">
+                        <button type="button" class="btn btn-outline-primary btn-sm resource-tag-add-button" id="add-resource-tag" aria-label="Add resource tag" title="Add resource tag">
                           <i class="bi bi-plus-lg"></i>
                         </button>
                       </div>
@@ -1422,11 +1422,6 @@ class App {
                         <label class="form-label fw-semibold">Unity Catalog Metastore <span class="text-danger">*</span></label>
                         ${this.renderHelpButton('metastore', 'Unity Catalog metastore')}
                       </div>
-                      ${this.currentProvider === 'azure' && this.currentConfig.enable_private_link ? `
-                      <div class="alert alert-info mb-0">
-                        Private Link can assign an existing Unity Catalog metastore. Catalog and storage objects remain managed by the standard Azure UC deployment.
-                      </div>
-                      ` : `
                       <div class="form-check">
                         <input class="form-check-input" type="radio" name="metastore_mode" id="metastore_mode_create"
                                value="create" ${this.currentConfig.metastore_mode !== 'existing' ? 'checked' : ''}>
@@ -1437,16 +1432,15 @@ class App {
                                value="existing" ${this.currentConfig.metastore_mode === 'existing' ? 'checked' : ''}>
                         <label class="form-check-label" for="metastore_mode_existing">Attach an existing metastore</label>
                       </div>
-                      `}
                     </div>
                     <div class="col-md-6">
-                      <div id="new-metastore-section" ${this.currentProvider === 'azure' && this.currentConfig.enable_private_link ? 'style="display: none;"' : ''}>
+                      <div id="new-metastore-section" style="display: none;">
                         <label class="form-label" for="metastore_name">Metastore Name</label>
                         <input type="text" class="form-control" id="metastore_name" name="metastore_name"
                                value="${this.currentConfig.metastore_name || ''}"
                                placeholder="Defaults to &lt;project-prefix&gt;-metastore">
                       </div>
-                      <div id="existing-metastore-section" ${this.currentProvider === 'azure' && this.currentConfig.enable_private_link ? '' : 'style="display: none;"'}>
+                      <div id="existing-metastore-section" style="display: none;">
                         <label class="form-label" for="metastore_id">Existing Metastore ID <span class="text-muted fw-normal">(optional)</span></label>
                         <input type="text" class="form-control" id="metastore_id" name="metastore_id"
                                value="${this.currentConfig.metastore_id || ''}"
@@ -2896,7 +2890,8 @@ class App {
     updateCatalogUI();
     const updateMetastoreUI = () => {
       const useExisting = metastoreModeExisting?.checked === true;
-      if (newMetastoreSection) newMetastoreSection.style.display = useExisting ? 'none' : 'block';
+      const createNew = metastoreModeCreate?.checked === true;
+      if (newMetastoreSection) newMetastoreSection.style.display = createNew ? 'block' : 'none';
       if (existingMetastoreSection) existingMetastoreSection.style.display = useExisting ? 'block' : 'none';
       if (metastoreIdInput) {
         if (useExisting) metastoreIdInput.setAttribute('required', '');
@@ -3054,10 +3049,12 @@ class App {
         config.azure_resource_group_mode = document.getElementById('azure_resource_group_mode')?.value || 'new';
         if (config.enable_private_link) {
           config.metastore_mode = document.querySelector('input[name="metastore_mode"]:checked')?.value || 'create';
-          config.metastore_id = document.getElementById('metastore_id')?.value?.trim() || '';
-          config.metastore_name = config.metastore_mode === 'existing'
-            ? ''
-            : (document.getElementById('metastore_name')?.value?.trim() || `${config.project_prefix}-metastore`);
+          config.metastore_id = config.metastore_mode === 'existing'
+            ? (document.getElementById('metastore_id')?.value?.trim() || '')
+            : '';
+          config.metastore_name = config.metastore_mode === 'create'
+            ? (document.getElementById('metastore_name')?.value?.trim() || `${config.project_prefix}-metastore`)
+            : '';
         } else {
           config.metastore_mode = document.querySelector('input[name="metastore_mode"]:checked')?.value || 'create';
           config.metastore_id = config.metastore_mode === 'existing'
