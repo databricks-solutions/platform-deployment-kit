@@ -127,6 +127,6 @@ test.describe('Azure critical journeys', () => {
     await FormHelpers.submitConfigForm(page);
     const { archive } = await downloadProject(page);
     const tfvars = await archive.file('terraform.tfvars').async('string');
-    expect(tfvars).toContain('existing-metastore-123');
+    expect(tfvars).toMatch(/metastore_id\s*=\s*"existing-metastore-123"/);
   });
 });

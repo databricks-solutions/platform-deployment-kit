@@ -535,20 +535,19 @@ class Validators {
       }
     }
     
-    // Azure-specific: Existing VNet validation
-    if (config.provider === 'azure' && !config.enable_private_link && !config.create_new_vpc) {
-      const vnetIdCheck = this.validateAzureVnetId(config.existing_vpc_id);
-      if (!vnetIdCheck.valid) {
-        errors.existing_vpc_id = vnetIdCheck.message;
-      }
-    }
-
     // Provider-specific
     if (config.provider === 'azure') {
       const subscriptionCheck = this.validateUuid(config.azure_subscription_id, 'Azure subscription ID');
       if (!subscriptionCheck.valid) errors.azure_subscription_id = subscriptionCheck.message;
       if (!config.databricks_account_id || !config.databricks_account_id.trim()) {
         errors.databricks_account_id = 'Databricks Account ID is required';
+      }
+      if (config.metastore_id && !this.validateUuid(config.metastore_id, 'Metastore ID').valid) {
+        errors.metastore_id = 'Metastore ID must be a valid UUID';
+      }
+      if (!config.create_new_vpc) {
+        const vnetIdCheck = this.validateAzureVnetId(config.existing_vpc_id);
+        if (!vnetIdCheck.valid) errors.existing_vpc_id = vnetIdCheck.message;
       }
       if (config.azure_resource_group_mode && !['new', 'existing'].includes(config.azure_resource_group_mode)) {
         errors.azure_resource_group_mode = 'Choose whether to create or reuse the workspace resource group';
@@ -561,9 +560,6 @@ class Validators {
       }
 
       if (config.enable_private_link) {
-        if (config.metastore_id && !this.validateUuid(config.metastore_id, 'Metastore ID').valid) {
-          errors.metastore_id = 'Metastore ID must be a valid UUID';
-        }
         if (config.create_catalog !== false) {
           const ucStorageCheck = this.validateAzureStorageAccountName(
             config.azure_uc_storage_account_name,
@@ -635,9 +631,6 @@ class Validators {
             'VNet resource group name'
           );
           if (!vnetRgCheck.valid) errors.azure_vnet_resource_group_name = vnetRgCheck.message;
-          if (config.azure_vnet_resource_group_name?.trim().toLowerCase() === config.resource_group_name?.trim().toLowerCase()) {
-            errors.azure_vnet_resource_group_name = 'VNet and workspace resource groups must have different names';
-          }
         } else {
           const match = String(config.existing_vpc_id || '').match(/\/resourceGroups\/([^/]+)\//i);
           if (match?.[1]?.toLowerCase() === config.resource_group_name?.trim().toLowerCase()) {

@@ -33,7 +33,7 @@ test.describe('AWS critical journeys', () => {
     });
     await page.locator('#nat_gateway_mode').selectOption('per_az');
     await expect(page.locator('#subnet-size-range')).toBeVisible();
-    await expect(page.locator('#subnet-size-range')).toHaveValue('25');
+    await expect(page.locator('#subnet-size-range')).toHaveValue('24');
     await page.locator('#subnet-size-range').fill('26');
     await expect(page.locator('#subnet-size-range')).toHaveValue('26');
 

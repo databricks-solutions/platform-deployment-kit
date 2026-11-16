@@ -3470,7 +3470,7 @@ class App {
                       ${config.provider === 'azure' && config.enable_private_link ? `
                       <tr>
                         <td class="fw-semibold">NAT Gateway:</td>
-                        <td><span class="badge bg-${natGatewayMode === 'none' ? 'secondary' : 'success'}">${azurePrivateLinkNatGatewayLabel}</span></td>
+                        <td><span class="badge bg-${natGatewayMode === 'none' ? 'secondary' : 'success'}">${azureNatGatewayLabel}</span></td>
                       </tr>
                       ` : ''}
                       ${config.provider === 'gcp' ? `
