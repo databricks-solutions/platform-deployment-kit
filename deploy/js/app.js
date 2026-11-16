@@ -2490,10 +2490,11 @@ class App {
           if (existingSubnetsSection) existingSubnetsSection.style.display = 'block';
           if (natGatewaySection) natGatewaySection.style.display = 'none';
         } else if (this.currentProvider === 'azure') {
-          // The Azure standard source creates the workspace subnets in the existing VNet.
+          // The Azure source creates the workspace subnets in the existing VNet.
           if (vpcCidrContainer) vpcCidrContainer.style.display = 'block';
           if (azContainer) azContainer.style.display = 'none';
-          if (natGatewaySection) natGatewaySection.style.display = 'none';
+          // Show NAT gateway when backend PL is enabled with an existing VNet.
+          if (natGatewaySection) natGatewaySection.style.display = azurePrivateLink ? 'block' : 'none';
         } else {
           if (vpcCidrContainer) vpcCidrContainer.style.display = 'none';
           if (azContainer) azContainer.style.display = 'none';
@@ -2689,11 +2690,6 @@ class App {
           if (privateLinkEnabled) input.removeAttribute('required');
           else input.setAttribute('required', '');
         });
-        if (createNewVpcCheckbox) {
-          if (privateLinkEnabled) createNewVpcCheckbox.checked = true;
-          createNewVpcCheckbox.disabled = privateLinkEnabled;
-          createNewVpcCheckbox.setAttribute('aria-disabled', String(privateLinkEnabled));
-        }
         updateAzureResourceGroupUI();
       }
 
@@ -2845,7 +2841,6 @@ class App {
       if (this.currentProvider === 'azure') {
         config.azure_resource_group_mode = document.getElementById('azure_resource_group_mode')?.value || 'new';
         if (config.enable_private_link) {
-          config.create_new_vpc = true;
           config.metastore_mode = 'none';
           config.metastore_id = '';
           config.metastore_name = '';

@@ -10,7 +10,7 @@ This ready-to-deploy Terraform project was generated from your selections.
 | Region | `{{region}}` |
 | Project Prefix | `{{project_prefix}}` |
 | Pricing Tier | Premium |
-| VNet | {{#if enable_private_link}}Create dedicated VNet{{else}}{{#if create_new_vpc}}Create new{{else}}Use `{{existing_vpc_id}}`{{/if}}{{/if}} |
+| VNet | {{#if enable_private_link}}{{#if create_new_vpc}}Create dedicated VNet{{else}}Use existing `{{existing_vpc_id}}`{{/if}}{{else}}{{#if create_new_vpc}}Create new{{else}}Use `{{existing_vpc_id}}`{{/if}}{{/if}} |
 | Back-end Private Link | {{private_link_status}} |
 {{#unless enable_private_link}}
 | Metastore | {{#if metastore_id}}Attach `{{metastore_id}}`{{else}}Create `{{metastore_name}}`{{/if}} |
@@ -46,7 +46,11 @@ For CI/CD, Terraform also auto-detects service-principal credentials from `ARM_C
 {{#if enable_private_link}}
 ## Back-end Private Link Topology
 
-This Azure Back-end Private Link topology creates a dedicated VNet, {{#if enable_nat_gateway}}a NAT gateway, {{/if}}Back-end and DBFS private endpoints, private DNS zones, storage service endpoints with an endpoint policy, and an account-level NCC for serverless DBFS access. The workspace UI remains available over the public network; front-end Private Link is not configured. Metastore assignment is deliberately disabled.
+{{#if create_new_vpc}}This Azure Back-end Private Link topology creates a dedicated VNet, {{#if enable_nat_gateway}}a NAT gateway, {{/if}}{{else}}This Azure Back-end Private Link topology deploys into your existing VNet (`{{existing_vpc_id}}`), creating the required subnets{{#if enable_nat_gateway}}, a NAT gateway,{{/if}} {{/if}}Back-end and DBFS private endpoints, private DNS zones, storage service endpoints with an endpoint policy, and an account-level NCC for serverless DBFS access. The workspace UI remains available over the public network; front-end Private Link is not configured. Metastore assignment is deliberately disabled.
+{{#unless create_new_vpc}}
+
+> **Note:** The upstream `azure-privatelink-classic` Terraform module currently creates a new VNet. To inject into your existing VNet, replace `azurerm_virtual_network.dp_vnet` in `network.tf` with a data source (see the comment in `terraform.tfvars`) before running `terraform apply`.
+{{/unless}}
 
 {{#unless enable_nat_gateway}}
 The deployment does not create a NAT gateway, so classic cluster nodes have no general internet egress by default. Ensure all required traffic is covered by the built-in Microsoft.Storage and Microsoft.EventHub service endpoints or routed through your own firewall/network virtual appliance (NVA). If clusters need customer-managed storage through the storage service endpoint, add its full Azure resource ID to `service_endpoint_policy_storage_accounts` before applying.

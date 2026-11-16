@@ -11,9 +11,26 @@ location        = "{{#if azure_create_data_plane_resource_group}}{{region}}{{/if
 create_data_plane_resource_group        = {{azure_create_data_plane_resource_group}}
 existing_data_plane_resource_group_name = "{{azure_existing_data_plane_resource_group_name}}"
 
+{{#if create_new_vpc}}
 cidr_dp                      = "{{vpc_cidr}}"
 subnet_workspace_cidrs       = {{{azure_workspace_subnet_cidrs}}}
 subnet_private_endpoint_cidr = "{{azure_private_endpoint_subnet_cidr}}"
+{{else}}
+# Bring-your-own-VNet: the upstream azure-privatelink-classic module always creates a new VNet.
+# To inject into your existing VNet, replace the azurerm_virtual_network.dp_vnet resource in
+# network.tf with a data source lookup and update all references accordingly:
+#
+#   data "azurerm_virtual_network" "dp_vnet" {
+#     name                = "{{azure_vnet_name}}"
+#     resource_group_name = "{{azure_vnet_resource_group_name}}"
+#   }
+#
+# Keep these CIDR values aligned with the free address ranges in your existing VNet:
+cidr_dp                      = "{{vpc_cidr}}"
+subnet_workspace_cidrs       = {{{azure_workspace_subnet_cidrs}}}
+subnet_private_endpoint_cidr = "{{azure_private_endpoint_subnet_cidr}}"
+# existing_vnet_resource_id    = "{{existing_vnet_id}}"
+{{/if}}
 
 create_nat_gateway = {{enable_nat_gateway}}
 nat_gateway_zones = {{{azure_private_link_nat_gateway_zones}}}
