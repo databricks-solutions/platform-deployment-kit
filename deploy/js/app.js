@@ -857,24 +857,9 @@ class App {
       : (this.currentConfig.enable_nat_gateway === false || this.currentConfig.enable_nat_gateway === 'false')
         ? 'none'
         : 'single';
-    const configuredAzureNatGatewayZone = Object.prototype.hasOwnProperty.call(
-      this.currentConfig,
-      'azure_nat_gateway_zone'
-    ) ? String(this.currentConfig.azure_nat_gateway_zone) : '1';
-    const savedAzureNatGatewayZone = ['', '1', '2', '3'].includes(configuredAzureNatGatewayZone)
-      ? (configuredAzureNatGatewayZone === '2' || configuredAzureNatGatewayZone === '3' ? '1' : configuredAzureNatGatewayZone)
-      : '1';
-    const configuredAzurePrivateLinkNatGatewayZone = Object.prototype.hasOwnProperty.call(
-      this.currentConfig,
-      'azure_private_link_nat_gateway_zone'
-    ) ? String(this.currentConfig.azure_private_link_nat_gateway_zone) : '';
-    const savedAzurePrivateLinkNatGatewayZone = ['', '1', '2', '3'].includes(configuredAzurePrivateLinkNatGatewayZone)
-      ? (savedNatGatewayMode === 'none'
-        ? ''
-        : (configuredAzurePrivateLinkNatGatewayZone === '2' || configuredAzurePrivateLinkNatGatewayZone === '3'
-          ? '1'
-          : configuredAzurePrivateLinkNatGatewayZone || '1'))
-      : (savedNatGatewayMode === 'none' ? '' : '1');
+    const azureNatGatewayEnabled = this.currentProvider === 'azure'
+      ? (this.currentConfig.enable_private_link ? savedNatGatewayMode !== 'none' : true)
+      : savedNatGatewayMode !== 'none';
     
     // Load configuration form based on provider
     const content = `
@@ -1206,21 +1191,10 @@ class App {
                            placeholder="e.g., rg-databricks-network">
                     <div class="form-text">Leave empty to use the workspace resource group. For an existing VNet, enter the resource group that contains it.</div>
                   </div>
-                  <div class="mb-3" id="azure-nat-gateway-zone-section"
-                       ${this.currentConfig.enable_private_link ? 'style="display: none;"' : ''}>
-                    <div class="field-label-with-help">
-                      <label class="form-label fw-semibold" for="azure_nat_gateway_zone">NAT Gateway Placement</label>
-                      ${this.renderHelpButton('nat-placement', 'NAT gateway placement')}
-                    </div>
-                    <select class="form-select" id="azure_nat_gateway_zone" name="azure_nat_gateway_zone">
-                      <option value="1" ${savedAzureNatGatewayZone === '1' ? 'selected' : ''}>Zonal</option>
-                      <option value="" ${savedAzureNatGatewayZone === '' ? 'selected' : ''}>Regional / non-zonal</option>
-                    </select>
-                  </div>
                   ` : ''}
                   ${this.currentProvider === 'aws' || this.currentProvider === 'azure' ? `
                   <div class="mb-3" id="nat-gateway-section"
-                       ${this.currentProvider === 'azure' && !this.currentConfig.enable_private_link ? 'style="display: none;"' : ''}>
+                       >
                     <div class="field-label-with-help">
                       <label class="form-label fw-semibold" for="nat_gateway_mode">NAT Gateway</label>
                       ${this.renderHelpButton('nat-gateway', 'NAT gateway options')}
@@ -1228,9 +1202,12 @@ class App {
                     ${this.currentProvider === 'azure' ? `
                     <div class="form-check form-switch">
                       <input class="form-check-input" type="checkbox" role="switch" id="create-nat-gateway"
-                             ${savedNatGatewayMode !== 'none' ? 'checked' : ''}>
+                             ${azureNatGatewayEnabled ? 'checked' : ''}>
                       <label class="form-check-label" for="create-nat-gateway">Create NAT Gateway</label>
                     </div>
+                    ${this.currentProvider === 'azure' && !this.currentConfig.enable_private_link ? `
+                    <div class="form-text">NAT Gateway is required for standard Azure deployments to provide control-plane connectivity.</div>
+                    ` : ''}
                     ` : ''}
                     <select class="form-select ${this.currentProvider === 'azure' ? 'd-none' : ''}" id="nat_gateway_mode"
                             name="${this.currentProvider === 'azure' ? 'azure_private_link_nat_gateway_mode' : 'nat_gateway_mode'}">
@@ -1240,24 +1217,14 @@ class App {
                       ` : ''}
                       <option value="none" ${savedNatGatewayMode === 'none' ? 'selected' : ''}>No NAT gateway</option>
                     </select>
-                    ${this.currentProvider === 'azure' ? `
-                    <div class="mt-3" id="azure-private-link-nat-gateway-zone-section"
-                         ${savedNatGatewayMode === 'none' ? 'style="display: none;"' : ''}>
-                      <div class="field-label-with-help">
-                        <label class="form-label fw-semibold" for="azure_private_link_nat_gateway_zone">NAT Gateway Placement</label>
-                        ${this.renderHelpButton('nat-placement', 'NAT gateway placement')}
-                      </div>
-                      <select class="form-select" id="azure_private_link_nat_gateway_zone" name="azure_private_link_nat_gateway_zone">
-                        <option value="1" ${savedAzurePrivateLinkNatGatewayZone === '1' ? 'selected' : ''}>Zonal</option>
-                        <option value="" ${savedAzurePrivateLinkNatGatewayZone === '' ? 'selected' : ''}>Regional / non-zonal</option>
-                      </select>
-                    </div>
-                    ` : ''}
                     <div id="nat-gateway-private-link-message" class="alert alert-warning mt-2 mb-0" style="display: none;">
                       <i class="bi bi-exclamation-triangle me-2"></i>
-                      ${this.currentProvider === 'azure'
-                        ? 'Without a NAT gateway, cluster nodes have no general internet egress. Ensure required traffic is covered by the configured service endpoints or routed through a firewall/NVA.'
+                      <span id="nat-gateway-warning-text">${this.currentProvider === 'azure'
+                        ? (this.currentConfig.enable_private_link
+                          ? 'Without a NAT gateway, cluster nodes have no general internet egress. Ensure required traffic is covered by the configured service endpoints or routed through a firewall/NVA.'
+                          : 'NAT Gateway is required for standard Azure deployments to provide control-plane connectivity.')
                         : 'Back-end PrivateLink is required to communicate with the control plane when no NAT gateway is selected.'}
+                      </span>
                     </div>
                   </div>
                   ` : ''}
@@ -1613,8 +1580,7 @@ class App {
     const createNatGatewayCheckbox = document.getElementById('create-nat-gateway');
     const natGatewaySection = document.getElementById('nat-gateway-section');
     const natGatewayPrivateLinkMessage = document.getElementById('nat-gateway-private-link-message');
-    const azureNatGatewayZoneSection = document.getElementById('azure-nat-gateway-zone-section');
-    const azurePrivateLinkNatGatewayZoneSection = document.getElementById('azure-private-link-nat-gateway-zone-section');
+    const natGatewayWarningText = document.getElementById('nat-gateway-warning-text');
     const gcpStandardNetworkInfo = document.getElementById('gcp-standard-network-info');
     const gcpPrivateLinkNetworkInfo = document.getElementById('gcp-private-link-network-info');
     const gcpExistingPscNetworkInfo = document.getElementById('gcp-existing-psc-network-info');
@@ -2637,7 +2603,7 @@ class App {
         if (vpcCidrContainer) vpcCidrContainer.style.display = 'block';
         if (azContainer) azContainer.style.display = 'block';
         if (natGatewaySection) {
-          natGatewaySection.style.display = this.currentProvider === 'aws' || azurePrivateLink || gcpPrivateLink ? 'block' : 'none';
+          natGatewaySection.style.display = this.currentProvider === 'aws' || this.currentProvider === 'azure' || gcpPrivateLink ? 'block' : 'none';
         }
       } else {
         // Using existing VPC
@@ -2652,7 +2618,7 @@ class App {
           // The Azure standard source creates the workspace subnets in the existing VNet.
           if (vpcCidrContainer) vpcCidrContainer.style.display = 'block';
           if (azContainer) azContainer.style.display = 'none';
-          if (natGatewaySection) natGatewaySection.style.display = azurePrivateLink ? 'block' : 'none';
+          if (natGatewaySection) natGatewaySection.style.display = 'block';
         } else {
           if (vpcCidrContainer) vpcCidrContainer.style.display = 'none';
           if (azContainer) azContainer.style.display = 'none';
@@ -2666,9 +2632,14 @@ class App {
 
       if (natGatewayPrivateLinkMessage) {
         const noAwsNat = this.currentProvider === 'aws' && isCreateNewVpc && natGatewaySelect?.value === 'none';
-        const noAzurePrivateLinkNat = azurePrivateLink && natGatewaySelect?.value === 'none';
+        const noAzureNat = this.currentProvider === 'azure' && natGatewaySelect?.value === 'none';
         const noGcpPrivateLinkNat = gcpPrivateLink && natGatewaySelect?.value === 'none';
-        natGatewayPrivateLinkMessage.style.display = noAwsNat || noAzurePrivateLinkNat || noGcpPrivateLinkNat ? 'block' : 'none';
+        natGatewayPrivateLinkMessage.style.display = noAwsNat || noAzureNat || noGcpPrivateLinkNat ? 'block' : 'none';
+        if (natGatewayWarningText && this.currentProvider === 'azure') {
+          natGatewayWarningText.textContent = azurePrivateLink
+            ? 'Without a NAT gateway, cluster nodes have no general internet egress. Ensure required traffic is covered by the configured service endpoints or routed through a firewall/NVA.'
+            : 'NAT Gateway is required for standard Azure deployments to provide control-plane connectivity.';
+        }
       }
 
       if (this.currentProvider === 'gcp') {
@@ -2702,11 +2673,6 @@ class App {
         }
       }
 
-      if (azurePrivateLinkNatGatewayZoneSection) {
-        const showPlacement = azurePrivateLink && natGatewaySelect?.value !== 'none';
-        azurePrivateLinkNatGatewayZoneSection.style.display = showPlacement ? 'block' : 'none';
-      }
-      
       // Toggle required attributes based on what's visible
       const vpcCidrInput = document.querySelector('input[name="vpc_cidr"]');
       const existingVpcIdInput = document.getElementById('existing_vpc_id');
@@ -2840,8 +2806,7 @@ class App {
         document.querySelectorAll('.azure-private-link-uc-field').forEach(field => {
           field.style.display = privateLinkEnabled ? 'block' : 'none';
         });
-        if (azureNatGatewayZoneSection) azureNatGatewayZoneSection.style.display = privateLinkEnabled ? 'none' : 'block';
-        if (natGatewaySection) natGatewaySection.style.display = privateLinkEnabled ? 'block' : 'none';
+        if (natGatewaySection) natGatewaySection.style.display = 'block';
         document.querySelectorAll('.azure-standard-required').forEach(input => {
           if (privateLinkEnabled) input.removeAttribute('required');
           else input.setAttribute('required', '');
@@ -2999,14 +2964,6 @@ class App {
       }
       if (this.currentProvider === 'azure') {
         config.pricing_tier = 'PREMIUM';
-        const azureNatGatewayZone = document.getElementById('azure_nat_gateway_zone')?.value ?? '1';
-        config.azure_nat_gateway_zone = ['', '1'].includes(azureNatGatewayZone)
-          ? azureNatGatewayZone
-          : '1';
-        const azurePrivateLinkNatGatewayZone = document.getElementById('azure_private_link_nat_gateway_zone')?.value ?? '';
-        config.azure_private_link_nat_gateway_zone = ['', '1'].includes(azurePrivateLinkNatGatewayZone)
-          ? azurePrivateLinkNatGatewayZone
-          : '1';
         config.azure_uc_container_name = document.querySelector('[name="azure_uc_container_name"]')?.value?.trim() || 'uc-catalog';
       }
       if (this.currentProvider === 'aws') {
@@ -3022,8 +2979,8 @@ class App {
         config.node_type_id = document.getElementById('node_type_id')?.value?.trim() || 'Standard_DS3_v2';
         config.cluster_autotermination_minutes = Number(document.getElementById('cluster_autotermination_minutes')?.value || 10);
       } else if (this.currentProvider === 'azure') {
-        config.nat_gateway_mode = 'single';
-        config.enable_nat_gateway = true;
+        config.nat_gateway_mode = document.getElementById('nat_gateway_mode')?.value || 'single';
+        config.enable_nat_gateway = config.nat_gateway_mode !== 'none';
         config.create_cluster = document.getElementById('create-test-cluster')?.checked || false;
         config.node_type_id = document.getElementById('node_type_id')?.value?.trim() || 'Standard_DS3_v2';
         config.cluster_autotermination_minutes = Number(document.getElementById('cluster_autotermination_minutes')?.value || 10);
@@ -3351,27 +3308,9 @@ class App {
     const natGatewayLabel = natGatewayMode === 'per_az'
       ? 'One per availability zone'
       : natGatewayMode === 'none' ? 'None' : 'Single';
-    const configuredAzureNatGatewayZone = Object.prototype.hasOwnProperty.call(config, 'azure_nat_gateway_zone')
-      ? String(config.azure_nat_gateway_zone)
-      : '1';
-    const azureNatGatewayZone = ['1', '2', '3'].includes(configuredAzureNatGatewayZone)
-      ? (configuredAzureNatGatewayZone === '2' || configuredAzureNatGatewayZone === '3' ? '1' : configuredAzureNatGatewayZone)
-      : '';
-    const azureNatGatewayLabel = azureNatGatewayZone
-      ? `Availability Zone ${azureNatGatewayZone}`
-      : 'Regional / non-zonal';
-    const configuredAzurePrivateLinkNatGatewayZone = Object.prototype.hasOwnProperty.call(
-      config,
-      'azure_private_link_nat_gateway_zone'
-    ) ? String(config.azure_private_link_nat_gateway_zone) : '';
-    const azurePrivateLinkNatGatewayZone = ['1', '2', '3'].includes(configuredAzurePrivateLinkNatGatewayZone)
-      ? (configuredAzurePrivateLinkNatGatewayZone === '2' || configuredAzurePrivateLinkNatGatewayZone === '3' ? '1' : configuredAzurePrivateLinkNatGatewayZone)
-      : '';
-    const azurePrivateLinkNatGatewayLabel = natGatewayMode === 'none'
+    const azureNatGatewayLabel = natGatewayMode === 'none'
       ? 'None'
-      : `Single — ${azurePrivateLinkNatGatewayZone
-        ? `Availability Zone ${azurePrivateLinkNatGatewayZone}`
-        : 'Regional / non-zonal'}`;
+      : 'Single — Regional / non-zonal';
     const providerIcon = config.provider === 'aws' ? 
       '<i class="bi bi-amazon text-warning me-2" style="font-size: 2rem;"></i>' :
       config.provider === 'azure' ?
@@ -3525,7 +3464,7 @@ class App {
                       ${config.provider === 'azure' && !config.enable_private_link ? `
                       <tr>
                         <td class="fw-semibold">NAT Gateway:</td>
-                        <td><span class="badge bg-success">${azureNatGatewayLabel}</span></td>
+                        <td><span class="badge bg-${natGatewayMode === 'none' ? 'secondary' : 'success'}">${azureNatGatewayLabel}</span></td>
                       </tr>
                       ` : ''}
                       ${config.provider === 'azure' && config.enable_private_link ? `

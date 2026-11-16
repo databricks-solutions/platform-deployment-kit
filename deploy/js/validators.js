@@ -202,6 +202,10 @@ class Validators {
       errors.azure_private_link_nat_gateway_mode = 'Choose whether to deploy a NAT gateway.';
     }
 
+    if (provider === 'azure' && !enable_private_link && natGatewayMode === 'none') {
+      errors.nat_gateway_mode = 'NAT Gateway is required for standard Azure deployments. Enable Back-end Private Link to deploy without NAT.';
+    }
+
     if (provider === 'gcp' && enable_private_link && !['single', 'none'].includes(natGatewayMode)) {
       errors.nat_gateway_mode = 'Choose whether to deploy Cloud NAT.';
     }

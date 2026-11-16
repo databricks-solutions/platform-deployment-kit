@@ -290,30 +290,13 @@ class TemplateEngine {
       vars.azure_storage_credential_name = config.azure_storage_credential_name || `${prefix}-storage-credential`;
       vars.azure_external_location_name = config.azure_external_location_name || `${prefix}-external-location`;
       vars.azure_uc_container_name = config.azure_uc_container_name || 'uc-catalog';
-      const configuredAzureNatGatewayZone = Object.prototype.hasOwnProperty.call(config, 'azure_nat_gateway_zone')
-        ? String(config.azure_nat_gateway_zone)
-        : '1';
-      const azureNatGatewayZone = ['1', '2', '3'].includes(configuredAzureNatGatewayZone)
-        ? configuredAzureNatGatewayZone
-        : '';
-      vars.azure_nat_gateway_zones = formatStringList(azureNatGatewayZone ? [azureNatGatewayZone] : []);
-      vars.azure_nat_gateway_summary = azureNatGatewayZone
-        ? `Availability Zone ${azureNatGatewayZone}`
-        : 'Regional / non-zonal';
-      const configuredAzurePrivateLinkNatGatewayZone = Object.prototype.hasOwnProperty.call(
-        config,
-        'azure_private_link_nat_gateway_zone'
-      ) ? String(config.azure_private_link_nat_gateway_zone) : '';
-      const azurePrivateLinkNatGatewayZone = ['1', '2', '3'].includes(configuredAzurePrivateLinkNatGatewayZone)
-        ? configuredAzurePrivateLinkNatGatewayZone
-        : '';
-      vars.azure_private_link_nat_gateway_zones = formatStringList(
-        azurePrivateLinkNatGatewayZone ? [azurePrivateLinkNatGatewayZone] : []
-      );
+      // Use the upstream regional/non-zonal default. Placement is intentionally
+      // not exposed in the UI; Azure NAT creation is controlled by one toggle.
+      vars.azure_nat_gateway_zones = '[]';
+      vars.azure_nat_gateway_summary = 'Regional / non-zonal';
+      vars.azure_private_link_nat_gateway_zones = '[]';
       vars.azure_private_link_nat_gateway_summary = vars.enable_nat_gateway
-        ? `Single — ${azurePrivateLinkNatGatewayZone
-          ? `Availability Zone ${azurePrivateLinkNatGatewayZone}`
-          : 'Regional / non-zonal'}`
+        ? 'Single — Regional / non-zonal'
         : 'Disabled';
       vars.azure_create_resource_group = config.azure_resource_group_mode !== 'existing';
       vars.azure_managed_resource_group_name = config.managed_resource_group_name || '';

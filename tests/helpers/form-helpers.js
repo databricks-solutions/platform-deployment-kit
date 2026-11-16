@@ -228,13 +228,6 @@ class FormHelpers {
       await page.waitForTimeout(800); // Wait for subnet calculation
     }
 
-    if (config.azure_nat_gateway_zone !== undefined) {
-      const natGatewayZone = page.locator('#azure_nat_gateway_zone');
-      if (await natGatewayZone.isVisible().catch(() => false)) {
-        await natGatewayZone.selectOption(config.azure_nat_gateway_zone);
-      }
-    }
-    
     // Set availability zones (Choices.js component)
     if (config.availability_zones && Array.isArray(config.availability_zones)) {
       // Azure uses a fixed subnet topology and no longer renders a zone picker.
