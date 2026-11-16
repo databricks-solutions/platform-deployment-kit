@@ -2715,11 +2715,9 @@ class App {
       }
 
       if (azureVnetResourceGroupInput) {
-        if (this.currentProvider === 'azure' && !azurePrivateLink && isCreateNewVpc) {
-          azureVnetResourceGroupInput.setAttribute('required', '');
-        } else {
-          azureVnetResourceGroupInput.removeAttribute('required');
-        }
+        // The Azure templates default a new VNet's resource group to the
+        // workspace resource group, so this field is always optional in the UI.
+        azureVnetResourceGroupInput.removeAttribute('required');
       }
 
       // Update subnet-size options and preview visibility

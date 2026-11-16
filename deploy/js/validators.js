@@ -626,11 +626,15 @@ class Validators {
           errors.metastore_id = 'Existing metastore ID is required';
         }
         if (config.create_new_vpc) {
-          const vnetRgCheck = this.validateAzureResourceGroupName(
-            config.azure_vnet_resource_group_name,
-            'VNet resource group name'
-          );
-          if (!vnetRgCheck.valid) errors.azure_vnet_resource_group_name = vnetRgCheck.message;
+          // The upstream template defaults an omitted VNet resource group to
+          // the workspace resource group when creating a new VNet.
+          if (config.azure_vnet_resource_group_name?.trim()) {
+            const vnetRgCheck = this.validateAzureResourceGroupName(
+              config.azure_vnet_resource_group_name,
+              'VNet resource group name'
+            );
+            if (!vnetRgCheck.valid) errors.azure_vnet_resource_group_name = vnetRgCheck.message;
+          }
         } else {
           const match = String(config.existing_vpc_id || '').match(/\/resourceGroups\/([^/]+)\//i);
           if (match?.[1]?.toLowerCase() === config.resource_group_name?.trim().toLowerCase()) {
