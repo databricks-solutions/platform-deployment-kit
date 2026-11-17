@@ -60,7 +60,7 @@ describe('NetworkCalculator', () => {
       const calc = new NetworkCalculator('aws');
       const result = calc.calculateSubnetSizeLimits('10.0.0.0/16', 2, false);
       expect(result.valid).toBe(true);
-      expect(result.totalSubnets).toBe(5);
+      expect(result.totalSubnets).toBe(4);
     });
 
     it('uses workspace subnets for PrivateLink endpoints', () => {
@@ -94,13 +94,13 @@ describe('NetworkCalculator', () => {
       const sizes = calc.getDefaultSubnetSizes(16);
       expect(sizes.private).toBeDefined();
       expect(sizes.public).toBeDefined();
-      expect(sizes.intra).toBe(27);
     });
 
-    it('AWS ENTERPRISE still uses the standard intra subnet', () => {
+    it('AWS ENTERPRISE uses the same private and public subnet sizes', () => {
       const calc = new NetworkCalculator('aws');
       const sizes = calc.getDefaultSubnetSizes(16, 'ENTERPRISE');
-      expect(sizes.intra).toBe(27);
+      expect(sizes.private).toBeDefined();
+      expect(sizes.public).toBeDefined();
     });
 
     it('Azure PREMIUM adds service subnet', () => {
@@ -128,16 +128,14 @@ describe('NetworkCalculator', () => {
       expect(() => calc.allocateSubnets('invalid', ['us-east-1a', 'us-east-1b'])).toThrow();
     });
 
-    it('allocates AWS private/public subnets plus a standard intra subnet', () => {
+    it('allocates AWS private/public subnets without a legacy intra subnet', () => {
       const calc = new NetworkCalculator('aws');
       const subnets = calc.allocateSubnets('10.0.0.0/16', ['us-east-1a', 'us-east-1b']);
-      expect(subnets).toHaveLength(5);
+      expect(subnets).toHaveLength(4);
       expect(subnets[0].subnet_type).toBe('private');
       expect(subnets[1].subnet_type).toBe('public');
       expect(subnets[2].subnet_type).toBe('private');
       expect(subnets[3].subnet_type).toBe('public');
-      expect(subnets[4].subnet_type).toBe('intra');
-      expect(subnets[4].size).toBe(27);
     });
 
     it('does not allocate a legacy service subnet with PrivateLink', () => {
@@ -218,7 +216,7 @@ describe('NetworkCalculator', () => {
       expect(summary.used_ips).toBeGreaterThan(0);
       expect(summary.available_ips).toBeLessThan(65536);
       expect(summary.utilization_percent).toBeGreaterThan(0);
-      expect(summary.subnet_count).toBe(3);
+      expect(summary.subnet_count).toBe(2);
     });
   });
 

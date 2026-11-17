@@ -44,9 +44,9 @@ test.describe('Contextual configuration help', () => {
     })).toHaveAttribute('href', 'https://learn.microsoft.com/en-us/azure/databricks/security/network/classic/vnet-inject');
 
     await page.keyboard.press('Escape');
-    await page.locator('[data-help-topic="nat-placement"]').first().click();
-    await expect(page.locator('#contextHelpTitle')).toHaveText('NAT gateway placement');
-    await expect(page.locator('#contextHelpBody')).toContainText('Regional placement');
+    await page.locator('[data-help-topic="nat-gateway"]').first().click();
+    await expect(page.locator('#contextHelpTitle')).toHaveText('NAT gateway mode');
+    await expect(page.locator('#contextHelpBody')).toContainText('general outbound internet access');
   });
 
   test('shows GCP identity and subnet guidance on mobile in light mode', async ({ page }) => {

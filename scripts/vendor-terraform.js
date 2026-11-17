@@ -12,6 +12,20 @@ function runGit(args, cwd, encoding = 'utf8') {
     cwd,
     encoding,
     maxBuffer: 32 * 1024 * 1024,
+    env: { ...process.env, GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' },
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+}
+
+function runUpstreamGit(args, cwd) {
+  // The upstream source is public. Ignore developer-specific global Git URL
+  // rewrites (for example, HTTPS -> EMU SSH) so builds use the configured URL
+  // consistently for personal and EMU accounts alike.
+  return execFileSync('git', args, {
+    cwd,
+    encoding: 'utf8',
+    maxBuffer: 32 * 1024 * 1024,
+    env: { ...process.env, GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' },
     stdio: ['ignore', 'pipe', 'pipe']
   });
 }
@@ -43,8 +57,8 @@ function prepareRepository(config) {
 
   const sourceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'oneclick-terraform-upstream-'));
   runGit(['init', '--quiet'], sourceDir);
-  runGit(['remote', 'add', 'origin', config.repository], sourceDir);
-  runGit(['fetch', '--quiet', '--depth=1', '--filter=blob:none', 'origin', config.ref], sourceDir);
+  runUpstreamGit(['remote', 'add', 'origin', config.repository], sourceDir);
+  runUpstreamGit(['fetch', '--quiet', '--depth=1', '--filter=blob:none', 'origin', config.ref], sourceDir);
   const commit = runGit(['rev-parse', 'FETCH_HEAD'], sourceDir).trim();
   return { sourceDir, commit, cleanup: true };
 }
