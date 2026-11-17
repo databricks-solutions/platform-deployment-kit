@@ -46,6 +46,21 @@ function safeRelativePath(value) {
   return normalized;
 }
 
+const FULL_SHA = /^[0-9a-f]{40}$/;
+
+// The upstream ref must be an immutable full commit SHA, never a branch or tag
+// (which can be moved to different code). Bump it deliberately with
+// `npm run upstream:update`, which resolves `branch` to its current SHA.
+function assertPinnedRef(ref) {
+  if (typeof ref !== 'string' || !FULL_SHA.test(ref)) {
+    throw new Error(
+      `config/upstreams.json "ref" must be a full 40-character commit SHA, got ${JSON.stringify(ref)}. ` +
+      'Run `npm run upstream:update` to pin the tracked branch to its current commit.'
+    );
+  }
+  return ref;
+}
+
 function prepareRepository(config) {
   const sourceOverride = process.env.TERRAFORM_SOURCE_DIR;
   if (sourceOverride) {
@@ -60,6 +75,10 @@ function prepareRepository(config) {
   runUpstreamGit(['remote', 'add', 'origin', config.repository], sourceDir);
   runUpstreamGit(['fetch', '--quiet', '--depth=1', '--filter=blob:none', 'origin', config.ref], sourceDir);
   const commit = runGit(['rev-parse', 'FETCH_HEAD'], sourceDir).trim();
+  if (commit !== config.ref) {
+    fs.rmSync(sourceDir, { recursive: true, force: true });
+    throw new Error(`Fetched upstream commit ${commit} does not match pinned ref ${config.ref}.`);
+  }
   return { sourceDir, commit, cleanup: true };
 }
 
@@ -89,9 +108,9 @@ function vendorTerraform(options = {}) {
   const outputRoot = options.outputRoot || path.join(repoRoot, 'dist', 'terraform-sources');
   const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 
-  safeRelativePath(config.ref);
+  assertPinnedRef(config.ref);
   const { sourceDir, commit, cleanup } = prepareRepository(config);
-  if (!/^[0-9a-f]{40}$/.test(commit)) {
+  if (!FULL_SHA.test(commit)) {
     throw new Error(`Unable to resolve ${config.ref} to a full commit SHA.`);
   }
 
@@ -179,4 +198,4 @@ if (require.main === module) {
   process.stdout.write(`Vendored ${Object.keys(manifest.variants).length} Terraform variants from ${manifest.commit}.\n`);
 }
 
-module.exports = { listTrackedFiles, safeRelativePath, sha256, vendorTerraform };
+module.exports = { assertPinnedRef, listTrackedFiles, safeRelativePath, sha256, vendorTerraform };

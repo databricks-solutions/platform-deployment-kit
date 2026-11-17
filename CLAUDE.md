@@ -9,6 +9,13 @@ Azure, and GCP from a form. There is no backend: the app source in `deploy/` is 
 - `npm run build` runs `scripts/build.js`: copies `deploy/` to `dist/`, vendors the upstream
   Terraform sources with SHA-256 hashes (`scripts/vendor-terraform.js`, config in
   `config/upstreams.json`), and writes `dist/version.json`.
+- The upstream Terraform repo is pinned by commit SHA: `ref` in `config/upstreams.json` must be
+  a full 40-character SHA (the build fails on a branch or tag name, and verifies the fetched
+  commit matches). `branch` is the branch it tracks. To pick up upstream changes, run
+  `npm run upstream:update` (or `-- --branch <name>` to track another branch, e.g. an
+  unmerged upstream PR), review the printed compare link, and commit the new SHA. For local
+  testing against an upstream checkout, `TERRAFORM_SOURCE_DIR` (and optional
+  `TERRAFORM_SOURCE_REF`) still override the fetch.
 - `npm run build:libs` (`scripts/copy-libs.js`) copies vendored libraries (Bootstrap, JSZip,
   Handlebars, Choices.js, fonts) into `deploy/libs` and `deploy/fonts`. Runs on `postinstall`.
 
@@ -138,7 +145,8 @@ the audit level.
 |--------|---------|
 | `scripts/build.js` | Build `dist/`, vendor upstream Terraform, write `version.json`. |
 | `scripts/copy-libs.js` | Copy vendored libraries and fonts into `deploy/`. |
-| `scripts/vendor-terraform.js` | Fetch upstream Terraform, generate the hashed manifest. |
+| `scripts/vendor-terraform.js` | Fetch upstream Terraform at the pinned SHA, generate the hashed manifest. |
+| `scripts/update-upstream-ref.js` | Re-pin the upstream SHA to the tracked branch head (`npm run upstream:update`). |
 | `scripts/dev.js` | Local dev server with live reload (`npm run dev`). |
 | `scripts/run.sh` | Build and serve `dist/` statically (`npm start`). |
 | `scripts/test-all.sh` | Single test/quality pipeline entry point (see Testing). |

@@ -14,6 +14,7 @@
     "dev": "node scripts/dev.js",
     "build": "node scripts/build.js",
     "build:libs": "node scripts/copy-libs.js",
+    "upstream:update": "node scripts/update-upstream-ref.js",
     "deploy": "bash scripts/deploy.sh",
     "postinstall": "npm run build:libs",
     "test:unit": "vitest run",
