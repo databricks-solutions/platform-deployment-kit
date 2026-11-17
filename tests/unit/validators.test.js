@@ -869,7 +869,7 @@ describe('Validators.validateConfiguration — cloud-specific error branches', (
     expect(errors.azure_resource_group_mode).toBeDefined();
   });
 
-  test('Azure existing VNet and workspace resource groups must differ', () => {
+  test('Azure existing VNet may share the workspace resource group', () => {
     const config = {
       provider: 'azure', project_prefix: 'myproject', region: 'eastus', pricing_tier: 'PREMIUM',
       enable_private_link: false, create_new_vpc: false,
@@ -877,7 +877,7 @@ describe('Validators.validateConfiguration — cloud-specific error branches', (
       resource_group_name: 'myrg',
     };
     const errors = Validators.validateConfiguration(config).errors;
-    expect(errors.existing_vpc_id).toMatch(/different names/);
+    expect(errors.existing_vpc_id).toBeUndefined();
   });
 
   test('GCP requires a Databricks subnet CIDR', () => {

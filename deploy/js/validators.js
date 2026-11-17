@@ -636,10 +636,9 @@ class Validators {
             if (!vnetRgCheck.valid) errors.azure_vnet_resource_group_name = vnetRgCheck.message;
           }
         } else {
-          const match = String(config.existing_vpc_id || '').match(/\/resourceGroups\/([^/]+)\//i);
-          if (match?.[1]?.toLowerCase() === config.resource_group_name?.trim().toLowerCase()) {
-            errors.existing_vpc_id = 'Existing VNet and workspace resource groups must have different names';
-          }
+          // The upstream template permits an existing VNet to share the
+          // workspace resource group, so no cross-resource-group restriction
+          // is needed here.
         }
       }
     }

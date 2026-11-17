@@ -122,11 +122,11 @@ test.describe('Azure critical journeys', () => {
     });
     await page.locator('#metastore_mode_existing').check();
     await expect(page.locator('#existing-metastore-section')).toBeVisible();
-    await page.locator('#metastore_id').fill('existing-metastore-123');
+    await page.locator('#metastore_id').fill('00000000-0000-4000-8000-000000000123');
 
     await FormHelpers.submitConfigForm(page);
     const { archive } = await downloadProject(page);
     const tfvars = await archive.file('terraform.tfvars').async('string');
-    expect(tfvars).toMatch(/metastore_id\s*=\s*"existing-metastore-123"/);
+    expect(tfvars).toMatch(/metastore_id\s*=\s*"00000000-0000-4000-8000-000000000123"/);
   });
 });
