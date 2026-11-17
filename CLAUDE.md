@@ -112,12 +112,19 @@ keeps force-push enabled for that generated branch, and blocks branch deletion.
 `.github/workflows/ci.yml` is a THIN wrapper. It only provisions the environment (checkout,
 Node from `.nvmrc`, `npm ci`) and then calls the scripts:
 
-- `test` job (non-tag pushes): `./scripts/test-all.sh --ci --e2e-coverage` (the script
-  installs the Playwright browser itself, with `--with-deps` under CI).
-- `deploy` job (tags): `./scripts/deploy.sh`.
+- `test` job (pull requests and pushes to `main`): `./scripts/test-all.sh --ci --e2e-coverage`
+  (the script installs the Playwright browser itself, with `--with-deps` under CI).
+- `deploy` job (tags): `./scripts/deploy.sh`. Currently DISABLED (`if: false && ...`) pending
+  the go/hardened-gha release review; see the comment on the job for how to re-enable it.
 
 Keep ALL test/build/deploy logic in the scripts, never in the workflow, so local and CI stay
 identical and re-enabling Actions needs no code change.
+
+The workflow follows go/hardened-gha for a public repo: GitHub-hosted `ubuntu-latest` runners
+(public repos cannot use the protected runner group), every action pinned to a full commit
+SHA with the tag in a comment, `permissions: contents: read` by default, and only
+fork-safe triggers (`pull_request`, never `pull_request_target`). Keep it that way when
+editing the workflow.
 
 ## Dependency security
 

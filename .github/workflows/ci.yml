@@ -1,25 +1,40 @@
 name: CI/CD
 
-# GitHub Actions is currently disabled for this repo. ALL test, build, and deploy
-# logic lives in scripts/ (scripts/test-all.sh and scripts/deploy.sh). This
-# workflow is a THIN wrapper: it only provisions the environment (checkout, Node,
-# npm ci) and then calls those scripts. Do not add test/build/deploy logic here —
-# keep it in the scripts so local runs and CI stay identical.
+# ALL test, build, and deploy logic lives in scripts/ (scripts/test-all.sh and
+# scripts/deploy.sh). This workflow is a THIN wrapper: it only provisions the
+# environment (checkout, Node, npm ci) and then calls those scripts. Do not add
+# test/build/deploy logic here — keep it in the scripts so local runs and CI stay
+# identical.
+#
+# Hardened per go/hardened-gha for a PUBLIC repo:
+#   - GitHub-hosted `ubuntu-latest` runners (public repos cannot use the
+#     protected runner group).
+#   - Every action pinned to a full commit SHA (tag kept in a comment).
+#   - Least-privilege token: `contents: read` by default.
+#   - Fork-PR safe: `pull_request` runs get a read-only token and no secrets.
+#   - Dependencies installed with `npm ci`, which enforces the integrity hashes
+#     in package-lock.json.
 
 on:
+  pull_request:
   push:
+    branches: [main]
+    tags: ['*']
+
+permissions:
+  contents: read
 
 jobs:
   test:
-    runs-on:
-      group: databricks-solutions-protected-runner-group
-
-    if: github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
@@ -30,18 +45,21 @@ jobs:
       - name: Run full test pipeline (build + audit + unit + e2e, all with coverage)
         run: ./scripts/test-all.sh --ci --e2e-coverage
 
+  # PUBLISH IS DISABLED pending the separate go/hardened-gha release review.
+  # To re-enable (in a reviewed PR): remove `false &&` from the `if`, set
+  # `permissions: contents: write` (needed to push gh-pages), and put the job
+  # behind a `release` Environment with a required reviewer and
+  # "Prevent self-review" enabled.
   deploy:
-    runs-on:
-      group: databricks-solutions-protected-runner-group
-
-    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    if: ${{ false && startsWith(github.ref, 'refs/tags/') }}
     permissions:
-      contents: write   # push the built site to the gh-pages branch
+      contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
