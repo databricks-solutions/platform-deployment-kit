@@ -1408,7 +1408,7 @@ class App {
                                placeholder="Defaults to &lt;project-prefix&gt;-metastore">
                       </div>
                       <div id="existing-metastore-section" style="display: none;">
-                        <label class="form-label" for="metastore_id">Existing Metastore ID <span class="text-muted fw-normal">(optional)</span></label>
+                        <label class="form-label" for="metastore_id">Existing Metastore ID <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="metastore_id" name="metastore_id"
                                value="${this.currentConfig.metastore_id || ''}"
                                placeholder="e.g., 12345678-1234-1234-1234-123456789abc">

@@ -903,6 +903,34 @@ describe('Validators.validateConfiguration — cloud-specific error branches', (
     expect(errors.metastore_id).toBeDefined();
   });
 
+  test('GCP existing metastore mode rejects a metastore ID that is not a UUID', () => {
+    const config = {
+      provider: 'gcp', project_prefix: 'myproject', region: 'us-central1',
+      project_id: 'my-gcp-project',
+      google_service_account_email: 'creator@my-gcp-project.iam.gserviceaccount.com',
+      databricks_account_id: '11111111-1111-4111-8111-111111111111',
+      databricks_admin_user: 'admin@example.com',
+      create_new_vpc: true, subnet_cidr: '10.10.0.0/20',
+      metastore_mode: 'existing', metastore_id: 'metastore-gcp-1234',
+    };
+    const errors = Validators.validateConfiguration(config).errors;
+    expect(errors.metastore_id).toMatch(/valid UUID/i);
+  });
+
+  test('GCP existing metastore mode accepts a UUID metastore ID', () => {
+    const config = {
+      provider: 'gcp', project_prefix: 'myproject', region: 'us-central1',
+      project_id: 'my-gcp-project',
+      google_service_account_email: 'creator@my-gcp-project.iam.gserviceaccount.com',
+      databricks_account_id: '11111111-1111-4111-8111-111111111111',
+      databricks_admin_user: 'admin@example.com',
+      create_new_vpc: true, subnet_cidr: '10.10.0.0/20',
+      metastore_mode: 'existing', metastore_id: '12345678-1234-4234-8234-123456789abc',
+    };
+    const errors = Validators.validateConfiguration(config).errors;
+    expect(errors.metastore_id).toBeUndefined();
+  });
+
   test('GCP Private Service Connect accepts an existing VPC with a PSC subnet CIDR', () => {
     const config = {
       provider: 'gcp', project_prefix: 'myproject', region: 'us-central1',

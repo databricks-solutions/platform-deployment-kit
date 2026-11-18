@@ -660,6 +660,8 @@ class Validators {
       }
       if (config.metastore_mode === 'existing' && (!config.metastore_id || !config.metastore_id.trim())) {
         errors.metastore_id = 'Existing metastore ID is required';
+      } else if (config.metastore_mode === 'existing' && !this.validateUuid(config.metastore_id, 'Metastore ID').valid) {
+        errors.metastore_id = 'Metastore ID must be a valid UUID';
       }
 
       const gcpCreateNewVpc = config.create_new_vpc !== false;
