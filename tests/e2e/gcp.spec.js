@@ -33,6 +33,11 @@ test.describe('GCP critical journeys', () => {
     await expect(page.locator('#enable_private_link')).toBeVisible();
     await expect(page.locator('#nat-gateway-section')).toBeHidden();
     await expect(page.locator('#unity-catalog-configuration')).toBeVisible();
+    await expect(page.locator('#metastore_mode_create')).toBeVisible();
+    await expect(page.locator('#metastore_mode_existing')).toBeVisible();
+    // GCP templates have no catalog option, so the toggle must not be offered.
+    await expect(page.locator('#create-catalog')).toHaveCount(0);
+    await expect(page.locator('#catalog-creation-fields')).toHaveCount(0);
     await expect(page.locator('#gcp-existing-vpc-section')).toBeHidden();
   });
 
@@ -86,7 +91,8 @@ test.describe('GCP critical journeys', () => {
     });
     await page.locator('#metastore_mode_existing').check();
     await expect(page.locator('#existing-metastore-section')).toBeVisible();
-    await page.locator('#metastore_id').fill('metastore-gcp-1234');
+    await expect(page.locator('label[for="metastore_id"]')).not.toContainText('optional');
+    await page.locator('#metastore_id').fill('12345678-1234-4234-8234-123456789abc');
     await expect(page.locator('#gcp-existing-vpc-section')).toBeVisible();
     await expect(page.locator('#gcp-new-vpc-fields')).toBeHidden();
     await FormHelpers.submitConfigForm(page);
@@ -94,7 +100,7 @@ test.describe('GCP critical journeys', () => {
     await expect(page).toHaveURL(/.*#\/summary/);
     await expect(page.getByText('Use Existing', { exact: true })).toBeVisible();
     await expect(page.getByText('shared-databricks-vpc')).toBeVisible();
-    await expect(page.getByText('metastore-gcp-1234')).toBeVisible();
+    await expect(page.getByText('12345678-1234-4234-8234-123456789abc')).toBeVisible();
 
     const { archive } = await downloadProject(page);
     expect(Object.keys(archive.files)).toEqual(expect.arrayContaining([
@@ -106,7 +112,7 @@ test.describe('GCP critical journeys', () => {
     expect(tfvars).toContain('vpc_name               = "shared-databricks-vpc"');
     expect(tfvars).toContain('subnet_name            = "databricks-subnet"');
     expect(tfvars).toContain('vpc_network_project_id = "gcp-host-project"');
-    expect(tfvars).toContain('metastore_id   = "metastore-gcp-1234"');
+    expect(tfvars).toContain('metastore_id   = "12345678-1234-4234-8234-123456789abc"');
     expect(tfvars).not.toContain('subnet_cidr');
     expect(await archive.file('network.tf').async('string')).toContain('google_compute_network');
   });

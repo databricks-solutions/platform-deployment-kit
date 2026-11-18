@@ -36,6 +36,8 @@ test.describe('AWS critical journeys', () => {
     await expect(page.locator('#subnet-size-range')).toHaveValue('24');
     await page.locator('#subnet-size-range').fill('26');
     await expect(page.locator('#subnet-size-range')).toHaveValue('26');
+    // AWS keeps the catalog toggle (only GCP hides it).
+    await expect(page.locator('#create-catalog')).toBeVisible();
 
     await FormHelpers.submitConfigForm(page);
     await expect(page).toHaveURL(/.*#\/summary/);

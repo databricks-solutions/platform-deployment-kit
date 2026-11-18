@@ -1408,12 +1408,14 @@ class App {
                                placeholder="Defaults to &lt;project-prefix&gt;-metastore">
                       </div>
                       <div id="existing-metastore-section" style="display: none;">
-                        <label class="form-label" for="metastore_id">Existing Metastore ID <span class="text-muted fw-normal">(optional)</span></label>
+                        <label class="form-label" for="metastore_id">Existing Metastore ID <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="metastore_id" name="metastore_id"
                                value="${this.currentConfig.metastore_id || ''}"
                                placeholder="e.g., 12345678-1234-1234-1234-123456789abc">
                       </div>
                     </div>
+                    <!-- GCP templates create or attach a metastore only; there is no catalog option to expose. -->
+                    ${this.currentProvider !== 'gcp' ? `
                     <div class="col-12">
                       <div class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" role="switch" id="create-catalog"
@@ -1477,6 +1479,7 @@ class App {
                     ` : ''}
                     </div>
                     </div>
+                    ` : ''}
                   </div>
                 </div>
               </div>
