@@ -33,6 +33,11 @@ test.describe('GCP critical journeys', () => {
     await expect(page.locator('#enable_private_link')).toBeVisible();
     await expect(page.locator('#nat-gateway-section')).toBeHidden();
     await expect(page.locator('#unity-catalog-configuration')).toBeVisible();
+    await expect(page.locator('#metastore_mode_create')).toBeVisible();
+    await expect(page.locator('#metastore_mode_existing')).toBeVisible();
+    // GCP templates have no catalog option, so the toggle must not be offered.
+    await expect(page.locator('#create-catalog')).toHaveCount(0);
+    await expect(page.locator('#catalog-creation-fields')).toHaveCount(0);
     await expect(page.locator('#gcp-existing-vpc-section')).toBeHidden();
   });
 

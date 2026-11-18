@@ -1414,6 +1414,8 @@ class App {
                                placeholder="e.g., 12345678-1234-1234-1234-123456789abc">
                       </div>
                     </div>
+                    <!-- GCP templates create or attach a metastore only; there is no catalog option to expose. -->
+                    ${this.currentProvider !== 'gcp' ? `
                     <div class="col-12">
                       <div class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" role="switch" id="create-catalog"
@@ -1477,6 +1479,7 @@ class App {
                     ` : ''}
                     </div>
                     </div>
+                    ` : ''}
                   </div>
                 </div>
               </div>
