@@ -1,0 +1,52 @@
+# ============================================================================
+# Databricks Module - Main Configuration
+# ============================================================================
+#
+# PURPOSE:
+#   This is a Terraform module that encapsulates Databricks workspace configuration.
+#   Modules are reusable components that can be called from other Terraform
+#   configurations. This module handles all Databricks-specific resources.
+#
+# KEY CONCEPTS FOR BEGINNERS:
+#   - Modules: Reusable Terraform configurations that can be called like functions
+#   - Module structure: Similar to root modules (variables, resources, outputs)
+#   - Module benefits: Reusability, organization, abstraction
+#   - Module usage: Called from root module using module blocks
+#
+# TERRAFORM DOCUMENTATION:
+#   - Modules: https://developer.hashicorp.com/terraform/language/modules
+#   - Module Composition: https://developer.hashicorp.com/terraform/language/modules/develop
+#   - Module Structure: https://developer.hashicorp.com/terraform/language/modules/develop/structure
+#
+# HOW MODULES WORK:
+#   1. This module defines inputs (variables) and outputs
+#   2. Root modules call this module: module "databricks" { source = "./modules/databricks" }
+#   3. Root modules pass values to module variables
+#   4. Module creates resources and returns outputs
+#   5. Root modules can use module outputs
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# DATABRICKS WORKSPACE CONFIGURATION
+# ----------------------------------------------------------------------------
+# This module would contain all Databricks-specific resources:
+# - Databricks workspace creation
+# - Workspace configuration (pricing tier, network settings)
+# - Workspace-level resources (clusters, notebooks, jobs)
+# - Service principals and access control
+#
+# The actual implementation would vary based on the cloud provider:
+# - AWS: Uses databricks_mws_workspaces resource
+# - Azure: Uses azurerm_databricks_workspace resource
+# - GCP: Uses databricks_mws_workspaces resource with GCP-specific config
+#
+# Example structure (provider-specific):
+# resource "databricks_mws_workspaces" "this" {
+#   provider        = databricks.mws
+#   account_id      = var.account_id
+#   workspace_name  = var.workspace_name
+#   # ... additional configuration
+# }
+
+# Note: This is a module placeholder. The actual resources would be configured
+# based on the cloud provider (AWS, Azure, or GCP) and specific requirements.

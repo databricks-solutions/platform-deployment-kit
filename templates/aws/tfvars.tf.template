@@ -1,0 +1,54 @@
+# Generated variables for the Databricks AWS deployment.
+# Databricks and AWS
+prefix          = "{{project_prefix}}"
+resource_prefix = "{{project_prefix}}"
+region          = "{{region}}"
+databricks_account_id = "{{aws_databricks_account_id}}"
+tags = {{{common_tags}}}
+
+# Unity Catalog metastore required by the workspace deployment
+metastore_id   = "{{metastore_id}}"
+metastore_name = "{{metastore_name}}"
+
+# User-defined catalog and its dedicated S3 storage.
+aws_account_id          = "{{aws_account_id}}"
+new_catalog             = {{create_catalog}}
+catalog_name            = "{{aws_catalog_name}}"
+external_location_name  = "{{aws_external_location_name}}"
+storage_credential_name = "{{aws_storage_credential_name}}"
+workspace_admin_email   = "{{aws_workspace_admin_email}}"
+new_cluster             = {{new_cluster}}
+cluster_autotermination_minutes = {{cluster_autotermination_minutes}}
+
+{{#if enable_private_link}}
+# Classic Back-end PrivateLink always creates an Enterprise workspace.
+network_configuration     = "{{aws_network_configuration}}"
+nat_gateway_mode          = "{{aws_nat_gateway_mode}}"
+{{#if is_fully_private}}
+endpoint_subnet_cidr      = "{{endpoint_subnet_cidr}}"
+{{/if}}
+vpc_id                    = "{{aws_vpc_id}}"
+vpc_cidr_range            = "{{vpc_cidr}}"
+availability_zones        = {{{aws_availability_zones}}}
+subnet_ids                = {{{aws_subnet_ids}}}
+private_subnets_cidr      = {{{byovpc_private_subnets_cidr}}}
+public_subnets_cidr       = {{{byovpc_public_subnets_cidr}}}
+security_group_ids        = {{{aws_security_group_ids}}}
+backend_rest_aws_vpce_id  = "{{backend_rest_aws_vpce_id}}"
+backend_relay_aws_vpce_id = "{{backend_relay_aws_vpce_id}}"
+sg_egress_ports           = [443, 2443, 5432, 6666, 8443, 8444, 8445, 8446, 8447, 8448, 8449, 8450, 8451]
+additional_egress_ips     = []
+{{else}}
+pricing_tier            = "{{pricing_tier}}"
+nat_gateway_mode        = "{{aws_nat_gateway_mode}}"
+vpc_id                  = "{{aws_vpc_id}}"
+vpc_cidr_range          = "{{vpc_cidr}}"
+availability_zones      = {{{aws_availability_zones}}}
+subnet_ids              = {{{aws_subnet_ids}}}
+private_subnets_cidr    = {{{byovpc_private_subnets_cidr}}}
+public_subnets_cidr     = {{{byovpc_public_subnets_cidr}}}
+security_group_ids      = {{{aws_security_group_ids}}}
+new_security_group_name = ""
+sg_egress_ports         = [443, 3306, 2443, 5432, 8443, 8444, 8445, 8446, 8447, 8448, 8449, 8450, 8451]
+
+{{/if}}

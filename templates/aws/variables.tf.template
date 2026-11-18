@@ -1,0 +1,211 @@
+# ============================================================================
+# AWS Terraform Variables
+# ============================================================================
+#
+# PURPOSE:
+#   This file defines all input variables for the AWS Databricks deployment.
+#
+# USAGE:
+#   - Set values in terraform.tfvars (recommended)
+#   - Override via command line: terraform apply -var="aws_region=us-west-2"
+#   - Use environment variables: export TF_VAR_aws_region=us-west-2
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# BASIC CONFIGURATION
+# ----------------------------------------------------------------------------
+
+variable "aws_region" {
+  description = "AWS region for resource deployment"
+  type        = string
+  default     = "{{region}}"
+}
+
+variable "project_prefix" {
+  description = "Prefix for all resource names"
+  type        = string
+  default     = "{{project_prefix}}"
+  
+  validation {
+    condition     = can(regex("^[a-z0-9][a-z0-9-]*[a-z0-9]$", var.project_prefix)) || length(var.project_prefix) <= 2
+    error_message = "Project prefix must contain only lowercase letters, numbers, and hyphens."
+  }
+}
+
+# ----------------------------------------------------------------------------
+# VPC CONFIGURATION
+# ----------------------------------------------------------------------------
+
+variable "vpc_cidr" {
+  description = "CIDR block for the VPC"
+  type        = string
+  default     = "{{vpc_cidr}}"
+  
+  validation {
+    condition     = can(cidrhost(var.vpc_cidr, 0))
+    error_message = "VPC CIDR must be a valid IPv4 CIDR block."
+  }
+}
+
+variable "create_new_vpc" {
+  description = "Whether to create a new VPC (true) or use an existing one (false)"
+  type        = bool
+  default     = {{create_new_vpc}}
+}
+
+variable "existing_vpc_id" {
+  description = "ID of existing VPC to use (required if create_new_vpc is false)"
+  type        = string
+  default     = "{{existing_vpc_id}}"
+}
+
+variable "create_new_subnets" {
+  description = "Whether to create new subnets in existing VPC (only applies when create_new_vpc is false)"
+  type        = bool
+  default     = {{create_new_subnets}}
+}
+
+variable "existing_subnet_ids" {
+  description = "List of existing subnet IDs to use (required if create_new_vpc and create_new_subnets are false)"
+  type        = list(string)
+  default     = {{{existing_subnet_ids}}}
+  
+  validation {
+    condition     = var.create_new_vpc || var.create_new_subnets || length(var.existing_subnet_ids) >= 2
+    error_message = "At least 2 existing subnet IDs are required when using existing subnets."
+  }
+}
+
+variable "existing_security_group_ids" {
+  description = "List of existing security group IDs to use (required if using existing subnets)"
+  type        = list(string)
+  default     = {{{existing_security_group_ids}}}
+  
+  validation {
+    condition     = var.create_new_vpc || var.create_new_subnets || length(var.existing_security_group_ids) >= 1
+    error_message = "At least 1 existing security group ID is required when using existing subnets."
+  }
+}
+
+variable "availability_zones" {
+  description = "List of availability zones for subnet deployment"
+  type        = list(string)
+  default     = {{{availability_zones}}}
+}
+
+# ----------------------------------------------------------------------------
+# SUBNET CONFIGURATION
+# ----------------------------------------------------------------------------
+{{#each calculated_subnets}}
+variable "{{name_replace}}_subnet_cidr" {
+  description = "CIDR block for {{name}} subnet in {{availability_zone}}"
+  type        = string
+  default     = "{{cidr}}"
+}
+
+{{/each}}
+# ----------------------------------------------------------------------------
+# DATABRICKS CONFIGURATION
+# ----------------------------------------------------------------------------
+
+variable "databricks_account_id" {
+  description = "Databricks account ID (found in Databricks account settings)"
+  type        = string
+  sensitive   = true
+  
+  validation {
+    condition     = length(var.databricks_account_id) > 0
+    error_message = "databricks_account_id is required. Find it at: Account Console > Settings > Account ID. You can also set it via environment variable: export TF_VAR_databricks_account_id=<your-account-id>"
+  }
+}
+
+variable "pricing_tier" {
+  description = "Databricks workspace pricing tier: STANDARD, PREMIUM, or ENTERPRISE"
+  type        = string
+  default     = "{{pricing_tier}}"
+  
+  validation {
+    condition     = contains(["STANDARD", "PREMIUM", "ENTERPRISE"], var.pricing_tier)
+    error_message = "Pricing tier must be one of: STANDARD, PREMIUM, or ENTERPRISE."
+  }
+}
+
+variable "workspace_name" {
+  description = "Name of the Databricks workspace"
+  type        = string
+  default     = "{{project_prefix}}"
+}
+
+# ----------------------------------------------------------------------------
+# SECURITY CONFIGURATION
+# ----------------------------------------------------------------------------
+
+variable "enable_private_link" {
+  description = "Enable AWS PrivateLink for private connectivity"
+  type        = bool
+  default     = {{enable_private_link}}
+}
+
+{{#if enable_private_link}}
+variable "privatelink_subnet_mode" {
+  description = "Mode for PrivateLink subnet: 'terraform_managed' creates a new subnet, 'user_managed' uses an existing subnet"
+  type        = string
+  default     = "{{privatelink_subnet_mode}}"
+  
+  validation {
+    condition     = contains(["terraform_managed", "user_managed"], var.privatelink_subnet_mode)
+    error_message = "privatelink_subnet_mode must be either 'terraform_managed' or 'user_managed'."
+  }
+}
+
+variable "existing_privatelink_subnet_id" {
+  description = "ID of existing subnet for PrivateLink VPC Endpoints (required if privatelink_subnet_mode is 'user_managed')"
+  type        = string
+  default     = "{{existing_privatelink_subnet_id}}"
+  
+  validation {
+    condition     = var.privatelink_subnet_mode == "terraform_managed" || (var.privatelink_subnet_mode == "user_managed" && length(var.existing_privatelink_subnet_id) > 0)
+    error_message = "existing_privatelink_subnet_id is required when privatelink_subnet_mode is 'user_managed'."
+  }
+}
+{{/if}}
+
+{{#if cross_account_role_arn}}
+variable "cross_account_role_arn" {
+  description = "ARN of existing cross-account IAM role for Databricks"
+  type        = string
+  default     = "{{cross_account_role_arn}}"
+}
+{{/if}}
+
+# ----------------------------------------------------------------------------
+# ADVANCED CONFIGURATION
+# ----------------------------------------------------------------------------
+
+variable "enable_nat_gateway" {
+  description = "Enable NAT Gateway for private subnet internet access"
+  type        = bool
+  default     = {{enable_nat_gateway}}
+}
+
+variable "enable_vpc_endpoints" {
+  description = "Enable VPC endpoints for AWS services"
+  type        = bool
+  default     = true
+}
+
+# ----------------------------------------------------------------------------
+# TAGGING CONFIGURATION
+# ----------------------------------------------------------------------------
+
+variable "common_tags" {
+  description = "Common tags to apply to all resources"
+  type        = map(string)
+  default = {
+    Project     = "{{project_prefix}}"
+    Environment = "dev"
+    ManagedBy   = "terraform"
+    Provider    = "aws"
+    CreatedBy   = "oneclick-databricks-deployer"
+  }
+}
