@@ -1417,10 +1417,14 @@ class App {
                     <!-- GCP templates create or attach a metastore only; there is no catalog option to expose. -->
                     ${this.currentProvider !== 'gcp' ? `
                     <div class="col-12">
+                      <div class="field-label-with-help">
+                        <div class="form-label fw-semibold">Catalog Creation</div>
+                        ${this.renderHelpButton('catalog-creation', 'catalog creation')}
+                      </div>
                       <div class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" role="switch" id="create-catalog"
                                ${this.currentConfig.create_catalog !== false ? 'checked' : ''}>
-                        <label class="form-check-label fw-semibold" for="create-catalog">Create a catalog</label>
+                        <label class="form-check-label" for="create-catalog">Create a catalog</label>
                         <div class="form-text">Optionally create a catalog and its storage objects as part of the deployment.</div>
                       </div>
                     </div>
