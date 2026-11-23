@@ -78,4 +78,51 @@ test.describe('Contextual configuration help', () => {
     await expect(page.locator('#contextHelpTitle')).toHaveText('Databricks subnet CIDR');
     await expect(page.locator('#contextHelpBody')).toContainText('Cloud NAT');
   });
+
+  test('shows AWS catalog creation guidance with S3 prerequisites', async ({ page }) => {
+    await FormHelpers.selectProvider(page, 'aws');
+
+    const trigger = page.locator('[data-help-topic="catalog-creation"]');
+    await trigger.click();
+
+    const drawer = page.locator('#contextHelpDrawer');
+    await expect(drawer).toBeVisible();
+    await expect(page.locator('#contextHelpProvider')).toHaveText('AWS guidance');
+    await expect(page.locator('#contextHelpTitle')).toHaveText('Catalog creation');
+    await expect(page.locator('#contextHelpBody')).toContainText('The S3 bucket does not need to be created in advance');
+    await expect(page.locator('#contextHelpBody')).toContainText('must not contain dots');
+
+    const docsLink = drawer.getByRole('link', { name: 'Create a storage credential and external location for S3' });
+    await expect(docsLink).toHaveAttribute('href', 'https://docs.databricks.com/aws/en/connect/unity-catalog/cloud-storage/s3/s3-external-location-manual');
+    await expect(docsLink).toHaveAttribute('target', '_blank');
+    await expect(docsLink).toHaveAttribute('rel', 'noopener noreferrer');
+
+    await page.keyboard.press('Escape');
+    await expect(drawer).not.toBeVisible();
+    await expect(trigger).toBeFocused();
+
+    // The help icon stays available when catalog creation is turned off.
+    await page.locator('#create-catalog').uncheck();
+    await expect(page.locator('#catalog-creation-fields')).toBeHidden();
+    await expect(trigger).toBeVisible();
+  });
+
+  test('shows Azure catalog creation guidance with ADLS prerequisites', async ({ page }) => {
+    await FormHelpers.selectProvider(page, 'azure');
+
+    await page.locator('[data-help-topic="catalog-creation"]').click();
+    await expect(page.locator('#contextHelpProvider')).toHaveText('Azure guidance');
+    await expect(page.locator('#contextHelpTitle')).toHaveText('Catalog creation');
+    await expect(page.locator('#contextHelpBody')).toContainText('The storage account and container do not need to be created in advance');
+    await expect(page.locator('#contextHelpBody')).toContainText('hierarchical namespace');
+    await expect(page.locator('#contextHelpBody').getByRole('link', {
+      name: 'Connect to an ADLS Gen2 external location'
+    })).toHaveAttribute('href', 'https://learn.microsoft.com/en-us/azure/databricks/connect/unity-catalog/cloud-storage/external-locations-adls');
+  });
+
+  test('does not show catalog creation help for GCP', async ({ page }) => {
+    await FormHelpers.selectProvider(page, 'gcp');
+    await expect(page.locator('[data-help-topic="metastore"]')).toBeVisible();
+    await expect(page.locator('[data-help-topic="catalog-creation"]')).toHaveCount(0);
+  });
 });

@@ -76,6 +76,44 @@ class HelpContent {
         ]
       }
     },
+    'catalog-creation': {
+      aws: {
+        title: 'Catalog creation',
+        overview: 'This option creates a Unity Catalog catalog, with the name and storage location specified below, as part of the deployment.',
+        whenToUse: [
+          'Enable this option to deliver the workspace with a catalog that is ready for data immediately after deployment.',
+          'Disable this option when catalogs and their storage are managed outside this deployment, for example by a central governance team.'
+        ],
+        considerations: [
+          'The S3 bucket does not need to be created in advance; Terraform provisions it as part of the deployment.',
+          'The project prefix must not contain dots, because it forms part of the bucket name and Databricks does not support dots in S3 bucket names.',
+          'The deploying identity requires CREATE CATALOG, CREATE STORAGE CREDENTIAL, and CREATE EXTERNAL LOCATION on the metastore, as well as iam:CreateRole in AWS.'
+        ],
+        links: [
+          { label: 'Create catalogs', url: 'https://docs.databricks.com/aws/en/catalogs/create-catalog' },
+          { label: 'Specify a managed storage location in Unity Catalog', url: 'https://docs.databricks.com/aws/en/connect/unity-catalog/cloud-storage/managed-storage' },
+          { label: 'Create a storage credential and external location for S3', url: 'https://docs.databricks.com/aws/en/connect/unity-catalog/cloud-storage/s3/s3-external-location-manual' }
+        ]
+      },
+      azure: {
+        title: 'Catalog creation',
+        overview: 'This option creates a Unity Catalog catalog, with the name and storage location specified below, as part of the deployment.',
+        whenToUse: [
+          'Enable this option to deliver the workspace with a catalog that is ready for data immediately after deployment.',
+          'Disable this option when catalogs and their storage are managed outside this deployment, for example by a central governance team.'
+        ],
+        considerations: [
+          'The storage account and container do not need to be created in advance; Terraform provisions them as part of the deployment, with hierarchical namespace enabled.',
+          'The storage account name must be globally unique and contain 3-24 lowercase letters and numbers.',
+          'The deploying identity requires CREATE CATALOG, CREATE STORAGE CREDENTIAL, and CREATE EXTERNAL LOCATION on the metastore, as well as Contributor on the resource group and User Access Administrator on the storage account.'
+        ],
+        links: [
+          { label: 'Create catalogs', url: 'https://learn.microsoft.com/en-us/azure/databricks/catalogs/create-catalog' },
+          { label: 'Specify a managed storage location in Unity Catalog', url: 'https://learn.microsoft.com/en-us/azure/databricks/connect/unity-catalog/cloud-storage/managed-storage' },
+          { label: 'Connect to an ADLS Gen2 external location', url: 'https://learn.microsoft.com/en-us/azure/databricks/connect/unity-catalog/cloud-storage/external-locations-adls' }
+        ]
+      }
+    },
     'network-mode': {
       aws: {
         title: 'New or existing VPC',
