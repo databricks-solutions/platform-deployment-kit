@@ -90,7 +90,7 @@ test.describe('Contextual configuration help', () => {
     await expect(page.locator('#contextHelpProvider')).toHaveText('AWS guidance');
     await expect(page.locator('#contextHelpTitle')).toHaveText('Catalog creation');
     await expect(page.locator('#contextHelpBody')).toContainText('The S3 bucket does not need to be created in advance');
-    await expect(page.locator('#contextHelpBody')).toContainText('dedicated S3 bucket');
+    await expect(page.locator('#contextHelpBody')).toContainText('must not contain dots');
 
     const docsLink = drawer.getByRole('link', { name: 'Create a storage credential and external location for S3' });
     await expect(docsLink).toHaveAttribute('href', 'https://docs.databricks.com/aws/en/connect/unity-catalog/cloud-storage/s3/s3-external-location-manual');

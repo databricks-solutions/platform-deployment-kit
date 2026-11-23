@@ -82,7 +82,7 @@ class HelpContent {
         overview: 'This option creates a Unity Catalog catalog, with the name and storage location specified below, as part of the deployment.',
         whenToUse: [
           'Enable this option to deliver the workspace with a catalog that is ready for data immediately after deployment.',
-          'Disable this option when catalogs and their storage are managed outside this deployment, for example by a central governance team'
+          'Disable this option when catalogs and their storage are managed outside this deployment, for example by a central governance team.'
         ],
         considerations: [
           'The S3 bucket does not need to be created in advance; Terraform provisions it as part of the deployment.',
@@ -100,7 +100,7 @@ class HelpContent {
         overview: 'This option creates a Unity Catalog catalog, with the name and storage location specified below, as part of the deployment.',
         whenToUse: [
           'Enable this option to deliver the workspace with a catalog that is ready for data immediately after deployment.',
-          'Disable this option when catalogs and their storage are managed outside this deployment, for example by a central governance team'
+          'Disable this option when catalogs and their storage are managed outside this deployment, for example by a central governance team.'
         ],
         considerations: [
           'The storage account and container do not need to be created in advance; Terraform provisions them as part of the deployment, with hierarchical namespace enabled.',
