@@ -184,11 +184,51 @@ class Utils {
   }
 
   /**
-   * Clear storage
+   * Save the config. Sensitive values (SENSITIVE_CONFIG_KEYS) go to
+   * sessionStorage, which is per tab and cleared when it closes, instead of
+   * localStorage, which persists and is shared across the GitHub Pages origin.
+   */
+  static saveConfig(config) {
+    const safe = {};
+    const sensitive = {};
+    Object.entries(config || {}).forEach(([key, value]) => {
+      (Utils.SENSITIVE_CONFIG_KEYS.includes(key) ? sensitive : safe)[key] = value;
+    });
+    try {
+      sessionStorage.setItem('config-sensitive', JSON.stringify(sensitive));
+    } catch {
+      // sessionStorage unavailable: sensitive values stay in memory only
+    }
+    return Utils.setStorage('config', safe);
+  }
+
+  /**
+   * Load the config, merging this tab's sensitive values back in. Re-saving
+   * scrubs sensitive values written to localStorage by earlier versions.
+   */
+  static loadConfig() {
+    let sensitive = {};
+    try {
+      sensitive = JSON.parse(sessionStorage.getItem('config-sensitive')) || {};
+    } catch {
+      sensitive = {};
+    }
+    const stored = Utils.getStorage('config');
+    const config = { ...(stored || {}), ...sensitive };
+    if (stored) {
+      Utils.saveConfig(config);
+    }
+    return config;
+  }
+
+  /**
+   * Clear this app's storage. Removes only the app's own keys, because
+   * localStorage is shared with every other site on the same origin.
    */
   static clearStorage() {
     try {
-      localStorage.clear();
+      ['config', 'provider', 'step'].forEach(key => localStorage.removeItem(key));
+      sessionStorage.removeItem('config-sensitive');
       return true;
     } catch {
       return false;
@@ -238,6 +278,26 @@ class Utils {
   }
 
 }
+
+// Config fields kept out of localStorage: cloud/Databricks identifiers,
+// network resource IDs, and people's emails (all clouds).
+Utils.SENSITIVE_CONFIG_KEYS = [
+  'databricks_account_id',
+  'aws_account_id',
+  'azure_subscription_id',
+  'project_id',
+  'vpc_network_project_id',
+  'metastore_id',
+  'workspace_admin_email',
+  'databricks_admin_user',
+  'azure_admin_user',
+  'google_service_account_email',
+  'existing_vpc_id',
+  'existing_subnet_ids',
+  'existing_security_group_id',
+  'backend_rest_aws_vpce_id',
+  'backend_relay_aws_vpce_id'
+];
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {

@@ -22,7 +22,7 @@ const GCP_PSC_SERVICE_ATTACHMENTS = {
 
 class App {
   constructor() {
-    this.currentConfig = Utils.getStorage('config') || {};
+    this.currentConfig = Utils.loadConfig();
     this.currentProvider = Utils.getStorage('provider') || null;
     this.currentStep = Utils.getStorage('step') || 0;
     this.downloadBlob = null;
@@ -2566,7 +2566,7 @@ class App {
             if (appInstance.currentConfig) {
               appInstance.currentConfig.availability_zones = [];
               appInstance.currentConfig.region = newRegion; // Update region in config
-              Utils.setStorage('config', appInstance.currentConfig); // Persist the change
+              Utils.saveConfig(appInstance.currentConfig); // Persist the change
             }
             
             // Update availability zone options with forceRecreate = true
@@ -3237,7 +3237,7 @@ class App {
       }
       
       this.currentConfig = config;
-      Utils.setStorage('config', config);
+      Utils.saveConfig(config);
       Utils.setStorage('step', 2);
       window.location.hash = '/summary';
     });
@@ -3680,7 +3680,7 @@ class App {
       // download-page regeneration path (after a reload) respects it too.
       const includeDocs = document.getElementById('include_docs');
       this.currentConfig.include_docs = includeDocs ? includeDocs.checked : true;
-      Utils.setStorage('config', this.currentConfig);
+      Utils.saveConfig(this.currentConfig);
 
       // Update loading message
       const loadingMessage = document.getElementById('loading-message');
