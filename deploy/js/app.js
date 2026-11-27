@@ -23,6 +23,9 @@ const GCP_PSC_SERVICE_ATTACHMENTS = {
 class App {
   constructor() {
     this.currentConfig = Utils.loadConfig();
+    // Sensitive values live only in the tab that entered them; in a new tab
+    // they must be re-entered before generating a project.
+    this.needsSensitiveReentry = Object.keys(this.currentConfig).length > 0 && !Utils.hasSessionConfig();
     this.currentProvider = Utils.getStorage('provider') || null;
     this.currentStep = Utils.getStorage('step') || 0;
     this.downloadBlob = null;
@@ -3237,6 +3240,7 @@ class App {
       }
       
       this.currentConfig = config;
+      this.needsSensitiveReentry = false;
       Utils.saveConfig(config);
       Utils.setStorage('step', 2);
       window.location.hash = '/summary';
@@ -3298,6 +3302,7 @@ class App {
       window.location.hash = '/select-provider';
       return;
     }
+    if (this.redirectForSensitiveReentry()) return;
     
     const config = this.currentConfig;
     const configuredSummaryNatGatewayMode = config.provider === 'azure' && config.enable_private_link
@@ -3714,6 +3719,7 @@ class App {
   }
 
   async renderDownload() {
+    if (this.redirectForSensitiveReentry()) return;
     const config = this.currentConfig;
     const databricksAccountId = config.databricks_account_id
       ? Utils.escapeHtml(config.databricks_account_id)
@@ -4199,6 +4205,17 @@ export DATABRICKS_CLIENT_SECRET="&lt;client-secret&gt;"`;
     Utils.updateProgress(0);
     Utils.showFlashMessage('Session reset. Starting fresh configuration.', 'info');
     window.location.hash = '/select-provider';
+  }
+
+  /**
+   * Send the user back to the form when this tab lacks the sensitive values
+   * (they are kept only in the tab that entered them).
+   */
+  redirectForSensitiveReentry() {
+    if (!this.needsSensitiveReentry) return false;
+    Utils.showFlashMessage('Please re-enter your account IDs and emails. For privacy they are kept only in the browser tab where you entered them.', 'warning');
+    window.location.hash = '/configure';
+    return true;
   }
 
   render(content) {

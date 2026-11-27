@@ -213,12 +213,24 @@ class Utils {
     } catch {
       sensitive = {};
     }
-    const stored = Utils.getStorage('config');
-    const config = { ...(stored || {}), ...sensitive };
-    if (stored) {
+    const stored = Utils.getStorage('config') || {};
+    const config = { ...stored, ...sensitive };
+    if (Object.keys(stored).some(key => Utils.SENSITIVE_CONFIG_KEYS.includes(key))) {
       Utils.saveConfig(config);
     }
     return config;
+  }
+
+  /**
+   * Whether this tab still holds the sensitive config values (false after the
+   * tab that entered them was closed).
+   */
+  static hasSessionConfig() {
+    try {
+      return sessionStorage.getItem('config-sensitive') !== null;
+    } catch {
+      return false;
+    }
   }
 
   /**
@@ -294,6 +306,7 @@ Utils.SENSITIVE_CONFIG_KEYS = [
   'google_service_account_email',
   'existing_vpc_id',
   'existing_subnet_ids',
+  'existing_subnet_ids[]',
   'existing_security_group_id',
   'backend_rest_aws_vpce_id',
   'backend_relay_aws_vpce_id'

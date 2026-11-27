@@ -219,6 +219,26 @@ describe('saveConfig / loadConfig', () => {
     expect(Utils.loadConfig()).toEqual({});
     expect(Utils.getStorage('config')).toBeNull();
   });
+
+  it('keeps the raw existing_subnet_ids[] form key out of localStorage', () => {
+    Utils.saveConfig({ region: 'us-east-1', 'existing_subnet_ids[]': 'subnet-2' });
+    expect(Utils.getStorage('config')).toEqual({ region: 'us-east-1' });
+  });
+
+  it('does not rewrite storage on load when nothing needs scrubbing', () => {
+    Utils.saveConfig(config);
+    vi.clearAllMocks();
+    Utils.loadConfig();
+    expect(localStorageMock.setItem).not.toHaveBeenCalled();
+  });
+
+  it('reports whether this tab holds the sensitive values', () => {
+    expect(Utils.hasSessionConfig()).toBe(false);
+    Utils.saveConfig(config);
+    expect(Utils.hasSessionConfig()).toBe(true);
+    sessionStorageMock._reset();
+    expect(Utils.hasSessionConfig()).toBe(false);
+  });
 });
 
 // =============================================================================
