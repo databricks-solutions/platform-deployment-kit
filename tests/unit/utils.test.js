@@ -3,8 +3,8 @@ import { createRequire } from 'module';
 
 // Note: Node 18+ exposes crypto.subtle globally — no setup needed.
 
-// Mock localStorage
-const localStorageMock = (() => {
+// Mock localStorage and sessionStorage
+const createStorageMock = () => {
   let store = {};
   return {
     getItem: vi.fn((key) => store[key] ?? null),
@@ -13,9 +13,12 @@ const localStorageMock = (() => {
     clear: vi.fn(() => { store = {}; }),
     _reset: () => { store = {}; },
   };
-})();
+};
+const localStorageMock = createStorageMock();
+const sessionStorageMock = createStorageMock();
 
 globalThis.localStorage = localStorageMock;
+globalThis.sessionStorage = sessionStorageMock;
 
 // Mock document for DOM methods
 globalThis.document = {
@@ -52,6 +55,7 @@ const Utils = require('../../deploy/js/utils.js');
 
 beforeEach(() => {
   localStorageMock._reset();
+  sessionStorageMock._reset();
   vi.clearAllMocks();
 });
 
@@ -163,12 +167,77 @@ describe('getStorage / setStorage / clearStorage', () => {
     expect(Utils.getStorage('nonexistent')).toBeNull();
   });
 
-  it('clearStorage clears all localStorage entries', () => {
-    Utils.setStorage('a', 1);
-    Utils.setStorage('b', 2);
+  it('clearStorage removes only the app keys', () => {
+    Utils.setStorage('config', { region: 'us-east-1' });
+    Utils.setStorage('step', 2);
+    Utils.setStorage('theme', 'dark');
+    sessionStorageMock.setItem('config-sensitive', '{}');
     const result = Utils.clearStorage();
     expect(result).toBe(true);
-    expect(localStorageMock.clear).toHaveBeenCalled();
+    expect(localStorageMock.clear).not.toHaveBeenCalled();
+    expect(Utils.getStorage('config')).toBeNull();
+    expect(Utils.getStorage('step')).toBeNull();
+    expect(Utils.getStorage('theme')).toBe('dark');
+    expect(sessionStorageMock.getItem('config-sensitive')).toBeNull();
+  });
+});
+
+describe('saveConfig / loadConfig', () => {
+  const config = {
+    project_prefix: 'demo',
+    region: 'us-east-1',
+    databricks_account_id: 'acct-123',
+    workspace_admin_email: 'admin@example.com',
+    existing_subnet_ids: ['subnet-1', 'subnet-2']
+  };
+
+  it('keeps sensitive keys out of localStorage', () => {
+    Utils.saveConfig(config);
+    const stored = Utils.getStorage('config');
+    expect(stored).toEqual({ project_prefix: 'demo', region: 'us-east-1' });
+    Utils.SENSITIVE_CONFIG_KEYS.forEach(key => expect(stored).not.toHaveProperty(key));
+  });
+
+  it('restores the full config within the same session', () => {
+    Utils.saveConfig(config);
+    expect(Utils.loadConfig()).toEqual(config);
+  });
+
+  it('persists only non-sensitive keys once the session ends', () => {
+    Utils.saveConfig(config);
+    sessionStorageMock._reset();
+    expect(Utils.loadConfig()).toEqual({ project_prefix: 'demo', region: 'us-east-1' });
+  });
+
+  it('scrubs sensitive keys saved by earlier versions', () => {
+    Utils.setStorage('config', config);
+    expect(Utils.loadConfig()).toEqual(config);
+    expect(Utils.getStorage('config')).toEqual({ project_prefix: 'demo', region: 'us-east-1' });
+  });
+
+  it('returns an empty config when nothing is saved', () => {
+    expect(Utils.loadConfig()).toEqual({});
+    expect(Utils.getStorage('config')).toBeNull();
+  });
+
+  it('keeps the raw existing_subnet_ids[] form key out of localStorage', () => {
+    Utils.saveConfig({ region: 'us-east-1', 'existing_subnet_ids[]': 'subnet-2' });
+    expect(Utils.getStorage('config')).toEqual({ region: 'us-east-1' });
+  });
+
+  it('does not rewrite storage on load when nothing needs scrubbing', () => {
+    Utils.saveConfig(config);
+    vi.clearAllMocks();
+    Utils.loadConfig();
+    expect(localStorageMock.setItem).not.toHaveBeenCalled();
+  });
+
+  it('reports whether this tab holds the sensitive values', () => {
+    expect(Utils.hasSessionConfig()).toBe(false);
+    Utils.saveConfig(config);
+    expect(Utils.hasSessionConfig()).toBe(true);
+    sessionStorageMock._reset();
+    expect(Utils.hasSessionConfig()).toBe(false);
   });
 });
 

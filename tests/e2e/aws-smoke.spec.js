@@ -143,8 +143,8 @@ test.describe('AWS critical journeys', () => {
     await FormHelpers.confirmAndGenerate(page);
     await expect(page).toHaveURL(/.*#\/download/);
 
-    // Reload drops the in-memory ZIP blob but keeps the config in localStorage,
-    // so the download button must go through the regenerate path in app.js.
+    // Reload drops the in-memory ZIP blob but keeps the config (sensitive values
+    // in sessionStorage), so the download button must go through the regenerate path.
     await page.reload();
     await expect(page.locator('#download-project-btn')).toBeVisible();
 
@@ -157,6 +157,30 @@ test.describe('AWS critical journeys', () => {
     expect(Object.keys(archive.files)).toEqual(expect.arrayContaining([
       'terraform.tfvars', 'README.md'
     ]));
+  });
+
+  test('asks to re-enter sensitive values when the download page opens in a new tab', async ({ page }) => {
+    await FormHelpers.fillBasicConfig(page, {
+      project_prefix: 'aws-newtab',
+      region: 'us-east-1',
+      pricing_tier: 'PREMIUM'
+    });
+    await FormHelpers.fillNetworkConfig(page, {
+      create_new_vpc: true,
+      vpc_cidr: '10.96.0.0/20',
+      availability_zones: ['us-east-1a', 'us-east-1b']
+    });
+    await FormHelpers.submitConfigForm(page);
+    await FormHelpers.confirmAndGenerate(page);
+    await expect(page).toHaveURL(/.*#\/download/);
+
+    // A new tab shares localStorage but not sessionStorage.
+    const newTab = await page.context().newPage();
+    await newTab.goto('/#/download');
+    await expect(newTab).toHaveURL(/.*#\/configure/);
+    await expect(newTab.locator('[name="project_prefix"]')).toHaveValue('aws-newtab');
+    await expect(newTab.locator('[name="databricks_account_id"]')).toHaveValue('');
+    await newTab.close();
   });
 
   test('generates a new-VPC project with a single NAT gateway on the Enterprise tier', async ({ page }) => {

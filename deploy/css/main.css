@@ -1595,6 +1595,21 @@ pre code {
    12. ALERTS & FLASH MESSAGES
    ============================================================================= */
 
+/* Keep flash messages in view when the page is scrolled (e.g. form validation errors) */
+#flash-messages {
+  position: sticky;
+  top: 1rem;
+  z-index: var(--z-fixed);
+}
+
+/* Opaque card layer under the translucent tint so scrolled content does not show through */
+#flash-messages .alert { box-shadow: var(--shadow-md); }
+#flash-messages .alert-success { background: linear-gradient(var(--success-subtle), var(--success-subtle)), var(--bg-card); }
+#flash-messages .alert-danger,
+#flash-messages .alert-error { background: linear-gradient(var(--error-subtle), var(--error-subtle)), var(--bg-card); }
+#flash-messages .alert-warning { background: linear-gradient(var(--warning-subtle), var(--warning-subtle)), var(--bg-card); }
+#flash-messages .alert-info { background: linear-gradient(var(--info-subtle), var(--info-subtle)), var(--bg-card); }
+
 .alert {
   padding: var(--space-4) var(--space-5);
   border-radius: var(--radius-lg);
